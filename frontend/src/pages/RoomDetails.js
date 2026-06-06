@@ -100,14 +100,14 @@ const RoomDetails = () => {
                     <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    Back to Rooms
+                    Back to Class Room
                 </button>
 
                 <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
                     <div className="bg-indigo-600 p-8 text-white">
                         <div className="flex justify-between items-center">
                             <div>
-                                <h1 className="text-3xl font-black tracking-tight">Room {room.room_number}</h1>
+                                <h1 className="text-3xl font-black tracking-tight">Class Room {room.room_number}</h1>
                                 <p className="text-indigo-100 font-medium">{room.type} • {room.department}</p>
                             </div>
                             <span className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest ${

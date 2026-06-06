@@ -183,14 +183,14 @@ const Rooms = () => {
         }
     };
 
-    if (loading) return <div className="p-10 text-center font-bold text-gray-500 tracking-widest uppercase animate-pulse">Loading Campus Classrooms...</div>;
+    if (loading) return <div className="p-10 text-center font-bold text-gray-500 tracking-widest uppercase animate-pulse">Loading Class Rooms...</div>;
 
     return (
         <div className="p-10 bg-gray-50 min-h-screen">
             <header className="mb-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-black text-gray-900 tracking-tight">Class Room</h1>
-                    <p className="text-gray-600 font-medium">Real-time classroom availability.</p>
+                    <p className="text-gray-600 font-medium">Real-time availability tracking.</p>
                 </div>
                 {role === 'admin' && (
                     <button

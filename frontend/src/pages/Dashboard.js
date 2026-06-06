@@ -63,7 +63,7 @@ const Dashboard = () => {
                         </div>
                         <span className="text-green-500 font-bold bg-green-50 px-2 py-1 rounded text-xs">+12%</span>
                     </div>
-                    <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider">Total Rooms</h3>
+                    <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider">Total Class Rooms</h3>
                     <p className="text-4xl font-black text-gray-900 mt-2">{stats.rooms}</p>
                 </div>
 
@@ -89,7 +89,7 @@ const Dashboard = () => {
                         </div>
                         <span className="text-red-500 font-bold bg-red-50 px-2 py-1 rounded text-xs">Live</span>
                     </div>
-                    <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider">Rooms in Use</h3>
+                    <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider">Class Rooms in Use</h3>
                     <p className="text-4xl font-black text-gray-900 mt-2">{stats.active}</p>
                 </div>
             </div>
@@ -105,7 +105,7 @@ const Dashboard = () => {
                                     </svg>
                                 </div>
                                 <div>
-                                    <p className="font-black text-lg">Room Available!</p>
+                                    <p className="font-black text-lg">Class Room Available!</p>
                                     <p className="font-medium opacity-90">{n.message}</p>
                                 </div>
                             </div>
