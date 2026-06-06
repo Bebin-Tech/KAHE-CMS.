@@ -63,6 +63,17 @@ def create_room(room: schemas.RoomCreate, db: Session = Depends(database.get_db)
     db.refresh(db_room)
     return db_room
 
+@app.put("/rooms/{room_id}", response_model=schemas.Room)
+def update_room(room_id: int, room: schemas.RoomCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
+    if not db_room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    for key, value in room.dict().items():
+        setattr(db_room, key, value)
+    db.commit()
+    db.refresh(db_room)
+    return db_room
+
 @app.delete("/rooms/{room_id}")
 def delete_room(room_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
@@ -112,6 +123,17 @@ def delete_booking(booking_id: int, db: Session = Depends(database.get_db), curr
     db.delete(db_booking)
     db.commit()
     return {"message": "Booking deleted successfully"}
+
+@app.put("/bookings/{booking_id}", response_model=schemas.Booking)
+def update_booking(booking_id: int, booking: schemas.BookingCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    db_booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
+    if not db_booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    for key, value in booking.dict().items():
+        setattr(db_booking, key, value)
+    db.commit()
+    db.refresh(db_booking)
+    return db_booking
 
 # Class Session APIs
 @app.post("/start-class", response_model=schemas.ClassSession)

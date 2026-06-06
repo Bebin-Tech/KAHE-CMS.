@@ -8,11 +8,22 @@ const Rooms = () => {
     const [loading, setLoading] = useState(true);
     const [showStartModal, setShowStartModal] = useState(false);
     const [showAddRoomModal, setShowAddRoomModal] = useState(false);
+    const [showEditRoomModal, setShowEditRoomModal] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [activeSessions, setActiveSessions] = useState({});
     const role = localStorage.getItem('role');
 
     const [newRoomData, setNewRoomData] = useState({
+        room_number: '',
+        room_name: '',
+        floor: '',
+        building: '',
+        type: 'Classroom',
+        capacity: 60,
+        department: 'Computer Science'
+    });
+
+    const [editRoomData, setEditRoomData] = useState({
         room_number: '',
         room_name: '',
         floor: '',
@@ -51,7 +62,6 @@ const Rooms = () => {
 
     useEffect(() => {
         fetchRooms();
-        // Continuous real-time updates every 5 seconds
         const interval = setInterval(fetchRooms, 5000);
         return () => clearInterval(interval);
     }, []);
@@ -80,7 +90,6 @@ const Rooms = () => {
             setLoading(false);
         } catch (err) {
             console.error("Backend unreachable:", err);
-            setRooms([]);
             setLoading(false);
         }
     };
@@ -115,13 +124,10 @@ const Rooms = () => {
                 fetchRooms();
                 alert('Class ended successfully!');
             } else {
-                alert('No active session found for this room. Re-syncing status...');
                 fetchRooms();
             }
         } catch (err) {
-            console.error("End class error:", err);
-            const errorMsg = err.response?.data?.detail || 'Failed to end class. Please check if the backend is running.';
-            alert(errorMsg);
+            alert('Failed to end class');
         }
     };
 
@@ -131,18 +137,25 @@ const Rooms = () => {
             await API.post('/rooms', newRoomData);
             setShowAddRoomModal(false);
             setNewRoomData({
-                room_number: '',
-                room_name: '',
-                floor: '',
-                building: '',
-                type: 'Classroom',
-                capacity: 60,
-                department: 'Computer Science'
+                room_number: '', room_name: '', floor: '', building: '',
+                type: 'Classroom', capacity: 60, department: 'Computer Science'
             });
             fetchRooms();
             alert('Room added successfully!');
         } catch (err) {
-            alert(err.response?.data?.detail || 'Failed to add room');
+            alert(err.response?.data?.detail || 'Failed to add room. Please login again.');
+        }
+    };
+
+    const handleUpdateRoom = async (e) => {
+        e.preventDefault();
+        try {
+            await API.put(`/rooms/${selectedRoom.id}`, editRoomData);
+            setShowEditRoomModal(false);
+            fetchRooms();
+            alert('Room updated successfully!');
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Failed to update room');
         }
     };
 
@@ -151,8 +164,7 @@ const Rooms = () => {
             alert('Cannot delete room while a class is in progress.');
             return;
         }
-
-        if (window.confirm(`Are you sure you want to delete Room ${roomNumber}? This action cannot be undone.`)) {
+        if (window.confirm(`Delete Room ${roomNumber}?`)) {
             try {
                 await API.delete(`/rooms/${id}`);
                 fetchRooms();
@@ -171,7 +183,7 @@ const Rooms = () => {
         }
     };
 
-    if (loading) return <div className="p-10 text-center font-bold text-gray-500">Loading Campus Rooms...</div>;
+    if (loading) return <div className="p-10 text-center font-bold text-gray-500 tracking-widest uppercase animate-pulse">Loading Campus Classrooms...</div>;
 
     return (
         <div className="p-10 bg-gray-50 min-h-screen">
@@ -190,67 +202,101 @@ const Rooms = () => {
                 )}
             </header>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {rooms.map((room) => (
                     <div
                         key={room.id}
-                        className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between min-h-[160px] relative group"
+                        className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-xl transition duration-300 flex flex-col relative group"
                     >
                         {role === 'admin' && (
-                            <button
-                                onClick={() => handleDeleteRoom(room.id, room.room_number, room.status)}
-                                className="absolute -top-2 -right-2 bg-red-600 text-white p-2 rounded-full shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 z-10 hover:bg-red-700 hover:scale-110"
-                                title="Delete Classroom"
-                            >
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        )}
-                        <div className="flex justify-between items-start mb-2">
-                            <div>
-                                <h3 className="text-xl font-black text-gray-900 tracking-tight">{room.room_number}</h3>
-                                {room.building && <p className="text-[8px] font-bold text-gray-400 uppercase">{room.building} • Fl {room.floor}</p>}
+                            <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                <button
+                                    onClick={() => { setSelectedRoom(room); setEditRoomData(room); setShowEditRoomModal(true); }}
+                                    className="bg-indigo-600 text-white p-2 rounded-xl shadow-lg hover:bg-indigo-700 transition"
+                                    title="Edit Room"
+                                >
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
                             </div>
-                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black tracking-widest border uppercase ${getStatusStyles(room.status)}`}>
+                        )}
+
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <h3 className="text-3xl font-black text-gray-900 tracking-tight">{room.room_number}</h3>
+                                {room.building && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{room.building} • Floor {room.floor}</p>}
+                            </div>
+                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest border uppercase ${getStatusStyles(room.status)}`}>
                                 {room.status === 'IN_USE' ? 'Occupied' : 'Available'}
                             </span>
                         </div>
 
-                        {room.status === 'IN_USE' && activeSessions[room.id] && (
-                            <div className="mb-3 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/30 space-y-1.5 animate-in fade-in duration-700">
-                                <div className="flex items-center space-x-2">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
-                                    <p className="text-[10px] font-black text-gray-800 truncate">
-                                        {activeSessions[room.id].faculty_name}
-                                        <span className="text-indigo-400 text-[8px] font-bold ml-1">({activeSessions[room.id].faculty_id_display})</span>
-                                    </p>
+                        {room.status === 'IN_USE' && activeSessions[room.id] ? (
+                            <div className="mb-6 bg-indigo-50 border border-indigo-100 p-6 rounded-[2rem] animate-in fade-in duration-500">
+                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">Active Session</p>
+                                <div className="space-y-3">
+                                    <div className="flex items-center">
+                                        <div className="h-2 w-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></div>
+                                        <p className="text-xs font-bold text-gray-700 truncate">
+                                            {activeSessions[room.id].faculty_name}
+                                        </p>
+                                    </div>
+                                    <div className="pl-4 border-l-2 border-indigo-100">
+                                        <p className="text-[11px] font-black text-indigo-600 truncate">{activeSessions[room.id].subject}</p>
+                                        <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5">Sec {activeSessions[room.id].section} • {activeSessions[room.id].start_time_display}</p>
+                                    </div>
                                 </div>
-                                <div className="pl-3.5 space-y-0.5 border-l border-indigo-100 ml-0.5">
-                                    <p className="text-[9px] font-bold text-indigo-600 truncate leading-tight">{activeSessions[room.id].subject}</p>
-                                    <div className="flex justify-between items-center pt-0.5">
-                                        <span className="text-[8px] text-gray-400 font-black uppercase">Sec {activeSessions[room.id].section}</span>
-                                        <span className="text-[8px] text-gray-400 font-bold">{activeSessions[room.id].start_time_display}</span>
+                            </div>
+                        ) : (
+                            <div className="space-y-4 mb-8">
+                                <div className="flex items-center text-gray-500 bg-gray-50 p-4 rounded-2xl border border-gray-100/50">
+                                    <svg className="h-6 w-6 mr-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-tight">Department</p>
+                                        <p className="text-sm font-bold text-gray-800">{room.department}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center text-gray-500 bg-gray-50 p-4 rounded-2xl border border-gray-100/50">
+                                    <svg className="h-6 w-6 mr-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 005.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-tight">Max Capacity</p>
+                                        <p className="text-sm font-bold text-gray-800">{room.capacity} Students</p>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {role !== 'student' && (
-                            <div className="mt-auto">
+                            <div className={`mt-auto flex gap-3`}>
                                 {room.status === 'AVAILABLE' ? (
                                     <button
                                         onClick={() => { setSelectedRoom(room); setShowStartModal(true); }}
-                                        className="w-full bg-green-600 text-white py-2 rounded-xl font-black text-[10px] hover:bg-green-700 transition shadow-sm"
+                                        className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-black text-sm hover:bg-green-700 transition shadow-lg shadow-green-100"
                                     >
                                         Start Class
                                     </button>
                                 ) : (
                                     <button
                                         onClick={() => handleEndClass(room.id)}
-                                        className="w-full bg-red-600 text-white py-2 rounded-xl font-black text-[10px] hover:bg-red-700 transition shadow-sm"
+                                        className="flex-1 bg-red-600 text-white py-4 rounded-2xl font-black text-sm hover:bg-red-700 transition shadow-lg shadow-red-100"
                                     >
                                         End Class
+                                    </button>
+                                )}
+                                {role === 'admin' && (
+                                    <button
+                                        onClick={() => handleDeleteRoom(room.id, room.room_number, room.status)}
+                                        className="bg-gray-100 text-red-600 px-4 rounded-2xl hover:bg-red-50 transition border border-gray-200"
+                                        title="Delete Classroom"
+                                    >
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
                                     </button>
                                 )}
                             </div>
@@ -259,112 +305,52 @@ const Rooms = () => {
                 ))}
             </div>
 
+            {/* Modal: Start Class */}
             {showStartModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50 overflow-y-auto">
-                    {/* ... (existing start modal code remains the same) ... */}
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="bg-indigo-600 p-6 text-white"><h2 className="text-2xl font-black uppercase">Start Class • {selectedRoom?.room_number}</h2></div>
+                        <div className="p-8 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Faculty Name</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500" value={sessionData.faculty_name} onChange={(e) => setSessionData({...sessionData, faculty_name: e.target.value})} required/></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Faculty ID</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500" value={sessionData.faculty_id_display} onChange={(e) => setSessionData({...sessionData, faculty_id_display: e.target.value})} required/></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Department</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.department} onChange={(e) => setSessionData({...sessionData, department: e.target.value, subject: ''})} required><option value="">Select Department</option>{departments.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Subject</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.subject} onChange={(e) => setSessionData({...sessionData, subject: e.target.value})} required disabled={!sessionData.department}><option value="">Select Subject</option>{sessionData.department && subjectMap[sessionData.department]?.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Section</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.section} onChange={(e) => setSessionData({...sessionData, section: e.target.value})} required><option value="">Select Section</option>{['A','B','C','D','E','F'].map(s => <option key={s} value={s}>Section {s}</option>)}</select></div>
+                            <div className="flex gap-4"><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase">Date</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.date} readOnly/></div><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase">Time</label><input type="time" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.start_time_display} readOnly/></div></div>
+                        </div>
+                        <div className="p-6 bg-white border-t flex gap-4"><button onClick={() => setShowStartModal(false)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-black">Cancel</button><button onClick={handleStartClass} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg">Confirm & Start</button></div>
+                    </div>
                 </div>
             )}
 
+            {/* Modal: Add Room */}
             {showAddRoomModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50 overflow-y-auto">
-                    <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] w-full max-w-2xl my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[95vh]">
-                        <div className="bg-indigo-600 p-6 md:p-8 text-white relative flex-shrink-0">
-                            <h2 className="text-3xl font-black tracking-tight uppercase">New Classroom</h2>
-                            <p className="text-indigo-100 font-bold opacity-80 mt-1 uppercase tracking-widest text-xs">Administrative Access Only</p>
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
+                        <div className="bg-indigo-600 p-6 text-white"><h2 className="text-2xl font-black uppercase">Add New Classroom</h2></div>
+                        <div className="p-8 grid grid-cols-2 gap-6">
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Room Number</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newRoomData.room_number} onChange={(e) => setNewRoomData({...newRoomData, room_number: e.target.value})} required/></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Room Name</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newRoomData.room_name} onChange={(e) => setNewRoomData({...newRoomData, room_name: e.target.value})}/></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Building</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newRoomData.building} onChange={(e) => setNewRoomData({...newRoomData, building: e.target.value})}/></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Floor</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newRoomData.floor} onChange={(e) => setNewRoomData({...newRoomData, floor: e.target.value})}/></div>
                         </div>
+                        <div className="p-6 border-t flex gap-4"><button onClick={() => setShowAddRoomModal(false)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-black">Cancel</button><button onClick={handleAddRoom} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg">Create Room</button></div>
+                    </div>
+                </div>
+            )}
 
-                        <div className="overflow-y-auto flex-1 custom-scrollbar">
-                            <form onSubmit={handleAddRoom} className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 bg-white">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">ROOM NUMBER</label>
-                                    <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
-                                        value={newRoomData.room_number}
-                                        onChange={(e) => setNewRoomData({...newRoomData, room_number: e.target.value})}
-                                        required
-                                        placeholder="e.g. A-101"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">ROOM NAME</label>
-                                    <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
-                                        value={newRoomData.room_name}
-                                        onChange={(e) => setNewRoomData({...newRoomData, room_name: e.target.value})}
-                                        placeholder="e.g. Smart Lab"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">BUILDING</label>
-                                    <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
-                                        value={newRoomData.building}
-                                        onChange={(e) => setNewRoomData({...newRoomData, building: e.target.value})}
-                                        placeholder="e.g. Science Block"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">FLOOR</label>
-                                    <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
-                                        value={newRoomData.floor}
-                                        onChange={(e) => setNewRoomData({...newRoomData, floor: e.target.value})}
-                                        placeholder="e.g. Ground"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">ROOM TYPE</label>
-                                    <select
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none"
-                                        value={newRoomData.type}
-                                        onChange={(e) => setNewRoomData({...newRoomData, type: e.target.value})}
-                                        required
-                                    >
-                                        <option value="Classroom">Classroom</option>
-                                        <option value="Lab">Lab</option>
-                                        <option value="Seminar Hall">Seminar Hall</option>
-                                        <option value="Office">Office</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">CAPACITY</label>
-                                    <input
-                                        type="number"
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
-                                        value={newRoomData.capacity}
-                                        onChange={(e) => setNewRoomData({...newRoomData, capacity: e.target.value})}
-                                        required
-                                    />
-                                </div>
-                                <div className="md:col-span-2 space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">DEPARTMENT</label>
-                                    <select
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none"
-                                        value={newRoomData.department}
-                                        onChange={(e) => setNewRoomData({...newRoomData, department: e.target.value})}
-                                        required
-                                    >
-                                        {departments.map(d => <option key={d} value={d}>{d}</option>)}
-                                    </select>
-                                </div>
-                            </form>
+            {/* Modal: Edit Room */}
+            {showEditRoomModal && (
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
+                        <div className="bg-indigo-600 p-6 text-white"><h2 className="text-2xl font-black uppercase">Edit Classroom</h2></div>
+                        <div className="p-8 grid grid-cols-2 gap-6">
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Room Number</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={editRoomData.room_number} onChange={(e) => setEditRoomData({...editRoomData, room_number: e.target.value})} required/></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Room Name</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={editRoomData.room_name} onChange={(e) => setEditRoomData({...editRoomData, room_name: e.target.value})}/></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Building</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={editRoomData.building} onChange={(e) => setEditRoomData({...editRoomData, building: e.target.value})}/></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Floor</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={editRoomData.floor} onChange={(e) => setEditRoomData({...editRoomData, floor: e.target.value})}/></div>
                         </div>
-
-                        <div className="p-6 md:p-8 bg-white border-t border-gray-50 flex gap-4">
-                            <button
-                                type="button"
-                                onClick={() => setShowAddRoomModal(false)}
-                                className="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black hover:bg-gray-200 transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleAddRoom}
-                                className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition"
-                            >
-                                Create Room
-                            </button>
-                        </div>
+                        <div className="p-6 border-t flex gap-4"><button onClick={() => setShowEditRoomModal(false)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-black">Cancel</button><button onClick={handleUpdateRoom} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg">Save Changes</button></div>
                     </div>
                 </div>
             )}
