@@ -1,0 +1,39 @@
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background is transparent -->
+
+    <!-- Sun/Icon Group -->
+    <g transform="translate(250, 160)">
+        <!-- Green Sunburst Background -->
+        <path d="M-85,0 A85,85 0 1,1 85,0" fill="#10a34d" />
+        <circle cx="0" cy="0" r="85" fill="#10a34d" />
+
+        <!-- White Sun Rays -->
+        <g stroke="white" stroke-width="2.5" stroke-linecap="round">
+            <line x1="0" y1="-85" x2="0" y2="0" />
+            <line x1="0" y1="0" x2="60" y2="-60" />
+            <line x1="0" y1="0" x2="85" y2="0" />
+            <line x1="0" y1="0" x2="60" y2="60" />
+            <line x1="0" y1="0" x2="-60" y2="-60" />
+            <line x1="0" y1="0" x2="-85" y2="0" />
+            <line x1="0" y1="0" x2="-60" y2="60" />
+            <line x1="0" y1="0" x2="30" y2="-80" />
+            <line x1="0" y1="0" x2="-30" y2="-80" />
+        </g>
+
+        <!-- Open Book / Waves Base -->
+        <g transform="translate(0, 15)">
+            <path d="M-100,10 Q-50,-10 0,10 Q50,-10 100,10 Q50,30 0,10 Q-50,30 -100,10 Z" fill="#10a34d" />
+            <path d="M-100,10 Q-50,-10 0,10 Q50,-10 100,10" fill="none" stroke="white" stroke-width="3" />
+            <path d="M-90,25 Q-45,5 0,25 Q45,5 90,25" fill="none" stroke="white" stroke-width="2" opacity="0.8" />
+        </g>
+    </g>
+
+    <!-- Tagline -->
+    <text x="250" y="275" font-family="'Segoe UI', Roboto, Arial, sans-serif" font-size="14" font-weight="600" fill="#333" text-anchor="middle" letter-spacing="0.5">Enable | Enlighten | Enrich</text>
+
+    <!-- Main Title: KARPAGAM -->
+    <text x="250" y="345" font-family="'Segoe UI', Roboto, Arial, sans-serif" font-size="64" font-weight="800" fill="#1e293b" text-anchor="middle" letter-spacing="3">KARPAGAM</text>
+
+    <!-- Sub Title: ACADEMY OF HIGHER EDUCATION -->
+    <text x="250" y="385" font-family="'Segoe UI', Roboto, Arial, sans-serif" font-size="22" font-weight="700" fill="#475569" text-anchor="middle" letter-spacing="1">ACADEMY OF HIGHER EDUCATION</text>
+</svg>
