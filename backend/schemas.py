@@ -27,6 +27,9 @@ class TokenData(BaseModel):
 
 class RoomBase(BaseModel):
     room_number: str
+    room_name: Optional[str] = None
+    floor: Optional[str] = None
+    building: Optional[str] = None
     type: str
     capacity: int
     department: str

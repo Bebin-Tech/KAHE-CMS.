@@ -33,6 +33,9 @@ class Room(Base):
     __tablename__ = "rooms"
     id = Column(Integer, primary_key=True, index=True)
     room_number = Column(String, unique=True, index=True)
+    room_name = Column(String) # Added
+    floor = Column(String) # Added
+    building = Column(String) # Added
     type = Column(String)
     capacity = Column(Integer)
     department = Column(String)

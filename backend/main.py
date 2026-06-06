@@ -68,6 +68,10 @@ def delete_room(room_id: int, db: Session = Depends(database.get_db), current_us
     db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
     if not db_room:
         raise HTTPException(status_code=404, detail="Room not found")
+    
+    if db_room.status == "IN_USE":
+        raise HTTPException(status_code=400, detail="Cannot delete a room while a class is in progress")
+
     db.delete(db_room)
     db.commit()
     return {"message": "Room deleted successfully"}
@@ -99,6 +103,15 @@ def book_room(booking: schemas.BookingCreate, db: Session = Depends(database.get
 @app.get("/bookings", response_model=List[schemas.Booking])
 def get_bookings(db: Session = Depends(database.get_db)):
     return db.query(models.Booking).all()
+
+@app.delete("/bookings/{booking_id}")
+def delete_booking(booking_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    db_booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
+    if not db_booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    db.delete(db_booking)
+    db.commit()
+    return {"message": "Booking deleted successfully"}
 
 # Class Session APIs
 @app.post("/start-class", response_model=schemas.ClassSession)
