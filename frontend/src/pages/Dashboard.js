@@ -53,14 +53,20 @@ const Dashboard = () => {
         }
     };
 
+    const getDisplayRole = (r) => {
+        if (!r) return 'User';
+        if (r.toLowerCase() === 'admin') return 'Admin';
+        if (r.length <= 3) return r.toUpperCase(); // Handles HOD, Staff (wait staff is 5), etc.
+        return r.charAt(0).toUpperCase() + r.slice(1);
+    };
+
     return (
         <div className="p-10 bg-gray-50 min-h-screen">
             <header className="mb-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-                        Welcome back, <span className={`${role === 'admin' ? 'text-green-600' : 'text-violet-600'} capitalize`}>{role}</span>
+                        Welcome back, <span className={role === 'admin' ? 'text-green-600' : 'text-violet-600'}>{getDisplayRole(role)}</span>.
                     </h1>
-                    <p className="mt-2 text-lg text-gray-600 font-medium">Here's what's happening on campus today.</p>
                 </div>
             </header>
 
