@@ -18,6 +18,7 @@ const Login = () => {
             const response = await API.post('/login', formData);
             localStorage.setItem('token', response.data.access_token);
             localStorage.setItem('role', response.data.role);
+            localStorage.setItem('user_id', response.data.user_id);
             navigate('/');
             window.location.reload();
         } catch (err) {

@@ -14,6 +14,7 @@ const Rooms = () => {
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [activeSessions, setActiveSessions] = useState({});
     const role = localStorage.getItem('role');
+    const currentUserId = parseInt(localStorage.getItem('user_id'));
 
     const [newRoomData, setNewRoomData] = useState({
         room_number: '',
@@ -332,13 +333,20 @@ const Rooms = () => {
                                             <span>START CLASS</span>
                                         </button>
                                     ) : (
-                                        <button
-                                            onClick={() => handleEndClass(room.id)}
-                                            className="flex-1 bg-red-600 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-red-700 transition shadow-lg shadow-red-100 active:scale-[0.98] flex items-center justify-center space-x-2"
-                                        >
-                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-                                            <span>END CLASS</span>
-                                        </button>
+                                        // Only show END CLASS if user is the faculty who started it OR is an admin
+                                        (role === 'admin' || activeSessions[room.id]?.faculty_user_id === currentUserId) ? (
+                                            <button
+                                                onClick={() => handleEndClass(room.id)}
+                                                className="flex-1 bg-red-600 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-red-700 transition shadow-lg shadow-red-100 active:scale-[0.98] flex items-center justify-center space-x-2"
+                                            >
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                <span>END CLASS</span>
+                                            </button>
+                                        ) : (
+                                            <div className="flex-1 bg-gray-100 text-gray-400 py-3.5 rounded-2xl font-black text-xs flex items-center justify-center cursor-not-allowed">
+                                                <span>OCCUPIED</span>
+                                            </div>
+                                        )
                                     )}
                                     {role === 'admin' && (
                                         <button

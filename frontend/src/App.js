@@ -16,6 +16,7 @@ const PrivateRoute = ({ children }) => {
 
 function App() {
     const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
 
     return (
         <Router>
@@ -24,12 +25,24 @@ function App() {
                 <main className="flex-1 overflow-y-auto">
                     <Routes>
                         <Route path="/login" element={<Login />} />
-                        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+                        <Route path="/" element={
+                            <PrivateRoute>
+                                {role === 'admin' ? <Dashboard /> : <Navigate to="/rooms" />}
+                            </PrivateRoute>
+                        } />
                         <Route path="/rooms" element={<PrivateRoute><Rooms /></PrivateRoute>} />
                         <Route path="/rooms/:roomId" element={<PrivateRoute><RoomDetails /></PrivateRoute>} />
                         <Route path="/bookings" element={<PrivateRoute><Bookings /></PrivateRoute>} />
-                        <Route path="/schedule" element={<PrivateRoute><Schedule /></PrivateRoute>} />
-                        <Route path="/user-directory" element={<PrivateRoute><UserDirectory /></PrivateRoute>} />
+                        <Route path="/schedule" element={
+                            <PrivateRoute>
+                                {role === 'admin' ? <Schedule /> : <Navigate to="/rooms" />}
+                            </PrivateRoute>
+                        } />
+                        <Route path="/user-directory" element={
+                            <PrivateRoute>
+                                {role === 'admin' ? <UserDirectory /> : <Navigate to="/rooms" />}
+                            </PrivateRoute>
+                        } />
                     </Routes>
                 </main>
             </div>

@@ -108,8 +108,8 @@ const UserDirectory = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-10">
                 {[
                     { label: 'TOTAL USERS', val: stats.total, color: 'text-indigo-600' },
-                    { label: 'ADMINS', val: stats.admins, color: 'text-blue-600' },
-                    { label: 'ACTIVE', val: stats.active, color: 'text-green-600' }
+                    { label: 'ADMINS', val: stats.admins, color: 'text-green-600' },
+                    { label: 'ACTIVE', val: stats.active, color: 'text-blue-600' }
                 ].map((s, idx) => (
                     <div key={idx} className="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center">
                         <p className={`text-3xl md:text-4xl font-black ${s.color}`}>{s.val}</p>
@@ -153,7 +153,9 @@ const UserDirectory = () => {
                                     <td className="p-4 md:p-6 text-gray-400 font-bold">{index + 1}</td>
                                     <td className="p-4 md:p-6">
                                         <div className="flex items-center space-x-4">
-                                            <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-lg uppercase flex-shrink-0">
+                                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-white font-black text-lg uppercase flex-shrink-0 ${
+                                                user.role === 'admin' ? 'bg-green-600' : 'bg-violet-600'
+                                            }`}>
                                                 {user.name.charAt(0)}
                                             </div>
                                             <div className="min-w-0">
@@ -166,10 +168,8 @@ const UserDirectory = () => {
                                     <td className="p-4 md:p-6">
                                         <span className={`px-3 py-1 rounded-lg text-[9px] font-black tracking-widest uppercase border inline-block ${
                                             user.role === 'admin'
-                                                ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                                : user.role === 'faculty'
-                                                    ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                                                    : 'bg-gray-50 text-gray-600 border-gray-100'
+                                                ? 'bg-green-50 text-green-600 border-green-100'
+                                                : 'bg-violet-50 text-violet-600 border-violet-100'
                                         }`}>
                                             {user.role}
                                         </span>

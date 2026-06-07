@@ -58,7 +58,7 @@ const Dashboard = () => {
             <header className="mb-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-                        Welcome back, <span className="text-indigo-600 capitalize">{role}</span>
+                        Welcome back, <span className={`${role === 'admin' ? 'text-green-600' : 'text-violet-600'} capitalize`}>{role}</span>
                     </h1>
                     <p className="mt-2 text-lg text-gray-600 font-medium">Here's what's happening on campus today.</p>
                 </div>
