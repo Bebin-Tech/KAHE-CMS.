@@ -47,10 +47,6 @@ const Dashboard = () => {
                     </h1>
                     <p className="mt-2 text-lg text-gray-600 font-medium">Here's what's happening on campus today.</p>
                 </div>
-                <div className="flex space-x-3">
-                    <button className="bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-xl font-bold shadow-sm hover:bg-gray-50 transition">Export PDF</button>
-                    <button className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition">View Schedule</button>
-                </div>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

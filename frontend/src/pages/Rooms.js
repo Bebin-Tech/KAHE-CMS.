@@ -132,9 +132,11 @@ const Rooms = () => {
     };
 
     const handleAddRoom = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         try {
-            await API.post('/rooms', newRoomData);
+            console.log("Adding room with data:", newRoomData);
+            const res = await API.post('/rooms', newRoomData);
+            console.log("Add room response:", res.data);
             setShowAddRoomModal(false);
             setNewRoomData({
                 room_number: '', room_name: '', floor: '', building: '',
@@ -143,19 +145,35 @@ const Rooms = () => {
             fetchRooms();
             alert('Room added successfully!');
         } catch (err) {
-            alert(err.response?.data?.detail || 'Failed to add room. Please login again.');
+            console.error("Add room full error details:", err);
+            const detail = err.response?.data?.detail;
+            let errorMsg = 'Failed to add room. Please try logging out and back in.';
+
+            if (typeof detail === 'string') {
+                errorMsg = detail;
+            } else if (Array.isArray(detail)) {
+                errorMsg = detail.map(d => `${d.loc.join('.')}: ${d.msg}`).join('\n');
+            } else if (err.response?.status === 401) {
+                errorMsg = "Unauthorized: Please logout and login again.";
+            } else if (err.response?.status === 403) {
+                errorMsg = "Access Denied: You must be an admin to add rooms.";
+            }
+
+            alert(errorMsg);
         }
     };
 
     const handleUpdateRoom = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         try {
             await API.put(`/rooms/${selectedRoom.id}`, editRoomData);
             setShowEditRoomModal(false);
             fetchRooms();
             alert('Room updated successfully!');
         } catch (err) {
-            alert(err.response?.data?.detail || 'Failed to update room');
+            console.error("Update room error:", err);
+            const detail = err.response?.data?.detail;
+            alert(typeof detail === 'string' ? detail : 'Failed to update room');
         }
     };
 
@@ -170,7 +188,9 @@ const Rooms = () => {
                 fetchRooms();
                 alert('Room deleted successfully.');
             } catch (err) {
-                alert(err.response?.data?.detail || 'Failed to delete room');
+                console.error("Delete room error:", err);
+                const detail = err.response?.data?.detail;
+                alert(typeof detail === 'string' ? detail : 'Failed to delete room');
             }
         }
     };
@@ -325,32 +345,204 @@ const Rooms = () => {
 
             {/* Modal: Add Room */}
             {showAddRoomModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
-                        <div className="bg-indigo-600 p-6 text-white"><h2 className="text-2xl font-black uppercase">Add New Classroom</h2></div>
-                        <div className="p-8 grid grid-cols-2 gap-6">
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Room Number</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newRoomData.room_number} onChange={(e) => setNewRoomData({...newRoomData, room_number: e.target.value})} required/></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Room Name</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newRoomData.room_name} onChange={(e) => setNewRoomData({...newRoomData, room_name: e.target.value})}/></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Building</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newRoomData.building} onChange={(e) => setNewRoomData({...newRoomData, building: e.target.value})}/></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Floor</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newRoomData.floor} onChange={(e) => setNewRoomData({...newRoomData, floor: e.target.value})}/></div>
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50 overflow-y-auto">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-3xl my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="bg-indigo-600 p-8 md:p-10 text-white relative flex-shrink-0">
+                            <div className="relative z-10">
+                                <h2 className="text-3xl md:text-4xl font-black tracking-tight uppercase">Add Classroom</h2>
+                                <p className="text-indigo-100 font-bold opacity-80 mt-1 uppercase tracking-widest text-xs">New Institutional Space</p>
+                            </div>
+                            <div className="absolute top-0 right-0 p-8 opacity-10 transform scale-150 rotate-12">
+                                <svg className="h-24 w-24 md:h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+                            </div>
                         </div>
-                        <div className="p-6 border-t flex gap-4"><button onClick={() => setShowAddRoomModal(false)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-black">Cancel</button><button onClick={handleAddRoom} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg">Create Room</button></div>
+
+                        <div className="overflow-y-auto flex-1 custom-scrollbar bg-white">
+                            <form onSubmit={handleAddRoom} id="addRoomForm" className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Number</label>
+                                    <input
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none transition-all"
+                                        value={newRoomData.room_number}
+                                        onChange={(e) => setNewRoomData({...newRoomData, room_number: e.target.value})}
+                                        required
+                                        placeholder="e.g. A-101"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Name</label>
+                                    <input
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none transition-all"
+                                        value={newRoomData.room_name}
+                                        onChange={(e) => setNewRoomData({...newRoomData, room_name: e.target.value})}
+                                        placeholder="e.g. Computer Lab"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Building</label>
+                                    <input
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none transition-all"
+                                        value={newRoomData.building}
+                                        onChange={(e) => setNewRoomData({...newRoomData, building: e.target.value})}
+                                        placeholder="Main Block"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Floor</label>
+                                    <input
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none transition-all"
+                                        value={newRoomData.floor}
+                                        onChange={(e) => setNewRoomData({...newRoomData, floor: e.target.value})}
+                                        placeholder="1st Floor"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Type</label>
+                                    <select
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none"
+                                        value={newRoomData.type}
+                                        onChange={(e) => setNewRoomData({...newRoomData, type: e.target.value})}
+                                        required
+                                    >
+                                        <option value="Classroom">Classroom</option>
+                                        <option value="Lab">Lab</option>
+                                        <option value="Seminar Hall">Seminar Hall</option>
+                                        <option value="Office">Office</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Capacity</label>
+                                    <input
+                                        type="number"
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none transition-all"
+                                        value={newRoomData.capacity}
+                                        onChange={(e) => setNewRoomData({...newRoomData, capacity: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Primary Department</label>
+                                    <select
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none"
+                                        value={newRoomData.department}
+                                        onChange={(e) => setNewRoomData({...newRoomData, department: e.target.value})}
+                                        required
+                                    >
+                                        {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="p-8 md:p-10 bg-white border-t border-gray-50 flex gap-4 md:gap-6 flex-shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowAddRoomModal(false)}
+                                className="flex-1 bg-gray-100 text-gray-500 py-4 md:py-5 rounded-[1.5rem] font-black hover:bg-gray-200 transition text-lg"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                form="addRoomForm"
+                                className="flex-1 bg-indigo-600 text-white py-4 md:py-5 rounded-[1.5rem] font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition text-lg"
+                            >
+                                Create Room
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Modal: Edit Room */}
             {showEditRoomModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
-                        <div className="bg-indigo-600 p-6 text-white"><h2 className="text-2xl font-black uppercase">Edit Classroom</h2></div>
-                        <div className="p-8 grid grid-cols-2 gap-6">
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Room Number</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={editRoomData.room_number} onChange={(e) => setEditRoomData({...editRoomData, room_number: e.target.value})} required/></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Room Name</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={editRoomData.room_name} onChange={(e) => setEditRoomData({...editRoomData, room_name: e.target.value})}/></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Building</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={editRoomData.building} onChange={(e) => setEditRoomData({...editRoomData, building: e.target.value})}/></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Floor</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={editRoomData.floor} onChange={(e) => setEditRoomData({...editRoomData, floor: e.target.value})}/></div>
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50 overflow-y-auto">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-3xl my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="bg-indigo-600 p-8 md:p-10 text-white relative flex-shrink-0">
+                            <div className="relative z-10">
+                                <h2 className="text-3xl md:text-4xl font-black tracking-tight uppercase">Edit Classroom</h2>
+                                <p className="text-indigo-100 font-bold opacity-80 mt-1 uppercase tracking-widest text-xs">Update Asset Information</p>
+                            </div>
                         </div>
-                        <div className="p-6 border-t flex gap-4"><button onClick={() => setShowEditRoomModal(false)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-black">Cancel</button><button onClick={handleUpdateRoom} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg">Save Changes</button></div>
+
+                        <div className="overflow-y-auto flex-1 custom-scrollbar bg-white">
+                            <form onSubmit={handleUpdateRoom} id="editRoomForm" className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Number</label>
+                                    <input
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        value={editRoomData.room_number}
+                                        onChange={(e) => setEditRoomData({...editRoomData, room_number: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Name</label>
+                                    <input
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        value={editRoomData.room_name}
+                                        onChange={(e) => setEditRoomData({...editRoomData, room_name: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Building</label>
+                                    <input
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        value={editRoomData.building}
+                                        onChange={(e) => setEditRoomData({...editRoomData, building: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Floor</label>
+                                    <input
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        value={editRoomData.floor}
+                                        onChange={(e) => setEditRoomData({...editRoomData, floor: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Type</label>
+                                    <select
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none"
+                                        value={editRoomData.type}
+                                        onChange={(e) => setEditRoomData({...editRoomData, type: e.target.value})}
+                                        required
+                                    >
+                                        <option value="Classroom">Classroom</option>
+                                        <option value="Lab">Lab</option>
+                                        <option value="Seminar Hall">Seminar Hall</option>
+                                        <option value="Office">Office</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Capacity</label>
+                                    <input
+                                        type="number"
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        value={editRoomData.capacity}
+                                        onChange={(e) => setEditRoomData({...editRoomData, capacity: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="p-8 md:p-10 bg-white border-t border-gray-50 flex gap-4 md:gap-6 flex-shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowEditRoomModal(false)}
+                                className="flex-1 bg-gray-100 text-gray-500 py-4 md:py-5 rounded-[1.5rem] font-black hover:bg-gray-200 transition text-lg"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                form="editRoomForm"
+                                className="flex-1 bg-indigo-600 text-white py-4 md:py-5 rounded-[1.5rem] font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition text-lg"
+                            >
+                                Save Changes
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

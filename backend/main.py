@@ -208,6 +208,16 @@ def get_active_session(room_id: int, db: Session = Depends(database.get_db)):
 # User Management (Admin Only)
 @app.post("/users", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    # Check if email is already taken
+    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="A user with this email address already exists.")
+    
+    # Check if faculty_id/username is already taken
+    existing_id = db.query(models.User).filter(models.User.faculty_id == user.faculty_id).first()
+    if existing_id:
+        raise HTTPException(status_code=400, detail="This User ID (Username) is already taken.")
+
     hashed_password = auth.get_password_hash(user.password)
     db_user = models.User(
         name=user.name,
@@ -224,6 +234,35 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
 @app.get("/faculty", response_model=List[schemas.User])
 def get_faculty(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     return db.query(models.User).filter(models.User.role == "faculty").all()
+
+@app.get("/users_list", response_model=List[schemas.User])
+def get_users_list(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    return db.query(models.User).all()
+
+@app.put("/users/{user_id}", response_model=schemas.User)
+def update_user(user_id: int, user_update: schemas.UserCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    db_user.name = user_update.name
+    db_user.email = user_update.email
+    db_user.role = user_update.role
+    db_user.faculty_id = user_update.faculty_id
+    # Note: password update excluded for simplicity here, but can be added
+    
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(db_user)
+    db.commit()
+    return {"message": "User deleted successfully"}
 
 # Department & Subject APIs
 @app.get("/departments", response_model=List[schemas.Department])
