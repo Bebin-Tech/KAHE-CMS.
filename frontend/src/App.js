@@ -25,22 +25,18 @@ function App() {
                 <main className="flex-1 overflow-y-auto">
                     <Routes>
                         <Route path="/login" element={<Login />} />
-                        <Route path="/" element={
-                            <PrivateRoute>
-                                {role === 'admin' ? <Dashboard /> : <Navigate to="/rooms" />}
-                            </PrivateRoute>
-                        } />
+                        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                         <Route path="/rooms" element={<PrivateRoute><Rooms /></PrivateRoute>} />
                         <Route path="/rooms/:roomId" element={<PrivateRoute><RoomDetails /></PrivateRoute>} />
                         <Route path="/bookings" element={<PrivateRoute><Bookings /></PrivateRoute>} />
                         <Route path="/schedule" element={
                             <PrivateRoute>
-                                {role === 'admin' ? <Schedule /> : <Navigate to="/rooms" />}
+                                {role === 'admin' ? <Schedule /> : <Navigate to="/" />}
                             </PrivateRoute>
                         } />
                         <Route path="/user-directory" element={
                             <PrivateRoute>
-                                {role === 'admin' ? <UserDirectory /> : <Navigate to="/rooms" />}
+                                {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
                             </PrivateRoute>
                         } />
                     </Routes>

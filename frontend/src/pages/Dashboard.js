@@ -6,7 +6,8 @@ const Dashboard = () => {
     const [recentActivity, setRecentActivity] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [notifications, setNotifications] = useState([]);
-    const role = localStorage.getItem('role');
+    const role = localStorage.getItem('role')?.toLowerCase();
+    const userName = localStorage.getItem('name'); // Assuming name is stored in localStorage
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -28,10 +29,12 @@ const Dashboard = () => {
             }
         };
 
-        fetchStats();
-        const interval = setInterval(fetchStats, 5000);
-        return () => clearInterval(interval);
-    }, []);
+        if (role === 'admin') {
+            fetchStats();
+            const interval = setInterval(fetchStats, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [role]);
 
     const getTimeAgo = (dateStr) => {
         const date = new Date(dateStr);
@@ -55,22 +58,52 @@ const Dashboard = () => {
 
     const getDisplayRole = (r) => {
         if (!r) return 'User';
-        if (r.toLowerCase() === 'admin') return 'Admin';
-        if (r.length <= 3) return r.toUpperCase(); // Handles HOD, Staff (wait staff is 5), etc.
+        if (r === 'admin') return 'Admin';
+        if (r === 'hod') return 'HOD';
         return r.charAt(0).toUpperCase() + r.slice(1);
     };
 
+    // --- RENDER HOD DASHBOARD ---
+    if (role === 'hod') {
+        return (
+            <div className="p-10 bg-gray-50 min-h-screen flex items-center justify-center">
+                <div className="text-center animate-in fade-in zoom-in duration-700">
+                    <h1 className="text-5xl font-black text-gray-900 tracking-tight">
+                        Welcome back, <span className="text-violet-600">HOD</span>.
+                    </h1>
+                    <p className="mt-4 text-gray-500 font-medium text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
+                </div>
+            </div>
+        );
+    }
+
+    // --- RENDER FACULTY DASHBOARD (Landing Page) ---
+    if (role === 'faculty') {
+        return (
+            <div className="p-10 bg-gray-50 min-h-screen flex items-center justify-center">
+                <div className="text-center animate-in fade-in zoom-in duration-700">
+                    <h1 className="text-5xl font-black text-gray-900 tracking-tight">
+                        Welcome back, <span className="text-violet-600">HOD</span>.
+                    </h1>
+                    <p className="mt-4 text-gray-500 font-medium text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
+                </div>
+            </div>
+        );
+    }
+
+    // --- RENDER ADMIN DASHBOARD (FULL) ---
     return (
         <div className="p-10 bg-gray-50 min-h-screen">
             <header className="mb-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-                        Welcome back, <span className={role === 'admin' ? 'text-green-600' : 'text-violet-600'}>{getDisplayRole(role)}</span>.
+                        Welcome back, <span className="text-green-600">Admin</span>.
                     </h1>
                 </div>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Admin Stats Cards */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition duration-300 transform hover:-translate-y-1">
                     <div className="flex items-center justify-between mb-4">
                         <div className="bg-blue-50 p-3 rounded-xl text-blue-600">
@@ -111,6 +144,7 @@ const Dashboard = () => {
                 </div>
             </div>
 
+            {/* Notifications */}
             {notifications.length > 0 && (
                 <div className="mt-8 space-y-4">
                     {notifications.map(n => (
@@ -137,6 +171,7 @@ const Dashboard = () => {
                 </div>
             )}
 
+            {/* Recent Activity Section */}
             <div className="mt-12">
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-6">
