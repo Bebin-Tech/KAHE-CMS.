@@ -91,6 +91,12 @@ const Rooms = () => {
         } catch (err) {
             console.error("Backend unreachable:", err);
             setLoading(false);
+            if (err.response?.status === 401) {
+                alert("Your session has expired. Please login again.");
+                localStorage.clear();
+                navigate('/login');
+                window.location.reload();
+            }
         }
     };
 
@@ -222,105 +228,124 @@ const Rooms = () => {
                 )}
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {rooms.map((room) => (
                     <div
                         key={room.id}
-                        className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-xl transition duration-300 flex flex-col relative group"
+                        className="bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col relative group overflow-hidden"
                     >
-                        {role === 'admin' && (
-                            <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                <button
-                                    onClick={() => { setSelectedRoom(room); setEditRoomData(room); setShowEditRoomModal(true); }}
-                                    className="bg-indigo-600 text-white p-2 rounded-xl shadow-lg hover:bg-indigo-700 transition"
-                                    title="Edit Room"
-                                >
-                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                </button>
-                            </div>
-                        )}
+                        {/* Top Accent Bar */}
+                        <div className={`h-1.5 w-full ${room.status === 'IN_USE' ? 'bg-red-500' : 'bg-green-500'}`}></div>
 
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h3 className="text-3xl font-black text-gray-900 tracking-tight">{room.room_number}</h3>
-                                {room.building && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{room.building} • Floor {room.floor}</p>}
-                            </div>
-                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest border uppercase ${getStatusStyles(room.status)}`}>
-                                {room.status === 'IN_USE' ? 'Occupied' : 'Available'}
-                            </span>
-                        </div>
-
-                        {room.status === 'IN_USE' && activeSessions[room.id] ? (
-                            <div className="mb-6 bg-indigo-50 border border-indigo-100 p-6 rounded-[2rem] animate-in fade-in duration-500">
-                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">Active Session</p>
-                                <div className="space-y-3">
-                                    <div className="flex items-center">
-                                        <div className="h-2 w-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></div>
-                                        <p className="text-xs font-bold text-gray-700 truncate">
-                                            {activeSessions[room.id].faculty_name}
-                                        </p>
-                                    </div>
-                                    <div className="pl-4 border-l-2 border-indigo-100">
-                                        <p className="text-[11px] font-black text-indigo-600 truncate">{activeSessions[room.id].subject}</p>
-                                        <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5">Sec {activeSessions[room.id].section} • {activeSessions[room.id].start_time_display}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-4 mb-8">
-                                <div className="flex items-center text-gray-500 bg-gray-50 p-4 rounded-2xl border border-gray-100/50">
-                                    <svg className="h-6 w-6 mr-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" />
-                                    </svg>
-                                    <div>
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-tight">Department</p>
-                                        <p className="text-sm font-bold text-gray-800">{room.department}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center text-gray-500 bg-gray-50 p-4 rounded-2xl border border-gray-100/50">
-                                    <svg className="h-6 w-6 mr-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 005.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857" />
-                                    </svg>
-                                    <div>
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-tight">Max Capacity</p>
-                                        <p className="text-sm font-bold text-gray-800">{room.capacity} Students</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {role !== 'student' && (
-                            <div className={`mt-auto flex gap-3`}>
-                                {room.status === 'AVAILABLE' ? (
+                        <div className="p-8 flex flex-col flex-1">
+                            {role === 'admin' && (
+                                <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                     <button
-                                        onClick={() => { setSelectedRoom(room); setShowStartModal(true); }}
-                                        className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-black text-sm hover:bg-green-700 transition shadow-lg shadow-green-100"
+                                        onClick={() => { setSelectedRoom(room); setEditRoomData(room); setShowEditRoomModal(true); }}
+                                        className="bg-white/90 backdrop-blur-md text-indigo-600 p-2.5 rounded-xl shadow-lg border border-indigo-50 hover:bg-indigo-600 hover:text-white transition-all"
+                                        title="Edit Room"
                                     >
-                                        Start Class
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => handleEndClass(room.id)}
-                                        className="flex-1 bg-red-600 text-white py-4 rounded-2xl font-black text-sm hover:bg-red-700 transition shadow-lg shadow-red-100"
-                                    >
-                                        End Class
-                                    </button>
-                                )}
-                                {role === 'admin' && (
-                                    <button
-                                        onClick={() => handleDeleteRoom(room.id, room.room_number, room.status)}
-                                        className="bg-gray-100 text-red-600 px-4 rounded-2xl hover:bg-red-50 transition border border-gray-200"
-                                        title="Delete Classroom"
-                                    >
-                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                     </button>
-                                )}
+                                </div>
+                            )}
+
+                            <div className="flex justify-between items-start mb-6">
+                                <div>
+                                    <div className="flex items-center space-x-2 mb-1">
+                                        <span className="text-2xl font-black text-gray-900 tracking-tight">{room.room_number}</span>
+                                        {room.type === 'Lab' && <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Lab</span>}
+                                    </div>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center">
+                                        <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/></svg>
+                                        {room.building} • FL {room.floor}
+                                    </p>
+                                </div>
+                                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black tracking-[0.15em] border-2 uppercase ${getStatusStyles(room.status)}`}>
+                                    {room.status === 'IN_USE' ? '• Occupied' : '● Available'}
+                                </span>
                             </div>
-                        )}
+
+                            {room.status === 'IN_USE' && activeSessions[room.id] ? (
+                                <div className="mb-8 space-y-5 bg-indigo-50/50 p-6 rounded-[1.5rem] border border-indigo-100 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                    <div className="flex items-start space-x-4">
+                                        <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-200">
+                                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Faculty In-Charge</p>
+                                            <p className="text-sm font-bold text-gray-800 truncate">{activeSessions[room.id].faculty_name}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start space-x-4">
+                                        <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-indigo-100">
+                                            <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Subject & Section</p>
+                                            <p className="text-xs font-bold text-indigo-600 truncate leading-snug">{activeSessions[room.id].subject}</p>
+                                            <p className="text-[9px] text-gray-400 font-bold mt-0.5">Section {activeSessions[room.id].section} • {activeSessions[room.id].start_time_display}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 mb-8">
+                                    <div className="flex items-center text-gray-500 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 transition-colors group-hover:bg-indigo-50/30 group-hover:border-indigo-100">
+                                        <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center mr-3 shadow-sm border border-gray-100">
+                                            <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" /></svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider">Department</p>
+                                            <p className="text-[11px] font-bold text-gray-700">{room.department}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center text-gray-500 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 transition-colors group-hover:bg-indigo-50/30 group-hover:border-indigo-100">
+                                        <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center mr-3 shadow-sm border border-gray-100">
+                                            <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 005.356-1.857" /></svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider">Seating Capacity</p>
+                                            <p className="text-[11px] font-bold text-gray-700">{room.capacity} Students Max</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {role !== 'student' && (
+                                <div className="mt-auto flex gap-3">
+                                    {room.status === 'AVAILABLE' ? (
+                                        <button
+                                            onClick={() => { setSelectedRoom(room); setShowStartModal(true); }}
+                                            className="flex-1 bg-green-600 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-green-700 transition shadow-lg shadow-green-100 active:scale-[0.98] flex items-center justify-center space-x-2"
+                                        >
+                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
+                                            <span>START CLASS</span>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleEndClass(room.id)}
+                                            className="flex-1 bg-red-600 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-red-700 transition shadow-lg shadow-red-100 active:scale-[0.98] flex items-center justify-center space-x-2"
+                                        >
+                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                                            <span>END CLASS</span>
+                                        </button>
+                                    )}
+                                    {role === 'admin' && (
+                                        <button
+                                            onClick={() => handleDeleteRoom(room.id, room.room_number, room.status)}
+                                            className="bg-gray-100 text-red-500 px-4 rounded-2xl hover:bg-red-50 transition border border-gray-200 active:scale-95 group/del"
+                                            title="Delete Classroom"
+                                        >
+                                            <svg className="h-5 w-5 group-hover/del:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>

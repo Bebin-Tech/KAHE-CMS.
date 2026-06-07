@@ -58,11 +58,14 @@ const Bookings = () => {
     const handleUpdateBooking = async (e) => {
         if (e) e.preventDefault();
         try {
+            console.log("Updating booking with data:", editBooking);
             const data = { ...editBooking, room_id: parseInt(editBooking.room_id) };
-            await API.put(`/bookings/${selectedBooking.id}`, data);
-            setShowEditModal(false);
-            fetchData();
-            alert('Booking updated successfully!');
+            const res = await API.put(`/bookings/${selectedBooking.id}`, data);
+            if (res.status === 200) {
+                setShowEditModal(false);
+                fetchData();
+                alert('Booking updated successfully!');
+            }
         } catch (err) {
             console.error("Update booking error:", err);
             const detail = err.response?.data?.detail;
@@ -89,7 +92,7 @@ const Bookings = () => {
         <div className="p-10 bg-gray-50 min-h-screen">
             <header className="mb-10 flex justify-between items-center">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">Room Bookings</h1>
+                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">CR Booking</h1>
                     <p className="text-gray-600 font-medium">Manage and schedule classroom reservations.</p>
                 </div>
                 <button

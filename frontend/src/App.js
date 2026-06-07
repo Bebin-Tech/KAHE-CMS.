@@ -19,9 +19,9 @@ function App() {
 
     return (
         <Router>
-            <div className="flex bg-gray-50 min-h-screen">
+            <div className="flex bg-gray-50 h-screen overflow-hidden">
                 {token && <Sidebar />}
-                <main className="flex-1 overflow-x-hidden">
+                <main className="flex-1 overflow-y-auto">
                     <Routes>
                         <Route path="/login" element={<Login />} />
                         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

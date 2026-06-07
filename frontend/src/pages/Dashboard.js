@@ -3,6 +3,8 @@ import API from '../api';
 
 const Dashboard = () => {
     const [stats, setStats] = useState({ rooms: 0, bookings: 0, active: 0 });
+    const [recentActivity, setRecentActivity] = useState([]);
+    const [rooms, setRooms] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const role = localStorage.getItem('role');
 
@@ -13,11 +15,13 @@ const Dashboard = () => {
                 const historyRes = await API.get('/class-history');
                 const notifRes = await API.get('/notifications');
 
+                setRooms(roomsRes.data || []);
                 setStats({
                     rooms: roomsRes.data.length,
                     bookings: historyRes.data.length,
                     active: roomsRes.data.filter(r => r.status === 'IN_USE').length
                 });
+                setRecentActivity(historyRes.data.slice(0, 5)); // Get last 5 activities
                 setNotifications(notifRes.data.filter(n => !n.is_read));
             } catch (err) {
                 console.error(err);
@@ -28,6 +32,17 @@ const Dashboard = () => {
         const interval = setInterval(fetchStats, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    const getTimeAgo = (dateStr) => {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+
+        if (diffInSeconds < 60) return 'Just now';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+        return date.toLocaleDateString();
+    };
 
     const markRead = async (id) => {
         try {
@@ -67,12 +82,12 @@ const Dashboard = () => {
                     <div className="flex items-center justify-between mb-4">
                         <div className="bg-yellow-50 p-3 rounded-xl text-yellow-600">
                             <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <span className="text-yellow-500 font-bold bg-yellow-50 px-2 py-1 rounded text-xs">Active</span>
+                        <span className="text-yellow-500 font-bold bg-yellow-50 px-2 py-1 rounded text-xs">Live</span>
                     </div>
-                    <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider">Bookings</h3>
+                    <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider">Today's Usage</h3>
                     <p className="text-4xl font-black text-gray-900 mt-2">{stats.bookings}</p>
                 </div>
 
@@ -123,17 +138,22 @@ const Dashboard = () => {
                         <button className="text-indigo-600 font-bold text-sm hover:underline">View All</button>
                     </div>
                     <div className="space-y-6">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="flex items-center space-x-4 border-b border-gray-50 pb-4 last:border-0">
+                        {recentActivity.map((activity, index) => (
+                            <div key={activity.id} className="flex items-center space-x-4 border-b border-gray-50 pb-4 last:border-0">
                                 <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 text-xs font-bold">
-                                    {i}
+                                    {index + 1}
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-gray-800">Faculty booked Lab B-205</p>
-                                    <p className="text-xs text-gray-500">10 minutes ago</p>
+                                    <p className="text-sm font-bold text-gray-800">
+                                        Room {rooms.find(r => r.id === activity.room_id)?.room_number || activity.room_id} is {activity.status === 'ACTIVE' ? 'currently occupied' : 'now available'} by {activity.faculty_name}
+                                    </p>
+                                    <p className="text-xs text-gray-500">{getTimeAgo(activity.start_time)}</p>
                                 </div>
                             </div>
                         ))}
+                        {recentActivity.length === 0 && (
+                            <p className="text-center py-10 text-gray-400 font-medium italic">No recent campus activity detected.</p>
+                        )}
                     </div>
                 </div>
             </div>

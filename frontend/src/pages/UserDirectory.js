@@ -34,21 +34,27 @@ const UserDirectory = () => {
     const handleCreateOrUpdate = async (e) => {
         if (e) e.preventDefault();
         try {
+            console.log("Saving user with data:", formData);
             if (isEditing) {
-                await API.put(`/users/${selectedUser.id}`, formData);
-                alert('User updated successfully');
+                const res = await API.put(`/users/${selectedUser.id}`, formData);
+                if (res.status === 200) alert('User updated successfully');
             } else {
-                await API.post('/users', formData);
-                alert('User created successfully');
+                const res = await API.post('/users', formData);
+                if (res.status === 200 || res.status === 201) alert('User created successfully');
             }
             setShowModal(false);
             fetchUsers();
         } catch (err) {
             console.error("Operation error:", err);
-            const detail = err.response?.data?.detail;
-            const message = typeof detail === 'string' ? detail :
-                          (err.response?.status === 401 ? "Session expired. Please re-login." : 'Operation failed');
-            alert(message);
+            if (err.response?.status === 401) {
+                alert("Your session has expired. Please login again.");
+                localStorage.clear();
+                window.location.href = '/login';
+            } else {
+                const detail = err.response?.data?.detail;
+                const message = typeof detail === 'string' ? detail : 'Operation failed';
+                alert(message);
+            }
         }
     };
 
