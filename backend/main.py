@@ -1,15 +1,24 @@
+import logging
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from typing import List, Optional
 from datetime import datetime
 
 from . import models, schemas, auth, database
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI(title="KAHE Campus Management System")
+app = FastAPI(
+    title="KAHE Campus Management System",
+    description="Optimized backend for real-time classroom tracking and management."
+)
 
 # CORS middleware
 app.add_middleware(
@@ -22,94 +31,129 @@ app.add_middleware(
 
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    hashed_password = auth.get_password_hash(user.password)
-    db_user = models.User(
-        name=user.name,
-        email=user.email,
-        password=hashed_password,
-        role=user.role,
-        faculty_id=user.faculty_id
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    try:
+        db_user = db.query(models.User).filter(models.User.email == user.email).first()
+        if db_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        hashed_password = auth.get_password_hash(user.password)
+        db_user = models.User(
+            name=user.name,
+            email=user.email,
+            password=hashed_password,
+            role=user.role,
+            faculty_id=user.faculty_id
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error during registration: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error occurred during registration.")
 
 @app.post("/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not auth.verify_password(form_data.password, user.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = auth.create_access_token(data={"sub": user.email, "role": user.role})
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+    try:
+        user = db.query(models.User).filter(models.User.email == form_data.username).first()
+        if not user or not auth.verify_password(form_data.password, user.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        access_token = auth.create_access_token(data={"sub": user.email, "role": user.role})
+        return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+    except SQLAlchemyError as e:
+        logger.error(f"Database error during login: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error during login.")
 
 # Room APIs
 @app.get("/rooms", response_model=List[schemas.Room])
 def get_rooms(db: Session = Depends(database.get_db)):
-    return db.query(models.Room).all()
+    try:
+        return db.query(models.Room).all()
+    except SQLAlchemyError as e:
+        logger.error(f"Error fetching rooms: {str(e)}")
+        return []
 
 @app.post("/rooms", response_model=schemas.Room)
 def create_room(room: schemas.RoomCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    db_room = models.Room(**room.dict())
-    db.add(db_room)
-    db.commit()
-    db.refresh(db_room)
-    return db_room
+    try:
+        db_room = models.Room(**room.dict())
+        db.add(db_room)
+        db.commit()
+        db.refresh(db_room)
+        return db_room
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error creating room: {str(e)}")
+        raise HTTPException(status_code=400, detail="Failed to create room. Please ensure the room number is unique.")
 
 @app.put("/rooms/{room_id}", response_model=schemas.Room)
 def update_room(room_id: int, room: schemas.RoomCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
-    if not db_room:
-        raise HTTPException(status_code=404, detail="Room not found")
-    for key, value in room.dict().items():
-        setattr(db_room, key, value)
-    db.commit()
-    db.refresh(db_room)
-    return db_room
+    try:
+        db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
+        if not db_room:
+            raise HTTPException(status_code=404, detail="Room not found")
+        for key, value in room.dict().items():
+            setattr(db_room, key, value)
+        db.commit()
+        db.refresh(db_room)
+        return db_room
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error updating room {room_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update classroom information.")
 
 @app.delete("/rooms/{room_id}")
 def delete_room(room_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
-    if not db_room:
-        raise HTTPException(status_code=404, detail="Room not found")
-    
-    if db_room.status == "IN_USE":
-        raise HTTPException(status_code=400, detail="Cannot delete a room while a class is in progress")
+    try:
+        db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
+        if not db_room:
+            raise HTTPException(status_code=404, detail="Room not found")
+        
+        if db_room.status == "IN_USE":
+            raise HTTPException(status_code=400, detail="Cannot delete a room while a class is in progress.")
 
-    db.delete(db_room)
-    db.commit()
-    return {"message": "Room deleted successfully"}
+        db.delete(db_room)
+        db.commit()
+        return {"message": "Room deleted successfully"}
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error deleting room {room_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete classroom.")
 
 # Booking APIs
 @app.post("/book-room", response_model=schemas.Booking)
 def book_room(booking: schemas.BookingCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_faculty)):
-    # Check if the room is currently in use or has an existing booking
-    room = db.query(models.Room).filter(models.Room.id == booking.room_id).first()
-    
-    # Check for overlapping bookings
-    overlap = db.query(models.Booking).filter(
-        models.Booking.room_id == booking.room_id,
-        models.Booking.start_time < booking.end_time,
-        models.Booking.end_time > booking.start_time,
-        models.Booking.status != "CANCELLED"
-    ).first()
+    try:
+        # Check if the room exists
+        room = db.query(models.Room).filter(models.Room.id == booking.room_id).first()
+        if not room:
+            raise HTTPException(status_code=404, detail="Target classroom not found.")
+        
+        # Check for overlapping bookings
+        overlap = db.query(models.Booking).filter(
+            models.Booking.room_id == booking.room_id,
+            models.Booking.start_time < booking.end_time,
+            models.Booking.end_time > booking.start_time,
+            models.Booking.status != "CANCELLED"
+        ).first()
 
-    status = "BOOKED"
-    if room.status == "IN_USE" or overlap:
-        status = "QUEUED"
-    
-    db_booking = models.Booking(**booking.dict(), user_id=current_user.id, status=status)
-    db.add(db_booking)
-    db.commit()
-    db.refresh(db_booking)
-    return db_booking
+        status = "BOOKED"
+        if room.status == "IN_USE" or overlap:
+            status = "QUEUED"
+        
+        db_booking = models.Booking(**booking.dict(), user_id=current_user.id, status=status)
+        db.add(db_booking)
+        db.commit()
+        db.refresh(db_booking)
+        return db_booking
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error during booking: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to process booking reservation.")
 
 @app.get("/bookings", response_model=List[schemas.Booking])
 def get_bookings(db: Session = Depends(database.get_db)):
@@ -138,52 +182,64 @@ def update_booking(booking_id: int, booking: schemas.BookingCreate, db: Session 
 # Class Session APIs
 @app.post("/start-class", response_model=schemas.ClassSession)
 def start_class(session: schemas.ClassSessionCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    room = db.query(models.Room).filter(models.Room.id == session.room_id).first()
-    if not room or room.status != "AVAILABLE":
-        raise HTTPException(status_code=400, detail="Room is not available")
-    
-    db_session = models.ClassSession(
-        **session.dict(),
-        faculty_user_id=current_user.id,
-        status="ACTIVE",
-        start_time=datetime.utcnow()
-    )
-    db.add(db_session)
-    room.status = "IN_USE"
-    db.commit()
-    db.refresh(db_session)
-    return db_session
+    try:
+        room = db.query(models.Room).filter(models.Room.id == session.room_id).first()
+        if not room:
+            raise HTTPException(status_code=404, detail="Room not found")
+        if room.status != "AVAILABLE":
+            raise HTTPException(status_code=400, detail="Room is currently occupied or unavailable.")
+        
+        db_session = models.ClassSession(
+            **session.dict(),
+            faculty_user_id=current_user.id,
+            status="ACTIVE",
+            start_time=datetime.utcnow()
+        )
+        db.add(db_session)
+        room.status = "IN_USE"
+        db.commit()
+        db.refresh(db_session)
+        return db_session
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error starting class: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database failure while starting class session.")
 
 @app.post("/end-class/{session_id}")
 def end_class(session_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    db_session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
-    if not db_session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    db_session.end_time = datetime.utcnow()
-    db_session.status = "COMPLETED"
-    
-    room = db.query(models.Room).filter(models.Room.id == db_session.room_id).first()
-    if room:
-        room.status = "AVAILABLE"
+    try:
+        db_session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+        if not db_session:
+            raise HTTPException(status_code=404, detail="Class session record not found.")
         
-        # Check for queued bookings and notify the next faculty
-        next_booking = db.query(models.Booking).filter(
-            models.Booking.room_id == room.id,
-            models.Booking.status == "QUEUED"
-        ).order_by(models.Booking.id.asc()).first()
+        db_session.end_time = datetime.utcnow()
+        db_session.status = "COMPLETED"
         
-        if next_booking:
-            next_booking.status = "BOOKED"
-            # Create a notification
-            notification = models.Notification(
-                user_id=next_booking.user_id,
-                message=f"Classroom {room.room_number} is now available for your session."
-            )
-            db.add(notification)
-    
-    db.commit()
-    return {"message": "Class ended successfully"}
+        room = db.query(models.Room).filter(models.Room.id == db_session.room_id).first()
+        if room:
+            room.status = "AVAILABLE"
+            
+            # Check for queued bookings and notify the next faculty
+            next_booking = db.query(models.Booking).filter(
+                models.Booking.room_id == room.id,
+                models.Booking.status == "QUEUED"
+            ).order_by(models.Booking.id.asc()).first()
+            
+            if next_booking:
+                next_booking.status = "BOOKED"
+                # Create a notification
+                notification = models.Notification(
+                    user_id=next_booking.user_id,
+                    message=f"Classroom {room.room_number} is now available for your session."
+                )
+                db.add(notification)
+        
+        db.commit()
+        return {"message": "Class session ended successfully and room released."}
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error ending class {session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to end class session properly.")
 
 # Notification APIs
 @app.get("/notifications")
@@ -208,93 +264,135 @@ def get_active_session(room_id: int, db: Session = Depends(database.get_db)):
 # User Management (Admin Only)
 @app.post("/users", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    # Check if email is already taken
-    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="A user with this email address already exists.")
-    
-    # Check if faculty_id/username is already taken
-    existing_id = db.query(models.User).filter(models.User.faculty_id == user.faculty_id).first()
-    if existing_id:
-        raise HTTPException(status_code=400, detail="This User ID (Username) is already taken.")
+    try:
+        # Check if email is already taken
+        existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="A user with this email address already exists.")
+        
+        # Check if faculty_id/username is already taken
+        existing_id = db.query(models.User).filter(models.User.faculty_id == user.faculty_id).first()
+        if existing_id:
+            raise HTTPException(status_code=400, detail="This User ID (Username) is already taken.")
 
-    hashed_password = auth.get_password_hash(user.password)
-    db_user = models.User(
-        name=user.name,
-        email=user.email,
-        password=hashed_password,
-        role=user.role,
-        faculty_id=user.faculty_id
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-@app.get("/faculty", response_model=List[schemas.User])
-def get_faculty(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    return db.query(models.User).filter(models.User.role == "faculty").all()
+        hashed_password = auth.get_password_hash(user.password)
+        db_user = models.User(
+            name=user.name,
+            email=user.email,
+            password=hashed_password,
+            role=user.role,
+            faculty_id=user.faculty_id
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error creating user: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database failure while creating user account.")
 
 @app.get("/users_list", response_model=List[schemas.User])
 def get_users_list(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    return db.query(models.User).all()
+    try:
+        return db.query(models.User).all()
+    except SQLAlchemyError as e:
+        logger.error(f"Error fetching users: {str(e)}")
+        return []
+
+@app.get("/faculty", response_model=List[schemas.User])
+def get_faculty(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    try:
+        return db.query(models.User).filter(models.User.role == "faculty").all()
+    except SQLAlchemyError as e:
+        logger.error(f"Error fetching faculty: {str(e)}")
+        return []
 
 @app.put("/users/{user_id}", response_model=schemas.User)
 def update_user(user_id: int, user_update: schemas.UserCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    db_user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    db_user.name = user_update.name
-    db_user.email = user_update.email
-    db_user.role = user_update.role
-    db_user.faculty_id = user_update.faculty_id
-    # Note: password update excluded for simplicity here, but can be added
-    
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    try:
+        db_user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User account not found.")
+        
+        db_user.name = user_update.name
+        db_user.email = user_update.email
+        db_user.role = user_update.role
+        db_user.faculty_id = user_update.faculty_id
+        
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error updating user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update user information.")
 
 @app.delete("/users/{user_id}")
 def delete_user(user_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    db_user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    db.delete(db_user)
-    db.commit()
-    return {"message": "User deleted successfully"}
+    try:
+        db_user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User account not found.")
+        db.delete(db_user)
+        db.commit()
+        return {"message": "User account deleted successfully."}
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error deleting user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database failure while deleting account.")
 
 # Department & Subject APIs
 @app.get("/departments", response_model=List[schemas.Department])
 def get_departments(db: Session = Depends(database.get_db)):
-    return db.query(models.Department).all()
+    try:
+        return db.query(models.Department).all()
+    except:
+        return []
 
 @app.post("/departments", response_model=schemas.Department)
 def create_department(dept: schemas.DepartmentBase, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    db_dept = models.Department(name=dept.name)
-    db.add(db_dept)
-    db.commit()
-    db.refresh(db_dept)
-    return db_dept
+    try:
+        db_dept = models.Department(name=dept.name)
+        db.add(db_dept)
+        db.commit()
+        db.refresh(db_dept)
+        return db_dept
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error creating department: {str(e)}")
+        raise HTTPException(status_code=400, detail="Department already exists or invalid data.")
 
 @app.get("/subjects", response_model=List[schemas.Subject])
 def get_subjects(db: Session = Depends(database.get_db)):
-    return db.query(models.Subject).all()
+    try:
+        return db.query(models.Subject).all()
+    except:
+        return []
 
 @app.post("/subjects", response_model=schemas.Subject)
 def create_subject(sub: schemas.SubjectBase, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
-    db_sub = models.Subject(name=sub.name, department_name=sub.department_name)
-    db.add(db_sub)
-    db.commit()
-    db.refresh(db_sub)
-    return db_sub
+    try:
+        db_sub = models.Subject(name=sub.name, department_name=sub.department_name)
+        db.add(db_sub)
+        db.commit()
+        db.refresh(db_sub)
+        return db_sub
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error creating subject: {str(e)}")
+        raise HTTPException(status_code=400, detail="Failed to create subject record.")
 
 @app.get("/class-history", response_model=List[schemas.ClassSession])
 def get_class_history(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    query = db.query(models.ClassSession)
-    if current_user.role == "faculty":
-        query = query.filter(models.ClassSession.faculty_user_id == current_user.id)
-    return query.order_by(models.ClassSession.id.desc()).all()
+    try:
+        query = db.query(models.ClassSession)
+        if current_user.role == "faculty":
+            query = query.filter(models.ClassSession.faculty_user_id == current_user.id)
+        return query.order_by(models.ClassSession.id.desc()).all()
+    except SQLAlchemyError as e:
+        logger.error(f"Error fetching history: {str(e)}")
+        return []
 
 if __name__ == "__main__":
     import uvicorn
