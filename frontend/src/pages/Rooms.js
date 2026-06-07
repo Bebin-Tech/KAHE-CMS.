@@ -9,6 +9,8 @@ const Rooms = () => {
     const [showStartModal, setShowStartModal] = useState(false);
     const [showAddRoomModal, setShowAddRoomModal] = useState(false);
     const [showEditRoomModal, setShowEditRoomModal] = useState(false);
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+    const [successMessage, setSuccessMessage] = useState({ title: '', sub: '' });
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [activeSessions, setActiveSessions] = useState({});
     const role = localStorage.getItem('role');
@@ -116,7 +118,9 @@ const Rooms = () => {
             });
             setShowStartModal(false);
             fetchRooms();
-            alert('Class started successfully!');
+            setSuccessMessage({ title: 'Class Started!', sub: 'Session is now live and active' });
+            setShowSuccessPopup(true);
+            setTimeout(() => setShowSuccessPopup(false), 3000);
         } catch (err) {
             alert(err.response?.data?.detail || 'Failed to start class');
         }
@@ -128,7 +132,9 @@ const Rooms = () => {
             if (activeRes.data && activeRes.data.id) {
                 await API.post(`/end-class/${activeRes.data.id}`);
                 fetchRooms();
-                alert('Class ended successfully!');
+                setSuccessMessage({ title: 'Class Ended!', sub: 'Session completed successfully' });
+                setShowSuccessPopup(true);
+                setTimeout(() => setShowSuccessPopup(false), 3000);
             } else {
                 fetchRooms();
             }
@@ -149,7 +155,9 @@ const Rooms = () => {
                 type: 'Classroom', capacity: 60, department: 'Computer Science'
             });
             fetchRooms();
-            alert('Room added successfully!');
+            setSuccessMessage({ title: 'Classroom Created!', sub: 'Successfully saved to directory' });
+            setShowSuccessPopup(true);
+            setTimeout(() => setShowSuccessPopup(false), 3000);
         } catch (err) {
             console.error("Add room full error details:", err);
             const detail = err.response?.data?.detail;
@@ -568,6 +576,20 @@ const Rooms = () => {
                                 Save Changes
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {showSuccessPopup && (
+                <div className="fixed inset-0 flex items-center justify-center z-[100] animate-in fade-in zoom-in duration-300">
+                    <div className="bg-white/90 backdrop-blur-xl border border-green-100 p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center max-w-sm w-full mx-4 text-center">
+                        <div className="h-20 w-20 bg-green-500 text-white rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-100">
+                            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-900 mb-2">{successMessage.title}</h2>
+                        <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{successMessage.sub}</p>
                     </div>
                 </div>
             )}
