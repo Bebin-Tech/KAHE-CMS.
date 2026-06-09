@@ -65,29 +65,24 @@ const Rooms = () => {
 
     useEffect(() => {
         fetchRooms();
-        const interval = setInterval(fetchRooms, 5000);
+        const interval = setInterval(fetchRooms, 10000); // 10 seconds is usually enough for auto-refresh
         return () => clearInterval(interval);
     }, []);
 
     const fetchRooms = async () => {
         try {
-            const res = await API.get('/rooms');
-            setRooms(res.data || []);
+            const [roomsRes, sessionsRes] = await Promise.all([
+                API.get('/rooms'),
+                API.get('/active-sessions')
+            ]);
+
+            setRooms(roomsRes.data || []);
 
             const sessions = {};
-            if (res.data) {
-                for (const room of res.data) {
-                    if (room.status === 'IN_USE') {
-                        try {
-                            const sRes = await API.get(`/active-session/${room.id}`);
-                            if (sRes.data) {
-                                sessions[room.id] = sRes.data;
-                            }
-                        } catch (e) {
-                            console.warn(`Could not fetch session for room ${room.id}`);
-                        }
-                    }
-                }
+            if (sessionsRes.data) {
+                sessionsRes.data.forEach(s => {
+                    sessions[s.room_id] = s;
+                });
             }
             setActiveSessions(sessions);
             setLoading(false);
@@ -262,9 +257,9 @@ const Rooms = () => {
                             )}
 
                             <div className="flex justify-between items-start mb-6">
-                                <div>
+                                <div className="cursor-pointer group/link" onClick={() => navigate(`/rooms/${room.id}`)}>
                                     <div className="flex items-center space-x-2 mb-1">
-                                        <span className="text-2xl font-black text-gray-900 tracking-tight">{room.room_number}</span>
+                                        <span className="text-2xl font-black text-gray-900 tracking-tight group-hover/link:text-indigo-600 transition-colors">{room.room_number}</span>
                                         {room.type === 'Lab' && <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Lab</span>}
                                     </div>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center">
@@ -326,7 +321,18 @@ const Rooms = () => {
                                 <div className="mt-auto flex gap-3">
                                     {room.status === 'AVAILABLE' ? (
                                         <button
-                                            onClick={() => { setSelectedRoom(room); setShowStartModal(true); }}
+                                            onClick={() => {
+                                                setSelectedRoom(room);
+                                                setSessionData({
+                                                    ...sessionData,
+                                                    faculty_name: localStorage.getItem('name') || '',
+                                                    faculty_id_display: localStorage.getItem('user_id') || '',
+                                                    department: room.department || '',
+                                                    date: new Date().toISOString().split('T')[0],
+                                                    start_time_display: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+                                                });
+                                                setShowStartModal(true);
+                                            }}
                                             className="flex-1 bg-green-600 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-green-700 transition shadow-lg shadow-green-100 active:scale-[0.98] flex items-center justify-center space-x-2"
                                         >
                                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>

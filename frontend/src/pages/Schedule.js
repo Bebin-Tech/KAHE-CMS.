@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import API from '../api';
 
 const Schedule = () => {
+    const [schedules, setSchedules] = useState([]);
+    const [rooms, setRooms] = useState([]);
+    const [loading, setLoading] = useState(true);
+
     const timeSlots = [
         { id: 'I', time: '9:00 AM - 9:50 AM' },
         { id: 'II', time: '9:50 AM - 10:55 AM' },
@@ -11,15 +16,52 @@ const Schedule = () => {
         { id: 'VII', time: '3:10 PM - 4:00 PM' },
     ];
 
-    const Cell = ({ course, faculty, color, colSpan = 1 }) => (
-        <td colSpan={colSpan} className={`${color} border border-gray-400 p-2 text-center align-middle h-20`}>
-            <div className="flex flex-col justify-center h-full">
-                <span className="font-black text-xs text-gray-900 leading-tight">{course}</span>
-                <div className="w-full h-[1px] bg-gray-600/20 my-1"></div>
-                <span className="font-bold text-[10px] text-gray-700">{faculty}</span>
-            </div>
-        </td>
-    );
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [schRes, roomsRes] = await Promise.all([
+                    API.get('/schedules'),
+                    API.get('/rooms')
+                ]);
+                setSchedules(schRes.data || []);
+                setRooms(roomsRes.data || []);
+                setLoading(false);
+            } catch (err) {
+                console.error("Schedule fetch error:", err);
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const getScheduleForCell = (day, slot) => {
+        // Find schedule for this day and slot
+        // Slot.time in backend might be exact string from timeSlots
+        return schedules.find(s => s.day_of_week === day && s.time_slot === slot.time);
+    };
+
+    const Cell = ({ day, slot }) => {
+        const item = getScheduleForCell(day, slot);
+        if (!item) return <td className="border border-gray-400"></td>;
+
+        const roomNum = rooms.find(r => r.id === item.room_id)?.room_number || 'N/A';
+        const isLab = item.subject.toLowerCase().includes('lab');
+        const color = isLab ? 'bg-yellow-200' : 'bg-green-300';
+
+        return (
+            <td className={`${color} border border-gray-400 p-2 text-center align-middle h-20`}>
+                <div className="flex flex-col justify-center h-full">
+                    <span className="font-black text-[10px] text-gray-900 leading-tight uppercase">{item.subject}</span>
+                    <div className="w-full h-[1px] bg-gray-600/20 my-1"></div>
+                    <span className="font-bold text-[9px] text-gray-700">ROOM {roomNum}</span>
+                </div>
+            </td>
+        );
+    };
+
+    if (loading) return <div className="p-10 text-center font-bold text-gray-400 animate-pulse">LOADING TIMETABLE...</div>;
 
     return (
         <div className="p-10 bg-gray-50 min-h-screen">
@@ -51,63 +93,14 @@ const Schedule = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {/* Monday */}
-                            <tr className="border-b border-gray-400">
-                                <td className="bg-[#fef9c3] border border-gray-400 p-4 text-center font-black text-gray-800 text-sm uppercase">Monday</td>
-                                <Cell course="<-- PY (LAB) RS(N4) ->" faculty="RS" color="bg-yellow-200" colSpan={2} />
-                                <Cell course="ENG" faculty="SM" color="bg-orange-200" />
-                                <Cell course="OS" faculty="RS" color="bg-green-300" />
-                                <Cell course="MATHS" faculty="URR" color="bg-blue-300" />
-                                <Cell course="CN" faculty="GA" color="bg-sky-300" />
-                                <td className="border border-gray-400"></td>
-                            </tr>
-
-                            {/* Tuesday */}
-                            <tr className="border-b border-gray-400">
-                                <td className="bg-[#fef9c3] border border-gray-400 p-4 text-center font-black text-gray-800 text-sm uppercase">Tuesday</td>
-                                <Cell course="<----- CN (LAB) AG(N4) ----->" faculty="AG" color="bg-yellow-200" colSpan={2} />
-                                <td className="border border-gray-400"></td>
-                                <Cell course="ENG" faculty="SM" color="bg-orange-200" />
-                                <Cell course="TAMIL" faculty="NF2" color="bg-red-400 text-white" />
-                                <Cell course="MATHS" faculty="URR" color="bg-blue-300" />
-                                <td className="border border-gray-400"></td>
-                            </tr>
-
-                            {/* Wednesday */}
-                            <tr className="border-b border-gray-400">
-                                <td className="bg-[#fef9c3] border border-gray-400 p-4 text-center font-black text-gray-800 text-sm uppercase">Wednesday</td>
-                                <Cell course="OS" faculty="RS" color="bg-green-300" />
-                                <Cell course="CN" faculty="GA" color="bg-sky-300" />
-                                <Cell course="PY (T)" faculty="RS" color="bg-yellow-200" />
-                                <Cell course="OS" faculty="RS" color="bg-green-300" />
-                                <Cell course="CESR" faculty="NVB" color="bg-amber-400" />
-                                <Cell course="TAMIL" faculty="NF2" color="bg-red-400 text-white" />
-                                <td className="border border-gray-400"></td>
-                            </tr>
-
-                            {/* Thursday */}
-                            <tr className="border-b border-gray-400">
-                                <td className="bg-[#fef9c3] border border-gray-400 p-4 text-center font-black text-gray-800 text-sm uppercase">Thursday</td>
-                                <Cell course="OS" faculty="RS" color="bg-green-300" />
-                                <Cell course="TAMIL" faculty="NF2" color="bg-red-400 text-white" />
-                                <Cell course="MATHS" faculty="URR" color="bg-blue-300" />
-                                <Cell course="CN (T)" faculty="AG" color="bg-yellow-200" />
-                                <Cell course="CN" faculty="GA" color="bg-sky-300" />
-                                <Cell course="ENG" faculty="SM" color="bg-orange-200" />
-                                <td className="border border-gray-400"></td>
-                            </tr>
-
-                            {/* Friday */}
-                            <tr className="border-b border-gray-400">
-                                <td className="bg-[#fef9c3] border border-gray-400 p-4 text-center font-black text-gray-800 text-sm uppercase">Friday</td>
-                                <Cell course="MATHS" faculty="URR" color="bg-blue-300" />
-                                <Cell course="OS" faculty="RS" color="bg-green-300" />
-                                <Cell course="CN" faculty="GA" color="bg-sky-300" />
-                                <Cell course="PY (L) RS(N4)" faculty="RS" color="bg-yellow-200" />
-                                <Cell course="TAMIL" faculty="NF2" color="bg-red-400 text-white" />
-                                <Cell course="CESR" faculty="NVB" color="bg-amber-400" />
-                                <td className="border border-gray-400"></td>
-                            </tr>
+                            {days.map(day => (
+                                <tr key={day} className="border-b border-gray-400">
+                                    <td className="bg-[#fef9c3] border border-gray-400 p-4 text-center font-black text-gray-800 text-sm uppercase">{day}</td>
+                                    {timeSlots.map(slot => (
+                                        <Cell key={`${day}-${slot.id}`} day={day} slot={slot} />
+                                    ))}
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
@@ -121,10 +114,6 @@ const Schedule = () => {
                 <div className="flex items-center space-x-2">
                     <div className="h-4 w-4 rounded bg-green-300 border border-gray-300"></div>
                     <span className="text-xs font-bold text-gray-500 uppercase">Theory</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 rounded bg-blue-300 border border-gray-300"></div>
-                    <span className="text-xs font-bold text-gray-500 uppercase">Specialized</span>
                 </div>
             </div>
         </div>

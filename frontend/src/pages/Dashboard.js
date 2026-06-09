@@ -69,7 +69,7 @@ const Dashboard = () => {
             <div className="p-10 bg-gray-50 min-h-screen flex items-center justify-center">
                 <div className="text-center animate-in fade-in zoom-in duration-700">
                     <h1 className="text-5xl font-black text-gray-900 tracking-tight">
-                        Welcome back, <span className="text-violet-600">HOD</span>.
+                        Welcome back, <span className="text-violet-600">{userName || 'HOD'}</span>.
                     </h1>
                     <p className="mt-4 text-gray-500 font-medium text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
                 </div>
@@ -83,9 +83,24 @@ const Dashboard = () => {
             <div className="p-10 bg-gray-50 min-h-screen flex items-center justify-center">
                 <div className="text-center animate-in fade-in zoom-in duration-700">
                     <h1 className="text-5xl font-black text-gray-900 tracking-tight">
-                        Welcome back, <span className="text-violet-600">HOD</span>.
+                        Welcome back, <span className="text-indigo-600">{userName || 'Faculty'}</span>.
                     </h1>
                     <p className="mt-4 text-gray-500 font-medium text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
+                </div>
+            </div>
+        );
+    }
+
+    // --- RENDER DEFAULT DASHBOARD (For Students/Staff/etc) ---
+    if (role !== 'admin') {
+        return (
+            <div className="p-10 bg-gray-50 min-h-screen flex items-center justify-center">
+                <div className="text-center animate-in fade-in zoom-in duration-700">
+                    <h1 className="text-5xl font-black text-gray-900 tracking-tight">
+                        Welcome back, <span className="text-slate-600">{userName || 'User'}</span>.
+                    </h1>
+                    <p className="mt-4 text-gray-500 font-medium text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
+                    <p className="mt-2 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Campus Management System</p>
                 </div>
             </div>
         );
@@ -97,7 +112,7 @@ const Dashboard = () => {
             <header className="mb-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-                        Welcome back, <span className="text-green-600">Admin</span>.
+                        Welcome back, <span className="text-green-600">{userName || 'Admin'}</span>.
                     </h1>
                 </div>
             </header>

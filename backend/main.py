@@ -36,11 +36,13 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         if db_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         hashed_password = auth.get_password_hash(user.password)
+        # Security fix: Default role to student if not specified or force it
+        role = user.role if user.role in ["faculty", "student"] else "student"
         db_user = models.User(
             name=user.name,
             email=user.email,
             password=hashed_password,
-            role=user.role,
+            role=role,
             faculty_id=user.faculty_id
         )
         db.add(db_user)
@@ -67,7 +69,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             "access_token": access_token, 
             "token_type": "bearer", 
             "role": user.role,
-            "user_id": user.id
+            "user_id": user.id,
+            "name": user.name
         }
     except SQLAlchemyError as e:
         logger.error(f"Database error during login: {str(e)}")
@@ -266,6 +269,10 @@ def get_active_session(room_id: int, db: Session = Depends(database.get_db)):
         models.ClassSession.status == "ACTIVE"
     ).first()
 
+@app.get("/active-sessions", response_model=List[schemas.ClassSession])
+def get_all_active_sessions(db: Session = Depends(database.get_db)):
+    return db.query(models.ClassSession).filter(models.ClassSession.status == "ACTIVE").all()
+
 # User Management (Admin Only)
 @app.post("/users", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
@@ -314,16 +321,19 @@ def get_faculty(db: Session = Depends(database.get_db), current_user: models.Use
         return []
 
 @app.put("/users/{user_id}", response_model=schemas.User)
-def update_user(user_id: int, user_update: schemas.UserCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         db_user = db.query(models.User).filter(models.User.id == user_id).first()
         if not db_user:
             raise HTTPException(status_code=404, detail="User account not found.")
         
-        db_user.name = user_update.name
-        db_user.email = user_update.email
-        db_user.role = user_update.role
-        db_user.faculty_id = user_update.faculty_id
+        if user_update.name is not None: db_user.name = user_update.name
+        if user_update.email is not None: db_user.email = user_update.email
+        if user_update.role is not None: db_user.role = user_update.role
+        if user_update.faculty_id is not None: db_user.faculty_id = user_update.faculty_id
+        
+        if user_update.password:
+            db_user.password = auth.get_password_hash(user_update.password)
         
         db.commit()
         db.refresh(db_user)
@@ -398,6 +408,36 @@ def get_class_history(db: Session = Depends(database.get_db), current_user: mode
     except SQLAlchemyError as e:
         logger.error(f"Error fetching history: {str(e)}")
         return []
+
+@app.get("/room-history/{room_id}", response_model=List[schemas.ClassSession])
+def get_room_history(room_id: int, db: Session = Depends(database.get_db)):
+    try:
+        return db.query(models.ClassSession).filter(models.ClassSession.room_id == room_id).order_by(models.ClassSession.id.desc()).all()
+    except SQLAlchemyError as e:
+        logger.error(f"Error fetching room history: {str(e)}")
+        return []
+
+# Schedule APIs
+@app.get("/schedules", response_model=List[schemas.Schedule])
+def get_schedules(db: Session = Depends(database.get_db)):
+    return db.query(models.Schedule).all()
+
+@app.post("/schedules", response_model=schemas.Schedule)
+def create_schedule(schedule: schemas.ScheduleCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    db_schedule = models.Schedule(**schedule.dict())
+    db.add(db_schedule)
+    db.commit()
+    db.refresh(db_schedule)
+    return db_schedule
+
+@app.delete("/schedules/{schedule_id}")
+def delete_schedule(schedule_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    db_schedule = db.query(models.Schedule).filter(models.Schedule.id == schedule_id).first()
+    if not db_schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    db.delete(db_schedule)
+    db.commit()
+    return {"message": "Schedule deleted"}
 
 if __name__ == "__main__":
     import uvicorn

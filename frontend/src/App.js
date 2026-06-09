@@ -29,11 +29,7 @@ function App() {
                         <Route path="/rooms" element={<PrivateRoute><Rooms /></PrivateRoute>} />
                         <Route path="/rooms/:roomId" element={<PrivateRoute><RoomDetails /></PrivateRoute>} />
                         <Route path="/bookings" element={<PrivateRoute><Bookings /></PrivateRoute>} />
-                        <Route path="/schedule" element={
-                            <PrivateRoute>
-                                {role === 'admin' ? <Schedule /> : <Navigate to="/" />}
-                            </PrivateRoute>
-                        } />
+                        <Route path="/schedule" element={<PrivateRoute><Schedule /></PrivateRoute>} />
                         <Route path="/user-directory" element={
                             <PrivateRoute>
                                 {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}

@@ -246,7 +246,7 @@ const UserDirectory = () => {
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">User ID (Username)</label>
                                     <input
                                         className="w-full p-4 bg-[#eff6ff] border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-gray-700 outline-none"
-                                        placeholder="admin@shk.com"
+                                        placeholder="Ex: admin_01"
                                         value={formData.faculty_id}
                                         onChange={(e) => setFormData({...formData, faculty_id: e.target.value})}
                                         required
@@ -258,7 +258,7 @@ const UserDirectory = () => {
                                     <input
                                         type="email"
                                         className="w-full p-4 bg-slate-50 border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-gray-700 outline-none"
-                                        placeholder="john@shkindustries.com"
+                                        placeholder="Ex: john@kahe.edu"
                                         value={formData.email}
                                         onChange={(e) => setFormData({...formData, email: e.target.value})}
                                         required

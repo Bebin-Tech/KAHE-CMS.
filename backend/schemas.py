@@ -11,6 +11,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[str] = None
+    faculty_id: Optional[str] = None
+    password: Optional[str] = None
+
 class User(UserBase):
     id: int
     class Config:
@@ -21,6 +28,7 @@ class Token(BaseModel):
     token_type: str
     role: str
     user_id: int
+    name: str
 
 class TokenData(BaseModel):
     email: Optional[str] = None
@@ -97,6 +105,21 @@ class SubjectBase(BaseModel):
     department_name: str
 
 class Subject(SubjectBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+class ScheduleBase(BaseModel):
+    faculty_id: int
+    room_id: int
+    subject: str
+    time_slot: str
+    day_of_week: str
+
+class ScheduleCreate(ScheduleBase):
+    pass
+
+class Schedule(ScheduleBase):
     id: int
     class Config:
         from_attributes = True
