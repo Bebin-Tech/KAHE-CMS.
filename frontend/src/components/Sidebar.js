@@ -39,63 +39,65 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 ></div>
             )}
 
-            <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition duration-300 ease-in-out w-72 bg-white border-r border-gray-200 flex flex-col h-screen shadow-xl lg:shadow-sm z-50 overflow-hidden`}>
-                {/* Compact Header */}
-                <div className="p-4 lg:p-8 flex items-center lg:flex-col lg:space-y-4 relative border-b lg:border-none border-gray-50">
-                    <img
-                        src="/logo.svg"
-                        alt="KAHE Logo"
-                        className="w-10 h-10 lg:w-[120px] lg:h-[120px] object-contain mr-3 lg:mr-0"
-                    />
-                    <div className="flex flex-col lg:items-center">
-                        <span className="text-lg lg:text-2xl font-bold text-gray-800 tracking-tight leading-tight">KAHE CMS</span>
-                        <span className="lg:hidden text-[8px] font-bold text-gray-400 uppercase tracking-widest">Campus Portal</span>
-                    </div>
+            <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition duration-300 ease-in-out w-72 lg:w-80 bg-white border-r border-gray-100 flex flex-col h-screen shadow-2xl lg:shadow-sm z-50 overflow-hidden`}>
+
+                {/* Header Section */}
+                <div className="p-8 pb-4 flex flex-col items-center relative">
                     <button
                         onClick={() => setIsOpen(false)}
-                        className="lg:hidden absolute right-4 text-gray-400 hover:text-gray-600"
+                        className="lg:hidden absolute top-6 right-6 text-gray-400 hover:text-gray-600"
                     >
                         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
+
+                    <img
+                        src="/logo.svg"
+                        alt="KAHE Logo"
+                        className="w-24 h-24 object-contain mb-6"
+                    />
+
+                    <h1 className="text-3xl font-bold text-gray-800 tracking-tight text-center">KAHE CMS</h1>
                 </div>
 
-                <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-                    <p className="px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Main Menu</p>
+                {/* Main Menu Section */}
+                <nav className="flex-1 px-6 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+                    <p className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-4">Main Menu</p>
                     {menuItems.map((item) => (
                         <Link
                             key={item.name}
                             to={item.path}
                             onClick={() => setIsOpen(false)}
-                            className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition duration-200 group ${
+                            className={`flex items-center space-x-4 px-5 py-4 rounded-2xl transition duration-200 group ${
                                 location.pathname === item.path
-                                    ? 'bg-indigo-50 text-indigo-700'
-                                    : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600'
+                                    ? 'bg-indigo-50 text-indigo-700 shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-50'
                             }`}
                         >
-                            <svg className={`h-5 w-5 ${location.pathname === item.path ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={`h-6 w-6 ${location.pathname === item.path ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
                             </svg>
-                            <span className="font-semibold text-sm">{item.name}</span>
+                            <span className="font-bold text-[15px]">{item.name}</span>
                         </Link>
                     ))}
                 </nav>
 
-                {/* Ultra-Compact Footer to ensure visibility */}
-                <div className="p-4 border-t border-gray-100 bg-white space-y-3">
-                    <div className="flex items-center justify-between px-2">
-                        <div className="flex items-center space-x-2">
-                            <div className={`h-8 w-8 text-white rounded-lg flex items-center justify-center font-black text-sm ${
-                                role === 'admin' ? 'bg-green-600' : 'bg-violet-600'
+                {/* Account & Logout Section */}
+                <div className="p-8 pt-4 bg-white border-t border-slate-50">
+                    <div className="mb-6 px-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Authenticated Account</p>
+                        <div className="flex items-center space-x-4">
+                            <div className={`h-14 w-14 text-white rounded-[1.25rem] flex items-center justify-center font-black text-xl shadow-lg ${
+                                role === 'admin' ? 'bg-green-600 shadow-green-100' : 'bg-violet-600 shadow-violet-100'
                             }`}>
                                 {role?.charAt(0).toUpperCase()}
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-[10px] font-black text-gray-900 leading-tight truncate w-24 uppercase">{role}</p>
-                                <p className="text-[8px] text-green-500 font-bold flex items-center">
-                                    <span className="h-1 w-1 bg-green-500 rounded-full mr-1"></span>
-                                    Online
+                            <div>
+                                <p className="text-lg font-black text-slate-900 leading-tight uppercase">{role}</p>
+                                <p className="text-[11px] text-green-500 font-bold flex items-center mt-1.5">
+                                    <span className="h-2 w-2 bg-green-500 rounded-full mr-2.5"></span>
+                                    Active Now
                                 </p>
                             </div>
                         </div>
@@ -103,9 +105,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-2 py-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition duration-200 font-black text-[10px] uppercase tracking-widest border border-red-100/50"
+                        className="w-full flex items-center justify-center space-x-3 px-4 py-4.5 text-red-600 bg-red-50/50 hover:bg-red-50 rounded-[1.5rem] transition duration-200 font-black text-xs uppercase tracking-[0.15em] border border-red-100/30"
                     >
-                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                         <span>Logout</span>
