@@ -3,16 +3,29 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./kahe_cms.db").strip()
+raw_url = os.getenv("DATABASE_URL", "sqlite:///./kahe_cms.db").strip()
 
-# Handle potential quotes if user accidentally included them
+# Final robust cleanup
+if "://" not in raw_url and not raw_url.startswith("sqlite"):
+    # If the user put just the name 'kahe-db', this is wrong.
+    # But we can't fix it without the full string.
+    print(f"CRITICAL ERROR: DATABASE_URL is invalid. It must be a full connection string starting with postgres://. Current value: {raw_url[:10]}...")
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./kahe_cms_fallback.db"
+else:
+    SQLALCHEMY_DATABASE_URL = raw_url
+
+# Handle potential quotes
 if (SQLALCHEMY_DATABASE_URL.startswith('"') and SQLALCHEMY_DATABASE_URL.endswith('"')) or \
    (SQLALCHEMY_DATABASE_URL.startswith("'") and SQLALCHEMY_DATABASE_URL.endswith("'")):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL[1:-1]
 
-# If using PostgreSQL (Render), we need to handle the 'postgres://' vs 'postgresql://' issue
+# Fix the Render 'postgres' vs 'postgresql' driver requirement
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+if "postgresql" in SQLALCHEMY_DATABASE_URL and "sslmode" not in SQLALCHEMY_DATABASE_URL:
+    sep = "&" if "?" in SQLALCHEMY_DATABASE_URL else "?"
+    SQLALCHEMY_DATABASE_URL += f"{sep}sslmode=require"
 
 engine_kwargs = {
     "pool_pre_ping": True,  # Verifies connection before use
