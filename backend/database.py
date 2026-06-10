@@ -5,12 +5,20 @@ from sqlalchemy.orm import sessionmaker
 
 raw_url = os.getenv("DATABASE_URL", "sqlite:///./kahe_cms.db").strip()
 
+# Extreme cleanup for user copy-paste errors (handling commands accidentally pasted as values)
+if '="' in raw_url:
+    # Extracts everything between quotes if the user pasted a command
+    import re
+    match = re.search(r'"([^"]*)"', raw_url)
+    if match:
+        raw_url = match.group(1)
+elif raw_url.startswith("DATABASE_URL="):
+    raw_url = raw_url.replace("DATABASE_URL=", "")
+
 # Final robust cleanup
 if "://" not in raw_url and not raw_url.startswith("sqlite"):
-    # If the user put just the name 'kahe-db', this is wrong.
-    # But we can't fix it without the full string.
-    print(f"CRITICAL ERROR: DATABASE_URL is invalid. It must be a full connection string starting with postgres://. Current value: {raw_url[:10]}...")
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./kahe_cms_fallback.db"
+    print(f"CRITICAL ERROR: DATABASE_URL is invalid. Value received: {raw_url[:20]}...")
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./kahe_cms.db" # Fallback to local
 else:
     SQLALCHEMY_DATABASE_URL = raw_url
 
