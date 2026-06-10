@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 
@@ -63,13 +63,7 @@ const Rooms = () => {
         "AI & DS (Artificial Intelligence and Data Science)": ["Machine Learning", "Natural Language Processing", "Data Visualization"]
     };
 
-    useEffect(() => {
-        fetchRooms();
-        const interval = setInterval(fetchRooms, 10000); // 10 seconds is usually enough for auto-refresh
-        return () => clearInterval(interval);
-    }, []);
-
-    const fetchRooms = async () => {
+    const fetchRooms = useCallback(async () => {
         try {
             const [roomsRes, sessionsRes] = await Promise.all([
                 API.get('/rooms'),
@@ -96,7 +90,13 @@ const Rooms = () => {
                 window.location.reload();
             }
         }
-    };
+    }, [navigate]);
+
+    useEffect(() => {
+        fetchRooms();
+        const interval = setInterval(fetchRooms, 10000); // 10 seconds is usually enough for auto-refresh
+        return () => clearInterval(interval);
+    }, [fetchRooms]);
 
     const handleStartClass = async (e) => {
         if (e) e.preventDefault();

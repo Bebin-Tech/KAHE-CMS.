@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api';
 
@@ -9,11 +9,7 @@ const RoomDetails = () => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetchRoomAndHistory();
-    }, [roomId]);
-
-    const fetchRoomAndHistory = async () => {
+    const fetchRoomAndHistory = useCallback(async () => {
         try {
             const [roomsRes, historyRes] = await Promise.all([
                 API.get('/rooms'),
@@ -28,7 +24,11 @@ const RoomDetails = () => {
             console.error(err);
             setLoading(false);
         }
-    };
+    }, [roomId]);
+
+    useEffect(() => {
+        fetchRoomAndHistory();
+    }, [fetchRoomAndHistory]);
 
     const getTimeAgo = (dateStr) => {
         const date = new Date(dateStr);

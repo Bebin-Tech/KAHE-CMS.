@@ -56,13 +56,6 @@ const Dashboard = () => {
         }
     };
 
-    const getDisplayRole = (r) => {
-        if (!r) return 'User';
-        if (r === 'admin') return 'Admin';
-        if (r === 'hod') return 'HOD';
-        return r.charAt(0).toUpperCase() + r.slice(1);
-    };
-
     // --- RENDER HOD DASHBOARD ---
     if (role === 'hod') {
         return (

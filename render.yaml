@@ -3,7 +3,7 @@ services:
     name: kahe-cms-all-in-one
     runtime: python
     buildCommand: |
-      cd frontend && npm install && npm run build
+      cd frontend && npm install && CI=false npm run build
       cd ../backend && pip install -r requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
