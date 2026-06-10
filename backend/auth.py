@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -5,10 +6,13 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from . import database, models, schemas
+try:
+    from . import database, models, schemas
+except ImportError:
+    import database, models, schemas
 
 # Secret key to sign the JWT token
-SECRET_KEY = "YOUR_SECRET_KEY_HERE" # In production, use an environment variable
+SECRET_KEY = os.getenv("SECRET_KEY", "YOUR_SECRET_KEY_HERE_FOR_DEV_ONLY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 600
 

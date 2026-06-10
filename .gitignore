@@ -8,10 +8,10 @@ backend/__pycache__/
 .vscode/
 
 # Database
-# User requested to preserve the database, but pushing a live SQLite file is not recommended.
-# However, I will include it if you wish, or you can use seed_db.py to recreate it.
-# kahe_cms.db
+kahe_cms.db
+*.sqlite
 
 # Build
 frontend/build/
 .DS_Store
+.env

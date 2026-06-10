@@ -7,13 +7,40 @@ from sqlalchemy.exc import SQLAlchemyError
 from typing import List, Optional
 from datetime import datetime
 
-from . import models, schemas, auth, database
+try:
+    from . import models, schemas, auth, database
+except ImportError:
+    import models, schemas, auth, database
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 models.Base.metadata.create_all(bind=database.engine)
+
+# Auto-seed admin user
+def seed_admin():
+    db = next(database.get_db())
+    try:
+        admin = db.query(models.User).filter(models.User.role == "admin").first()
+        if not admin:
+            hashed_password = auth.get_password_hash("admin123")
+            admin_user = models.User(
+                name="System Admin",
+                email="admin@kahe.edu",
+                password=hashed_password,
+                role="admin",
+                faculty_id="admin_01"
+            )
+            db.add(admin_user)
+            db.commit()
+            logger.info("Default admin user created.")
+    except Exception as e:
+        logger.error(f"Seeding error: {e}")
+    finally:
+        db.close()
+
+seed_admin()
 
 app = FastAPI(
     title="KAHE Campus Management System",
