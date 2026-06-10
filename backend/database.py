@@ -3,7 +3,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./kahe_cms.db")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./kahe_cms.db").strip()
+
+# Handle potential quotes if user accidentally included them
+if (SQLALCHEMY_DATABASE_URL.startswith('"') and SQLALCHEMY_DATABASE_URL.endswith('"')) or \
+   (SQLALCHEMY_DATABASE_URL.startswith("'") and SQLALCHEMY_DATABASE_URL.endswith("'")):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL[1:-1]
 
 # If using PostgreSQL (Render), we need to handle the 'postgres://' vs 'postgresql://' issue
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
