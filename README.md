@@ -59,7 +59,6 @@ $env:DATABASE_URL="YOUR_EXTERNAL_POSTGRES_URL"; python migrate_to_render.py
 
 ## 🔒 Security
 
-- Default institutional credentials: `admin@kahe.edu` / `admin123`.
 - Tiered access control for Admins, Faculty, and Students.
 - Gzip compression and database connection pooling for maximum responsiveness.
 
