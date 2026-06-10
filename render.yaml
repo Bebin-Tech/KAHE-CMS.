@@ -1,36 +1,23 @@
 services:
-  # Backend Web Service
   - type: web
-    name: kahe-cms-backend-v5
+    name: kahe-cms-all-in-one
     runtime: python
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: |
+      cd frontend && npm install && npm run build
+      cd ../backend && pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: kahe-cms-db-v5
+          name: kahe-cms-db-final
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: PYTHON_VERSION
         value: 3.10.0
-
-  # Frontend Static Site
-  - type: web
-    name: kahe-cms-frontend-v5
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: frontend/build
-    envVars:
       - key: REACT_APP_API_URL
-        sync: false
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+        value: "" # Empty means it will use relative path in frontend
 
 databases:
-  - name: kahe-cms-db-v5
+  - name: kahe-cms-db-final
     plan: free
