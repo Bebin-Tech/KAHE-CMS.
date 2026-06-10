@@ -105,9 +105,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-3 px-4 py-4.5 text-red-600 bg-red-50/50 hover:bg-red-50 rounded-[1.5rem] transition duration-200 font-black text-xs uppercase tracking-[0.15em] border border-red-100/30"
+                        className="w-full flex items-center justify-center space-x-3 px-4 py-5 text-red-600 bg-red-50 hover:bg-red-100 rounded-2xl transition duration-200 font-black text-sm uppercase tracking-[0.2em] shadow-sm border border-red-100"
                     >
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                         <span>Logout</span>
