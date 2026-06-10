@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -17,26 +17,52 @@ const PrivateRoute = ({ children }) => {
 function App() {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     return (
         <Router>
-            <div className="flex bg-gray-50 h-screen overflow-hidden">
-                {token && <Sidebar />}
-                <main className="flex-1 overflow-y-auto">
-                    <Routes>
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-                        <Route path="/rooms" element={<PrivateRoute><Rooms /></PrivateRoute>} />
-                        <Route path="/rooms/:roomId" element={<PrivateRoute><RoomDetails /></PrivateRoute>} />
-                        <Route path="/bookings" element={<PrivateRoute><Bookings /></PrivateRoute>} />
-                        <Route path="/schedule" element={<PrivateRoute><Schedule /></PrivateRoute>} />
-                        <Route path="/user-directory" element={
-                            <PrivateRoute>
-                                {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
-                            </PrivateRoute>
-                        } />
-                    </Routes>
-                </main>
+            <div className="flex bg-gray-50 h-screen overflow-hidden relative">
+                {token && (
+                    <Sidebar
+                        isOpen={isSidebarOpen}
+                        setIsOpen={setIsSidebarOpen}
+                    />
+                )}
+
+                <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                    {token && (
+                        <header className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between z-30">
+                            <div className="flex items-center space-x-3">
+                                <img src="/logo.svg" alt="Logo" className="h-8 w-8" />
+                                <span className="font-bold text-gray-800">KAHE CMS</span>
+                            </div>
+                            <button
+                                onClick={() => setIsSidebarOpen(true)}
+                                className="p-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none"
+                            >
+                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </button>
+                        </header>
+                    )}
+
+                    <main className="flex-1 overflow-y-auto focus:outline-none">
+                        <Routes>
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+                            <Route path="/rooms" element={<PrivateRoute><Rooms /></PrivateRoute>} />
+                            <Route path="/rooms/:roomId" element={<PrivateRoute><RoomDetails /></PrivateRoute>} />
+                            <Route path="/bookings" element={<PrivateRoute><Bookings /></PrivateRoute>} />
+                            <Route path="/schedule" element={<PrivateRoute><Schedule /></PrivateRoute>} />
+                            <Route path="/user-directory" element={
+                                <PrivateRoute>
+                                    {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
+                                </PrivateRoute>
+                            } />
+                        </Routes>
+                    </main>
+                </div>
             </div>
         </Router>
     );

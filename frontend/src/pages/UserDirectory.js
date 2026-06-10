@@ -83,11 +83,11 @@ const UserDirectory = () => {
     };
 
     return (
-        <div className="p-4 md:p-10 bg-gray-50 min-h-screen">
-            <header className="mb-6 md:mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen">
+            <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight">User Directory</h1>
-                    <p className="text-gray-500 font-medium mt-1">Manage user accounts, roles and passwords</p>
+                    <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">User Directory</h1>
+                    <p className="text-gray-500 font-medium mt-1 text-sm sm:text-base">Manage user accounts, roles and passwords</p>
                 </div>
                 <button
                     onClick={() => {

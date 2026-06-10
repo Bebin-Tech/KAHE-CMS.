@@ -59,12 +59,12 @@ const Dashboard = () => {
     // --- RENDER HOD DASHBOARD ---
     if (role === 'hod') {
         return (
-            <div className="p-10 bg-gray-50 min-h-screen flex items-center justify-center">
+            <div className="p-6 sm:p-10 bg-gray-50 min-h-screen flex items-center justify-center">
                 <div className="text-center animate-in fade-in zoom-in duration-700">
-                    <h1 className="text-5xl font-black text-gray-900 tracking-tight">
+                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
                         Welcome back, <span className="text-violet-600">{userName || 'HOD'}</span>.
                     </h1>
-                    <p className="mt-4 text-gray-500 font-medium text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
+                    <p className="mt-4 text-gray-500 font-medium text-sm sm:text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
                 </div>
             </div>
         );
@@ -73,12 +73,12 @@ const Dashboard = () => {
     // --- RENDER FACULTY DASHBOARD (Landing Page) ---
     if (role === 'faculty') {
         return (
-            <div className="p-10 bg-gray-50 min-h-screen flex items-center justify-center">
+            <div className="p-6 sm:p-10 bg-gray-50 min-h-screen flex items-center justify-center">
                 <div className="text-center animate-in fade-in zoom-in duration-700">
-                    <h1 className="text-5xl font-black text-gray-900 tracking-tight">
+                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
                         Welcome back, <span className="text-indigo-600">{userName || 'Faculty'}</span>.
                     </h1>
-                    <p className="mt-4 text-gray-500 font-medium text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
+                    <p className="mt-4 text-gray-500 font-medium text-sm sm:text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
                 </div>
             </div>
         );
@@ -87,12 +87,12 @@ const Dashboard = () => {
     // --- RENDER DEFAULT DASHBOARD (For Students/Staff/etc) ---
     if (role !== 'admin') {
         return (
-            <div className="p-10 bg-gray-50 min-h-screen flex items-center justify-center">
+            <div className="p-6 sm:p-10 bg-gray-50 min-h-screen flex items-center justify-center">
                 <div className="text-center animate-in fade-in zoom-in duration-700">
-                    <h1 className="text-5xl font-black text-gray-900 tracking-tight">
+                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
                         Welcome back, <span className="text-slate-600">{userName || 'User'}</span>.
                     </h1>
-                    <p className="mt-4 text-gray-500 font-medium text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
+                    <p className="mt-4 text-gray-500 font-medium text-sm sm:text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
                     <p className="mt-2 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Campus Management System</p>
                 </div>
             </div>
@@ -101,10 +101,10 @@ const Dashboard = () => {
 
     // --- RENDER ADMIN DASHBOARD (FULL) ---
     return (
-        <div className="p-10 bg-gray-50 min-h-screen">
-            <header className="mb-10 flex justify-between items-center">
+        <div className="p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen">
+            <header className="mb-6 sm:mb-10 flex justify-between items-center">
                 <div>
-                    <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+                    <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
                         Welcome back, <span className="text-green-600">{userName || 'Admin'}</span>.
                     </h1>
                 </div>
@@ -156,21 +156,21 @@ const Dashboard = () => {
             {notifications.length > 0 && (
                 <div className="mt-8 space-y-4">
                     {notifications.map(n => (
-                        <div key={n.id} className="bg-indigo-600 text-white p-6 rounded-[2rem] shadow-xl flex justify-between items-center animate-bounce">
+                        <div key={n.id} className="bg-indigo-600 text-white p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-bounce">
                             <div className="flex items-center space-x-4">
-                                <div className="bg-white/20 p-3 rounded-2xl">
+                                <div className="bg-white/20 p-3 rounded-2xl hidden sm:block">
                                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                     </svg>
                                 </div>
                                 <div>
-                                    <p className="font-black text-lg">Class Room Available!</p>
-                                    <p className="font-medium opacity-90">{n.message}</p>
+                                    <p className="font-black text-base sm:text-lg">Class Room Available!</p>
+                                    <p className="font-medium text-sm opacity-90">{n.message}</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => markRead(n.id)}
-                                className="bg-white text-indigo-600 px-6 py-2 rounded-xl font-black text-xs hover:bg-indigo-50 transition"
+                                className="w-full sm:w-auto bg-white text-indigo-600 px-6 py-2 rounded-xl font-black text-xs hover:bg-indigo-50 transition"
                             >
                                 DISMISS
                             </button>
@@ -182,9 +182,9 @@ const Dashboard = () => {
             {/* Recent Activity Section */}
             <div className="mt-12">
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <h2 className="text-xl font-black text-gray-900">Recent Activity</h2>
-                        <button className="text-indigo-600 font-bold text-sm hover:underline">View All</button>
+                        <button className="text-indigo-600 font-bold text-sm hover:underline text-left">View All</button>
                     </div>
                     <div className="space-y-6">
                         {recentActivity.map((activity, index) => (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const role = localStorage.getItem('role');
@@ -30,8 +30,25 @@ const Sidebar = () => {
     }
 
     return (
-        <div className="w-72 bg-white border-r border-gray-200 flex flex-col h-screen shadow-sm sticky top-0 overflow-hidden">
-            <div className="p-8 flex flex-col items-center space-y-4">
+        <>
+            {/* Mobile Overlay */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+                    onClick={() => setIsOpen(false)}
+                ></div>
+            )}
+
+            <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition duration-300 ease-in-out w-72 bg-white border-r border-gray-200 flex flex-col h-screen shadow-xl lg:shadow-sm z-50 overflow-hidden`}>
+                <div className="p-8 flex flex-col items-center space-y-4 relative">
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="lg:hidden absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                    >
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 <img
                     src="/logo.svg"
                     alt="KAHE Logo"
@@ -46,6 +63,7 @@ const Sidebar = () => {
                     <Link
                         key={item.name}
                         to={item.path}
+                        onClick={() => setIsOpen(false)}
                         className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-200 group ${
                             location.pathname === item.path
                                 ? 'bg-indigo-50 text-indigo-700'

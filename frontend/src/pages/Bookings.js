@@ -89,15 +89,15 @@ const Bookings = () => {
     const departments = ["Languages", "Computer Science", "Mathematics", "General Education", "AI & DS (Artificial Intelligence and Data Science)"];
 
     return (
-        <div className="p-10 bg-gray-50 min-h-screen">
-            <header className="mb-10 flex justify-between items-center">
+        <div className="p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen">
+            <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">CR Booking</h1>
-                    <p className="text-gray-600 font-medium">Manage and schedule classroom reservations.</p>
+                    <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">CR Booking</h1>
+                    <p className="text-gray-600 font-medium text-sm sm:text-base">Manage and schedule classroom reservations.</p>
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
-                    className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition flex items-center space-x-2"
+                    className="w-full sm:w-auto bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition flex items-center justify-center space-x-2"
                 >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
@@ -194,12 +194,12 @@ const Bookings = () => {
                             </div>
                         </div>
 
-                        <div className="overflow-y-auto flex-1 custom-scrollbar bg-white p-8">
-                            <form onSubmit={handleBook} id="bookingForm" className="space-y-6">
+                        <div className="overflow-y-auto flex-1 custom-scrollbar bg-white p-4 sm:p-8">
+                            <form onSubmit={handleBook} id="bookingForm" className="space-y-4 sm:space-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Faculty Name</label>
                                     <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none text-sm"
                                         placeholder="Full Name"
                                         onChange={(e) => setNewBooking({...newBooking, faculty_name: e.target.value})}
                                         required
@@ -230,12 +230,12 @@ const Bookings = () => {
                                     </select>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Start Time</label>
                                         <input
                                             type="datetime-local"
-                                            className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                            className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none text-sm"
                                             onChange={(e) => setNewBooking({...newBooking, start_time: e.target.value})}
                                             required
                                         />
@@ -244,7 +244,7 @@ const Bookings = () => {
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">End Time</label>
                                         <input
                                             type="datetime-local"
-                                            className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                            className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none text-sm"
                                             onChange={(e) => setNewBooking({...newBooking, end_time: e.target.value})}
                                             required
                                         />

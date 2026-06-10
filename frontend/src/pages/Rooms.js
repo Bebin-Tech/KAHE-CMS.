@@ -213,19 +213,19 @@ const Rooms = () => {
         }
     };
 
-    if (loading) return <div className="p-10 text-center font-bold text-gray-500 tracking-widest uppercase animate-pulse">Loading Class Rooms...</div>;
+    if (loading) return <div className="p-4 sm:p-10 text-center font-bold text-gray-500 tracking-widest uppercase animate-pulse">Loading Class Rooms...</div>;
 
     return (
-        <div className="p-10 bg-gray-50 min-h-screen">
-            <header className="mb-10 flex justify-between items-center">
+        <div className="p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen">
+            <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">Class Room</h1>
-                    <p className="text-gray-600 font-medium">Real-time availability tracking.</p>
+                    <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">Class Room</h1>
+                    <p className="text-gray-600 font-medium text-sm sm:text-base">Real-time availability tracking.</p>
                 </div>
                 {role === 'admin' && (
                     <button
                         onClick={() => setShowAddRoomModal(true)}
-                        className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition"
+                        className="w-full sm:w-auto bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition"
                     >
                         + Add New Room
                     </button>
@@ -377,15 +377,15 @@ const Rooms = () => {
                 <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                         <div className="bg-indigo-600 p-6 text-white"><h2 className="text-2xl font-black uppercase">Start Class • {selectedRoom?.room_number}</h2></div>
-                        <div className="p-8 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Faculty Name</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500" value={sessionData.faculty_name} onChange={(e) => setSessionData({...sessionData, faculty_name: e.target.value})} required/></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Faculty ID</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500" value={sessionData.faculty_id_display} onChange={(e) => setSessionData({...sessionData, faculty_id_display: e.target.value})} required/></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Department</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.department} onChange={(e) => setSessionData({...sessionData, department: e.target.value, subject: ''})} required><option value="">Select Department</option>{departments.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Subject</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.subject} onChange={(e) => setSessionData({...sessionData, subject: e.target.value})} required disabled={!sessionData.department}><option value="">Select Subject</option>{sessionData.department && subjectMap[sessionData.department]?.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Section</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.section} onChange={(e) => setSessionData({...sessionData, section: e.target.value})} required><option value="">Select Section</option>{['A','B','C','D','E','F'].map(s => <option key={s} value={s}>Section {s}</option>)}</select></div>
-                            <div className="flex gap-4"><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase">Date</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.date} readOnly/></div><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase">Time</label><input type="time" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={sessionData.start_time_display} readOnly/></div></div>
-                        </div>
-                        <div className="p-6 bg-white border-t flex gap-4"><button onClick={() => setShowStartModal(false)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-black">Cancel</button><button onClick={handleStartClass} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg">Confirm & Start</button></div>
+                            <div className="p-6 sm:p-8 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Faculty Name</label><input className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500 text-sm" value={sessionData.faculty_name} onChange={(e) => setSessionData({...sessionData, faculty_name: e.target.value})} required/></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Faculty ID</label><input className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500 text-sm" value={sessionData.faculty_id_display} onChange={(e) => setSessionData({...sessionData, faculty_id_display: e.target.value})} required/></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Department</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.department} onChange={(e) => setSessionData({...sessionData, department: e.target.value, subject: ''})} required><option value="">Select Department</option>{departments.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Subject</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.subject} onChange={(e) => setSessionData({...sessionData, subject: e.target.value})} required disabled={!sessionData.department}><option value="">Select Subject</option>{sessionData.department && subjectMap[sessionData.department]?.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Section</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.section} onChange={(e) => setSessionData({...sessionData, section: e.target.value})} required><option value="">Select Section</option>{['A','B','C','D','E','F'].map(s => <option key={s} value={s}>Section {s}</option>)}</select></div>
+                                <div className="flex gap-4"><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase">Date</label><input type="date" className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.date} readOnly/></div><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase">Time</label><input type="time" className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.start_time_display} readOnly/></div></div>
+                            </div>
+                            <div className="p-4 sm:p-6 bg-white border-t flex flex-col sm:flex-row gap-3 sm:gap-4"><button onClick={() => setShowStartModal(false)} className="flex-1 bg-gray-100 py-3 sm:py-4 rounded-2xl font-black text-sm sm:text-base">Cancel</button><button onClick={handleStartClass} className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-black shadow-lg text-sm sm:text-base">Confirm & Start</button></div>
                     </div>
                 </div>
             )}

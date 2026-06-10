@@ -61,12 +61,12 @@ const Schedule = () => {
         );
     };
 
-    if (loading) return <div className="p-10 text-center font-bold text-gray-400 animate-pulse">LOADING TIMETABLE...</div>;
+    if (loading) return <div className="p-4 sm:p-10 text-center font-bold text-gray-400 animate-pulse">LOADING TIMETABLE...</div>;
 
     return (
-        <div className="p-10 bg-gray-50 min-h-screen">
-            <header className="mb-8">
-                <h1 className="text-4xl font-black text-gray-900 tracking-tight">Academic Timetable</h1>
+        <div className="p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen">
+            <header className="mb-6 sm:mb-8">
+                <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">Academic Timetable</h1>
                 <p className="text-gray-500 font-medium mt-1 uppercase tracking-widest text-xs">Official Class Schedule • KAHE CMS</p>
             </header>
 
