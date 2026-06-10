@@ -1,7 +1,7 @@
 services:
   # Backend Web Service
   - type: web
-    name: kahe-cms-backend-final
+    name: kahe-cms-backend-v5
     runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
@@ -9,7 +9,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: kahe-cms-db-final
+          name: kahe-cms-db-v5
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
@@ -18,14 +18,12 @@ services:
 
   # Frontend Static Site
   - type: web
-    name: kahe-cms-frontend-final
+    name: kahe-cms-frontend-v5
     runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
-    staticPublishPath: build
+    staticPublishPath: frontend/build
     envVars:
-      # The browser needs the PUBLIC URL of the backend. 
-      # Render will ask you for this value during setup.
       - key: REACT_APP_API_URL
         sync: false
     routes:
@@ -34,5 +32,5 @@ services:
         destination: /index.html
 
 databases:
-  - name: kahe-cms-db-final
+  - name: kahe-cms-db-v5
     plan: free
