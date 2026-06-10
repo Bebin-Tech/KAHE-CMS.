@@ -22,14 +22,21 @@ engine_kwargs = {
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 elif "postgresql" in SQLALCHEMY_DATABASE_URL:
-    # Ensure SSL is handled correctly if not in URL
+    # Render PostgreSQL often requires specialized SSL handling
     if "sslmode" not in SQLALCHEMY_DATABASE_URL:
-        if "?" in SQLALCHEMY_DATABASE_URL:
-            SQLALCHEMY_DATABASE_URL += "&sslmode=require"
-        else:
-            SQLALCHEMY_DATABASE_URL += "?sslmode=require"
+        # If it's an internal URL, we might not need SSL, but require is usually safe
+        # If it's external, we definitely need it.
+        sep = "&" if "?" in SQLALCHEMY_DATABASE_URL else "?"
+        SQLALCHEMY_DATABASE_URL += f"{sep}sslmode=require"
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
+# Create engine with improved connection pooling
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, 
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20,
+    pool_recycle=1800
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
