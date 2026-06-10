@@ -94,7 +94,7 @@ const Rooms = () => {
 
     useEffect(() => {
         fetchRooms();
-        const interval = setInterval(fetchRooms, 10000); // 10 seconds is usually enough for auto-refresh
+        const interval = setInterval(fetchRooms, 15000); // Optimized: 15 seconds for live room status
         return () => clearInterval(interval);
     }, [fetchRooms]);
 

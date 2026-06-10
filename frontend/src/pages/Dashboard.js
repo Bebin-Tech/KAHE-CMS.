@@ -31,7 +31,7 @@ const Dashboard = () => {
 
         if (role === 'admin') {
             fetchStats();
-            const interval = setInterval(fetchStats, 5000);
+            const interval = setInterval(fetchStats, 30000); // Optimized: 30 seconds for dashboard stats
             return () => clearInterval(interval);
         }
     }, [role]);

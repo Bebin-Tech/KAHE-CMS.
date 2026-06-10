@@ -4,7 +4,8 @@ import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from fastapi.middleware.gzip import GZipMiddleware
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from typing import List, Optional
 from datetime import datetime
@@ -33,8 +34,6 @@ for i in range(max_retries):
             time.sleep(5)
         else:
             logger.error("Could not connect to database after several attempts.")
-            # We don't necessarily want to crash the whole app if DB is down, 
-            # but create_all is usually critical.
             raise e
 
 # Auto-seed admin user
@@ -66,7 +65,8 @@ app = FastAPI(
     description="Optimized backend for real-time classroom tracking and management."
 )
 
-# CORS middleware
+# Optimized Middlewares
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -82,7 +82,6 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         if db_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         hashed_password = auth.get_password_hash(user.password)
-        # Security fix: Default role to student if not specified or force it
         role = user.role if user.role in ["faculty", "student"] else "student"
         db_user = models.User(
             name=user.name,
@@ -182,12 +181,10 @@ def delete_room(room_id: int, db: Session = Depends(database.get_db), current_us
 @app.post("/book-room", response_model=schemas.Booking)
 def book_room(booking: schemas.BookingCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_faculty)):
     try:
-        # Check if the room exists
         room = db.query(models.Room).filter(models.Room.id == booking.room_id).first()
         if not room:
             raise HTTPException(status_code=404, detail="Target classroom not found.")
         
-        # Check for overlapping bookings
         overlap = db.query(models.Booking).filter(
             models.Booking.room_id == booking.room_id,
             models.Booking.start_time < booking.end_time,
@@ -211,7 +208,7 @@ def book_room(booking: schemas.BookingCreate, db: Session = Depends(database.get
 
 @app.get("/bookings", response_model=List[schemas.Booking])
 def get_bookings(db: Session = Depends(database.get_db)):
-    return db.query(models.Booking).all()
+    return db.query(models.Booking).options(joinedload(models.Booking.room)).all()
 
 @app.delete("/bookings/{booking_id}")
 def delete_booking(booking_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
@@ -272,8 +269,6 @@ def end_class(session_id: int, db: Session = Depends(database.get_db), current_u
         room = db.query(models.Room).filter(models.Room.id == db_session.room_id).first()
         if room:
             room.status = "AVAILABLE"
-            
-            # Check for queued bookings and notify the next faculty
             next_booking = db.query(models.Booking).filter(
                 models.Booking.room_id == room.id,
                 models.Booking.status == "QUEUED"
@@ -281,7 +276,6 @@ def end_class(session_id: int, db: Session = Depends(database.get_db), current_u
             
             if next_booking:
                 next_booking.status = "BOOKED"
-                # Create a notification
                 notification = models.Notification(
                     user_id=next_booking.user_id,
                     message=f"Classroom {room.room_number} is now available for your session."
@@ -323,12 +317,9 @@ def get_all_active_sessions(db: Session = Depends(database.get_db)):
 @app.post("/users", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
-        # Check if email is already taken
         existing_user = db.query(models.User).filter(models.User.email == user.email).first()
         if existing_user:
             raise HTTPException(status_code=400, detail="A user with this email address already exists.")
-        
-        # Check if faculty_id/username is already taken
         existing_id = db.query(models.User).filter(models.User.faculty_id == user.faculty_id).first()
         if existing_id:
             raise HTTPException(status_code=400, detail="This User ID (Username) is already taken.")
@@ -447,7 +438,7 @@ def create_subject(sub: schemas.SubjectBase, db: Session = Depends(database.get_
 @app.get("/class-history", response_model=List[schemas.ClassSession])
 def get_class_history(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     try:
-        query = db.query(models.ClassSession)
+        query = db.query(models.ClassSession).options(joinedload(models.ClassSession.room))
         if current_user.role == "faculty":
             query = query.filter(models.ClassSession.faculty_user_id == current_user.id)
         return query.order_by(models.ClassSession.id.desc()).all()
@@ -466,7 +457,7 @@ def get_room_history(room_id: int, db: Session = Depends(database.get_db)):
 # Schedule APIs
 @app.get("/schedules", response_model=List[schemas.Schedule])
 def get_schedules(db: Session = Depends(database.get_db)):
-    return db.query(models.Schedule).all()
+    return db.query(models.Schedule).options(joinedload(models.Schedule.room), joinedload(models.Schedule.faculty)).all()
 
 @app.post("/schedules", response_model=schemas.Schedule)
 def create_schedule(schedule: schemas.ScheduleCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
