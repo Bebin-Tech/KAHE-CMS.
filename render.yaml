@@ -2,7 +2,7 @@ services:
   # Backend Web Service
   - type: web
     name: kahe-cms-backend
-    env: python
+    runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
@@ -17,18 +17,18 @@ services:
         value: 3.10.0
 
   # Frontend Static Site
-  - type: static
+  - type: web
     name: kahe-cms-frontend
-    env: static
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     publishDir: build
     envVars:
       - key: REACT_APP_API_URL
-        fromStack:
+        fromService:
           type: web
           name: kahe-cms-backend
-          property: url
+          property: host
     routes:
       - type: rewrite
         source: /*
