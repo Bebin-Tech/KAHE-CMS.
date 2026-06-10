@@ -30,7 +30,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     }
 
     return (
-        <>
+        <React.Fragment>
             {/* Mobile Overlay */}
             {isOpen && (
                 <div
@@ -49,65 +49,66 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
-                <img
-                    src="/logo.svg"
-                    alt="KAHE Logo"
-                    className="w-[120px] h-[120px] object-contain"
-                />
-                <span className="text-2xl font-bold text-gray-800 tracking-tight leading-tight">KAHE CMS</span>
-            </div>
-
-            <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
-                <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Main Menu</p>
-                {menuItems.map((item) => (
-                    <Link
-                        key={item.name}
-                        to={item.path}
-                        onClick={() => setIsOpen(false)}
-                        className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-200 group ${
-                            location.pathname === item.path
-                                ? 'bg-indigo-50 text-indigo-700'
-                                : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600'
-                        }`}
-                    >
-                        <svg className={`h-6 w-6 ${location.pathname === item.path ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                        </svg>
-                        <span className="font-semibold">{item.name}</span>
-                    </Link>
-                ))}
-            </nav>
-
-            <div className="p-6 border-t border-gray-100 bg-white">
-                <div className="mb-4 px-2">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Authenticated Account</p>
-                    <div className="flex items-center space-x-3">
-                        <div className={`h-10 w-10 text-white rounded-xl flex items-center justify-center font-black text-lg ${
-                            role === 'admin' ? 'bg-green-600' : 'bg-violet-600'
-                        }`}>
-                            {role?.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <p className="text-sm font-black text-gray-900 leading-tight truncate w-32">{role?.toUpperCase()}</p>
-                            <p className="text-[10px] text-green-500 font-bold flex items-center">
-                                <span className="h-1.5 w-1.5 bg-green-500 rounded-full mr-1.5"></span>
-                                Active Now
-                            </p>
-                        </div>
-                    </div>
+                    <img
+                        src="/logo.svg"
+                        alt="KAHE Logo"
+                        className="w-[120px] h-[120px] object-contain"
+                    />
+                    <span className="text-2xl font-bold text-gray-800 tracking-tight leading-tight">KAHE CMS</span>
                 </div>
 
-                <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-2xl transition duration-200 font-black text-xs uppercase tracking-widest"
-                >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    <span>Logout</span>
-                </button>
+                <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+                    <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Main Menu</p>
+                    {menuItems.map((item) => (
+                        <Link
+                            key={item.name}
+                            to={item.path}
+                            onClick={() => setIsOpen(false)}
+                            className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-200 group ${
+                                location.pathname === item.path
+                                    ? 'bg-indigo-50 text-indigo-700'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600'
+                            }`}
+                        >
+                            <svg className={`h-6 w-6 ${location.pathname === item.path ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                            </svg>
+                            <span className="font-semibold">{item.name}</span>
+                        </Link>
+                    ))}
+                </nav>
+
+                <div className="p-6 border-t border-gray-100 bg-white">
+                    <div className="mb-4 px-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Authenticated Account</p>
+                        <div className="flex items-center space-x-3">
+                            <div className={`h-10 w-10 text-white rounded-xl flex items-center justify-center font-black text-lg ${
+                                role === 'admin' ? 'bg-green-600' : 'bg-violet-600'
+                            }`}>
+                                {role?.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <p className="text-sm font-black text-gray-900 leading-tight truncate w-32">{role?.toUpperCase()}</p>
+                                <p className="text-[10px] text-green-500 font-bold flex items-center">
+                                    <span className="h-1.5 w-1.5 bg-green-500 rounded-full mr-1.5"></span>
+                                    Active Now
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-2xl transition duration-200 font-black text-xs uppercase tracking-widest"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span>Logout</span>
+                    </button>
+                </div>
             </div>
-        </div>
+        </React.Fragment>
     );
 };
 
