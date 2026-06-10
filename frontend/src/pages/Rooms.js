@@ -392,20 +392,20 @@ const Rooms = () => {
 
             {/* Modal: Add Room */}
             {showAddRoomModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50 overflow-y-auto">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-3xl my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="bg-indigo-600 p-8 md:p-10 text-white relative flex-shrink-0">
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] w-full max-w-3xl my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="bg-indigo-600 p-6 sm:p-8 md:p-10 text-white relative flex-shrink-0">
                             <div className="relative z-10">
-                                <h2 className="text-3xl md:text-4xl font-black tracking-tight uppercase">Add Classroom</h2>
-                                <p className="text-indigo-100 font-bold opacity-80 mt-1 uppercase tracking-widest text-xs">New Institutional Space</p>
+                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight uppercase">Add Classroom</h2>
+                                <p className="text-indigo-100 font-bold opacity-80 mt-1 uppercase tracking-widest text-[10px]">New Institutional Space</p>
                             </div>
-                            <div className="absolute top-0 right-0 p-8 opacity-10 transform scale-150 rotate-12">
+                            <div className="absolute top-0 right-0 p-8 opacity-10 transform scale-150 rotate-12 hidden sm:block">
                                 <svg className="h-24 w-24 md:h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
                             </div>
                         </div>
 
                         <div className="overflow-y-auto flex-1 custom-scrollbar bg-white">
-                            <form onSubmit={handleAddRoom} id="addRoomForm" className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            <form onSubmit={handleAddRoom} id="addRoomForm" className="p-6 sm:p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 sm:gap-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Number</label>
                                     <input
@@ -481,18 +481,18 @@ const Rooms = () => {
                             </form>
                         </div>
 
-                        <div className="p-8 md:p-10 bg-white border-t border-gray-50 flex gap-4 md:gap-6 flex-shrink-0">
+                        <div className="p-6 sm:p-8 md:p-10 bg-white border-t border-gray-50 flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 flex-shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setShowAddRoomModal(false)}
-                                className="flex-1 bg-gray-100 text-gray-500 py-4 md:py-5 rounded-[1.5rem] font-black hover:bg-gray-200 transition text-lg"
+                                className="flex-1 bg-gray-100 text-gray-500 py-3 sm:py-4 md:py-5 rounded-[1.2rem] sm:rounded-[1.5rem] font-black hover:bg-gray-200 transition text-base sm:text-lg"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 form="addRoomForm"
-                                className="flex-1 bg-indigo-600 text-white py-4 md:py-5 rounded-[1.5rem] font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition text-lg"
+                                className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 md:py-5 rounded-[1.2rem] sm:rounded-[1.5rem] font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition text-base sm:text-lg"
                             >
                                 Create Room
                             </button>
@@ -503,21 +503,21 @@ const Rooms = () => {
 
             {/* Modal: Edit Room */}
             {showEditRoomModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50 overflow-y-auto">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-3xl my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="bg-indigo-600 p-8 md:p-10 text-white relative flex-shrink-0">
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] w-full max-w-3xl my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="bg-indigo-600 p-6 sm:p-8 md:p-10 text-white relative flex-shrink-0">
                             <div className="relative z-10">
-                                <h2 className="text-3xl md:text-4xl font-black tracking-tight uppercase">Edit Classroom</h2>
-                                <p className="text-indigo-100 font-bold opacity-80 mt-1 uppercase tracking-widest text-xs">Update Asset Information</p>
+                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight uppercase">Edit Classroom</h2>
+                                <p className="text-indigo-100 font-bold opacity-80 mt-1 uppercase tracking-widest text-[10px]">Update Asset Information</p>
                             </div>
                         </div>
 
                         <div className="overflow-y-auto flex-1 custom-scrollbar bg-white">
-                            <form onSubmit={handleUpdateRoom} id="editRoomForm" className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            <form onSubmit={handleUpdateRoom} id="editRoomForm" className="p-6 sm:p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 sm:gap-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Number</label>
                                     <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none text-sm"
                                         value={editRoomData.room_number}
                                         onChange={(e) => setEditRoomData({...editRoomData, room_number: e.target.value})}
                                         required
@@ -526,7 +526,7 @@ const Rooms = () => {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Room Name</label>
                                     <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none text-sm"
                                         value={editRoomData.room_name}
                                         onChange={(e) => setEditRoomData({...editRoomData, room_name: e.target.value})}
                                     />
@@ -534,7 +534,7 @@ const Rooms = () => {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Building</label>
                                     <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none text-sm"
                                         value={editRoomData.building}
                                         onChange={(e) => setEditRoomData({...editRoomData, building: e.target.value})}
                                     />
@@ -542,7 +542,7 @@ const Rooms = () => {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Floor</label>
                                     <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none text-sm"
                                         value={editRoomData.floor}
                                         onChange={(e) => setEditRoomData({...editRoomData, floor: e.target.value})}
                                     />
@@ -550,7 +550,7 @@ const Rooms = () => {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Type</label>
                                     <select
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none text-sm"
                                         value={editRoomData.type}
                                         onChange={(e) => setEditRoomData({...editRoomData, type: e.target.value})}
                                         required
@@ -565,7 +565,7 @@ const Rooms = () => {
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Capacity</label>
                                     <input
                                         type="number"
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none text-sm"
                                         value={editRoomData.capacity}
                                         onChange={(e) => setEditRoomData({...editRoomData, capacity: e.target.value})}
                                         required
@@ -574,18 +574,18 @@ const Rooms = () => {
                             </form>
                         </div>
 
-                        <div className="p-8 md:p-10 bg-white border-t border-gray-50 flex gap-4 md:gap-6 flex-shrink-0">
+                        <div className="p-6 sm:p-8 md:p-10 bg-white border-t border-gray-50 flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 flex-shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setShowEditRoomModal(false)}
-                                className="flex-1 bg-gray-100 text-gray-500 py-4 md:py-5 rounded-[1.5rem] font-black hover:bg-gray-200 transition text-lg"
+                                className="flex-1 bg-gray-100 text-gray-500 py-3 sm:py-4 md:py-5 rounded-[1.2rem] sm:rounded-[1.5rem] font-black hover:bg-gray-200 transition text-base sm:text-lg"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 form="editRoomForm"
-                                className="flex-1 bg-indigo-600 text-white py-4 md:py-5 rounded-[1.5rem] font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition text-lg"
+                                className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 md:py-5 rounded-[1.2rem] sm:rounded-[1.5rem] font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition text-base sm:text-lg"
                             >
                                 Save Changes
                             </button>

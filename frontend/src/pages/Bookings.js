@@ -185,16 +185,16 @@ const Bookings = () => {
 
             {/* Modal: New Booking */}
             {showModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50 overflow-y-auto">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-lg my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="bg-indigo-600 p-8 text-white relative flex-shrink-0">
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] w-full max-w-lg my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="bg-indigo-600 p-6 sm:p-8 text-white relative flex-shrink-0">
                             <div className="relative z-10">
-                                <h2 className="text-3xl font-black tracking-tight uppercase text-center">New Reservation</h2>
+                                <h2 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-center">New Reservation</h2>
                                 <p className="text-indigo-100 font-bold opacity-80 mt-1 uppercase tracking-widest text-[10px] text-center">Secure Room Booking</p>
                             </div>
                         </div>
 
-                        <div className="overflow-y-auto flex-1 custom-scrollbar bg-white p-4 sm:p-8">
+                        <div className="overflow-y-auto flex-1 custom-scrollbar bg-white p-6 sm:p-8">
                             <form onSubmit={handleBook} id="bookingForm" className="space-y-4 sm:space-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Faculty Name</label>
@@ -253,18 +253,18 @@ const Bookings = () => {
                             </form>
                         </div>
 
-                        <div className="p-8 bg-white border-t border-gray-50 flex gap-4 flex-shrink-0">
+                        <div className="p-6 sm:p-8 bg-white border-t border-gray-50 flex flex-col sm:flex-row gap-3 sm:gap-4 flex-shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setShowModal(false)}
-                                className="flex-1 font-black text-gray-400 py-4 hover:bg-gray-50 rounded-2xl transition"
+                                className="flex-1 font-black text-gray-400 py-3 sm:py-4 hover:bg-gray-50 rounded-2xl transition text-sm sm:text-base"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 form="bookingForm"
-                                className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition"
+                                className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition text-sm sm:text-base"
                             >
                                 Confirm Booking
                             </button>
@@ -275,17 +275,17 @@ const Bookings = () => {
 
             {/* Modal: Edit Booking */}
             {showEditModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50 overflow-y-auto">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-lg my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="bg-indigo-600 p-8 text-white relative flex-shrink-0">
-                            <h2 className="text-2xl font-black text-center uppercase tracking-tight">Edit Reservation</h2>
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] w-full max-w-lg my-auto shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="bg-indigo-600 p-6 sm:p-8 text-white relative flex-shrink-0">
+                            <h2 className="text-xl sm:text-2xl font-black text-center uppercase tracking-tight">Edit Reservation</h2>
                         </div>
-                        <div className="overflow-y-auto flex-1 bg-white p-8">
-                            <form onSubmit={handleUpdateBooking} id="editBookingForm" className="space-y-5">
+                        <div className="overflow-y-auto flex-1 bg-white p-6 sm:p-8">
+                            <form onSubmit={handleUpdateBooking} id="editBookingForm" className="space-y-4 sm:space-y-5">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Faculty Name</label>
                                     <input
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none text-sm"
                                         value={editBooking.faculty_name}
                                         onChange={(e) => setEditBooking({...editBooking, faculty_name: e.target.value})}
                                         required
@@ -294,7 +294,7 @@ const Bookings = () => {
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Department</label>
                                     <select
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none text-sm"
                                         value={editBooking.department}
                                         onChange={(e) => setEditBooking({...editBooking, department: e.target.value})}
                                         required
@@ -306,7 +306,7 @@ const Bookings = () => {
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Select Room</label>
                                     <select
-                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none"
+                                        className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-gray-800 outline-none appearance-none text-sm"
                                         value={editBooking.room_id}
                                         onChange={(e) => setEditBooking({...editBooking, room_id: e.target.value})}
                                         required
@@ -314,12 +314,12 @@ const Bookings = () => {
                                         {rooms.map(r => <option key={r.id} value={r.id}>{r.room_number}</option>)}
                                     </select>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Start Time</label>
                                         <input
                                             type="datetime-local"
-                                            className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold outline-none"
+                                            className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl font-bold outline-none text-sm"
                                             value={editBooking.start_time ? new Date(new Date(editBooking.start_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
                                             onChange={(e) => setEditBooking({...editBooking, start_time: e.target.value})}
                                             required
@@ -329,7 +329,7 @@ const Bookings = () => {
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">End Time</label>
                                         <input
                                             type="datetime-local"
-                                            className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold outline-none"
+                                            className="w-full p-3 sm:p-4 bg-gray-50 border-none rounded-2xl font-bold outline-none text-sm"
                                             value={editBooking.end_time ? new Date(new Date(editBooking.end_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
                                             onChange={(e) => setEditBooking({...editBooking, end_time: e.target.value})}
                                             required
@@ -338,9 +338,9 @@ const Bookings = () => {
                                 </div>
                             </form>
                         </div>
-                        <div className="p-8 bg-white border-t flex gap-4 flex-shrink-0">
-                            <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 font-black text-gray-400">Cancel</button>
-                            <button type="submit" form="editBookingForm" className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg">Save Changes</button>
+                        <div className="p-6 sm:p-8 bg-white border-t flex flex-col sm:flex-row gap-3 sm:gap-4 flex-shrink-0">
+                            <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 font-black text-gray-400 text-sm sm:text-base">Cancel</button>
+                            <button type="submit" form="editBookingForm" className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-black shadow-lg text-sm sm:text-base">Save Changes</button>
                         </div>
                     </div>
                 </div>
