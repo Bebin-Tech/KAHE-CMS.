@@ -1,6 +1,7 @@
 services:
+  # Unified All-in-One Web Service
   - type: web
-    name: kahe-cms-all-in-one
+    name: kahe-cms-all-in-one-final
     runtime: python
     buildCommand: |
       cd frontend && npm install && CI=false npm run build
@@ -16,7 +17,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.10.0
       - key: REACT_APP_API_URL
-        value: "" # Empty means it will use relative path in frontend
+        value: ""
 
 databases:
   - name: kahe-cms-db-final
