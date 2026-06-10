@@ -1,7 +1,7 @@
 import logging
 import time
 import os
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -65,6 +65,8 @@ app = FastAPI(
     description="Optimized backend for real-time classroom tracking and management."
 )
 
+api_router = APIRouter(prefix="/api")
+
 # Optimized Middlewares
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
@@ -75,7 +77,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/register", response_model=schemas.User)
+@api_router.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     try:
         db_user = db.query(models.User).filter(models.User.email == user.email).first()
@@ -99,7 +101,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         logger.error(f"Database error during registration: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred during registration.")
 
-@app.post("/login", response_model=schemas.Token)
+@api_router.post("/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     try:
         user = db.query(models.User).filter(models.User.email == form_data.username).first()
@@ -122,7 +124,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=500, detail="Internal server error during login.")
 
 # Room APIs
-@app.get("/rooms", response_model=List[schemas.Room])
+@api_router.get("/rooms", response_model=List[schemas.Room])
 def get_rooms(db: Session = Depends(database.get_db)):
     try:
         return db.query(models.Room).all()
@@ -130,7 +132,7 @@ def get_rooms(db: Session = Depends(database.get_db)):
         logger.error(f"Error fetching rooms: {str(e)}")
         return []
 
-@app.post("/rooms", response_model=schemas.Room)
+@api_router.post("/rooms", response_model=schemas.Room)
 def create_room(room: schemas.RoomCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         db_room = models.Room(**room.dict())
@@ -143,7 +145,7 @@ def create_room(room: schemas.RoomCreate, db: Session = Depends(database.get_db)
         logger.error(f"Error creating room: {str(e)}")
         raise HTTPException(status_code=400, detail="Failed to create room. Please ensure the room number is unique.")
 
-@app.put("/rooms/{room_id}", response_model=schemas.Room)
+@api_router.put("/rooms/{room_id}", response_model=schemas.Room)
 def update_room(room_id: int, room: schemas.RoomCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
@@ -159,7 +161,7 @@ def update_room(room_id: int, room: schemas.RoomCreate, db: Session = Depends(da
         logger.error(f"Error updating room {room_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update classroom information.")
 
-@app.delete("/rooms/{room_id}")
+@api_router.delete("/rooms/{room_id}")
 def delete_room(room_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
@@ -178,7 +180,7 @@ def delete_room(room_id: int, db: Session = Depends(database.get_db), current_us
         raise HTTPException(status_code=500, detail="Failed to delete classroom.")
 
 # Booking APIs
-@app.post("/book-room", response_model=schemas.Booking)
+@api_router.post("/book-room", response_model=schemas.Booking)
 def book_room(booking: schemas.BookingCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_faculty)):
     try:
         room = db.query(models.Room).filter(models.Room.id == booking.room_id).first()
@@ -206,11 +208,11 @@ def book_room(booking: schemas.BookingCreate, db: Session = Depends(database.get
         logger.error(f"Error during booking: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to process booking reservation.")
 
-@app.get("/bookings", response_model=List[schemas.Booking])
+@api_router.get("/bookings", response_model=List[schemas.Booking])
 def get_bookings(db: Session = Depends(database.get_db)):
     return db.query(models.Booking).options(joinedload(models.Booking.room)).all()
 
-@app.delete("/bookings/{booking_id}")
+@api_router.delete("/bookings/{booking_id}")
 def delete_booking(booking_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     db_booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
     if not db_booking:
@@ -219,7 +221,7 @@ def delete_booking(booking_id: int, db: Session = Depends(database.get_db), curr
     db.commit()
     return {"message": "Booking deleted successfully"}
 
-@app.put("/bookings/{booking_id}", response_model=schemas.Booking)
+@api_router.put("/bookings/{booking_id}", response_model=schemas.Booking)
 def update_booking(booking_id: int, booking: schemas.BookingCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     db_booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
     if not db_booking:
@@ -231,7 +233,7 @@ def update_booking(booking_id: int, booking: schemas.BookingCreate, db: Session 
     return db_booking
 
 # Class Session APIs
-@app.post("/start-class", response_model=schemas.ClassSession)
+@api_router.post("/start-class", response_model=schemas.ClassSession)
 def start_class(session: schemas.ClassSessionCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     try:
         room = db.query(models.Room).filter(models.Room.id == session.room_id).first()
@@ -256,7 +258,7 @@ def start_class(session: schemas.ClassSessionCreate, db: Session = Depends(datab
         logger.error(f"Error starting class: {str(e)}")
         raise HTTPException(status_code=500, detail="Database failure while starting class session.")
 
-@app.post("/end-class/{session_id}")
+@api_router.post("/end-class/{session_id}")
 def end_class(session_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     try:
         db_session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
@@ -290,11 +292,11 @@ def end_class(session_id: int, db: Session = Depends(database.get_db), current_u
         raise HTTPException(status_code=500, detail="Failed to end class session properly.")
 
 # Notification APIs
-@app.get("/notifications")
+@api_router.get("/notifications")
 def get_notifications(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     return db.query(models.Notification).filter(models.Notification.user_id == current_user.id).order_by(models.Notification.id.desc()).all()
 
-@app.post("/notifications/read/{notif_id}")
+@api_router.post("/notifications/read/{notif_id}")
 def mark_notification_read(notif_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     notif = db.query(models.Notification).filter(models.Notification.id == notif_id, models.Notification.user_id == current_user.id).first()
     if notif:
@@ -302,19 +304,19 @@ def mark_notification_read(notif_id: int, db: Session = Depends(database.get_db)
         db.commit()
     return {"status": "success"}
 
-@app.get("/active-session/{room_id}", response_model=Optional[schemas.ClassSession])
+@api_router.get("/active-session/{room_id}", response_model=Optional[schemas.ClassSession])
 def get_active_session(room_id: int, db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).filter(
         models.ClassSession.room_id == room_id,
         models.ClassSession.status == "ACTIVE"
     ).first()
 
-@app.get("/active-sessions", response_model=List[schemas.ClassSession])
+@api_router.get("/active-sessions", response_model=List[schemas.ClassSession])
 def get_all_active_sessions(db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).filter(models.ClassSession.status == "ACTIVE").all()
 
 # User Management (Admin Only)
-@app.post("/users", response_model=schemas.User)
+@api_router.post("/users", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         existing_user = db.query(models.User).filter(models.User.email == user.email).first()
@@ -341,7 +343,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
         logger.error(f"Error creating user: {str(e)}")
         raise HTTPException(status_code=500, detail="Database failure while creating user account.")
 
-@app.get("/users_list", response_model=List[schemas.User])
+@api_router.get("/users_list", response_model=List[schemas.User])
 def get_users_list(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         return db.query(models.User).all()
@@ -349,7 +351,7 @@ def get_users_list(db: Session = Depends(database.get_db), current_user: models.
         logger.error(f"Error fetching users: {str(e)}")
         return []
 
-@app.get("/faculty", response_model=List[schemas.User])
+@api_router.get("/faculty", response_model=List[schemas.User])
 def get_faculty(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         return db.query(models.User).filter(models.User.role == "faculty").all()
@@ -357,7 +359,7 @@ def get_faculty(db: Session = Depends(database.get_db), current_user: models.Use
         logger.error(f"Error fetching faculty: {str(e)}")
         return []
 
-@app.put("/users/{user_id}", response_model=schemas.User)
+@api_router.put("/users/{user_id}", response_model=schemas.User)
 def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         db_user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -380,7 +382,7 @@ def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Dep
         logger.error(f"Error updating user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update user information.")
 
-@app.delete("/users/{user_id}")
+@api_router.delete("/users/{user_id}")
 def delete_user(user_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         db_user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -395,14 +397,14 @@ def delete_user(user_id: int, db: Session = Depends(database.get_db), current_us
         raise HTTPException(status_code=500, detail="Database failure while deleting account.")
 
 # Department & Subject APIs
-@app.get("/departments", response_model=List[schemas.Department])
+@api_router.get("/departments", response_model=List[schemas.Department])
 def get_departments(db: Session = Depends(database.get_db)):
     try:
         return db.query(models.Department).all()
     except:
         return []
 
-@app.post("/departments", response_model=schemas.Department)
+@api_router.post("/departments", response_model=schemas.Department)
 def create_department(dept: schemas.DepartmentBase, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         db_dept = models.Department(name=dept.name)
@@ -415,14 +417,14 @@ def create_department(dept: schemas.DepartmentBase, db: Session = Depends(databa
         logger.error(f"Error creating department: {str(e)}")
         raise HTTPException(status_code=400, detail="Department already exists or invalid data.")
 
-@app.get("/subjects", response_model=List[schemas.Subject])
+@api_router.get("/subjects", response_model=List[schemas.Subject])
 def get_subjects(db: Session = Depends(database.get_db)):
     try:
         return db.query(models.Subject).all()
     except:
         return []
 
-@app.post("/subjects", response_model=schemas.Subject)
+@api_router.post("/subjects", response_model=schemas.Subject)
 def create_subject(sub: schemas.SubjectBase, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     try:
         db_sub = models.Subject(name=sub.name, department_name=sub.department_name)
@@ -435,7 +437,7 @@ def create_subject(sub: schemas.SubjectBase, db: Session = Depends(database.get_
         logger.error(f"Error creating subject: {str(e)}")
         raise HTTPException(status_code=400, detail="Failed to create subject record.")
 
-@app.get("/class-history", response_model=List[schemas.ClassSession])
+@api_router.get("/class-history", response_model=List[schemas.ClassSession])
 def get_class_history(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     try:
         query = db.query(models.ClassSession).options(joinedload(models.ClassSession.room))
@@ -446,7 +448,7 @@ def get_class_history(db: Session = Depends(database.get_db), current_user: mode
         logger.error(f"Error fetching history: {str(e)}")
         return []
 
-@app.get("/room-history/{room_id}", response_model=List[schemas.ClassSession])
+@api_router.get("/room-history/{room_id}", response_model=List[schemas.ClassSession])
 def get_room_history(room_id: int, db: Session = Depends(database.get_db)):
     try:
         return db.query(models.ClassSession).filter(models.ClassSession.room_id == room_id).order_by(models.ClassSession.id.desc()).all()
@@ -455,11 +457,11 @@ def get_room_history(room_id: int, db: Session = Depends(database.get_db)):
         return []
 
 # Schedule APIs
-@app.get("/schedules", response_model=List[schemas.Schedule])
+@api_router.get("/schedules", response_model=List[schemas.Schedule])
 def get_schedules(db: Session = Depends(database.get_db)):
     return db.query(models.Schedule).options(joinedload(models.Schedule.room), joinedload(models.Schedule.faculty)).all()
 
-@app.post("/schedules", response_model=schemas.Schedule)
+@api_router.post("/schedules", response_model=schemas.Schedule)
 def create_schedule(schedule: schemas.ScheduleCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     db_schedule = models.Schedule(**schedule.dict())
     db.add(db_schedule)
@@ -467,7 +469,7 @@ def create_schedule(schedule: schemas.ScheduleCreate, db: Session = Depends(data
     db.refresh(db_schedule)
     return db_schedule
 
-@app.delete("/schedules/{schedule_id}")
+@api_router.delete("/schedules/{schedule_id}")
 def delete_schedule(schedule_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
     db_schedule = db.query(models.Schedule).filter(models.Schedule.id == schedule_id).first()
     if not db_schedule:
@@ -475,6 +477,9 @@ def delete_schedule(schedule_id: int, db: Session = Depends(database.get_db), cu
     db.delete(db_schedule)
     db.commit()
     return {"message": "Schedule deleted"}
+
+# Include API Router
+app.include_router(api_router)
 
 # Serve Frontend Static Files
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
