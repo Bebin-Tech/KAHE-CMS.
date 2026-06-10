@@ -64,4 +64,4 @@ $env:DATABASE_URL="YOUR_EXTERNAL_POSTGRES_URL"; python migrate_to_render.py
 - Gzip compression and database connection pooling for maximum responsiveness.
 
 ---
-*Developed for Karpagam Academy of Higher Education.*
+*Developed by Bebin R.*
