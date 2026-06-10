@@ -1,4 +1,6 @@
 import logging
+import time
+import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +8,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from typing import List, Optional
 from datetime import datetime
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 try:
     from . import models, schemas, auth, database
@@ -16,7 +20,22 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-models.Base.metadata.create_all(bind=database.engine)
+# Retry logic for database connection during startup
+max_retries = 5
+for i in range(max_retries):
+    try:
+        models.Base.metadata.create_all(bind=database.engine)
+        logger.info("Database tables created/verified.")
+        break
+    except Exception as e:
+        if i < max_retries - 1:
+            logger.warning(f"Database connection failed (attempt {i+1}/{max_retries}). Retrying in 5s...")
+            time.sleep(5)
+        else:
+            logger.error("Could not connect to database after several attempts.")
+            # We don't necessarily want to crash the whole app if DB is down, 
+            # but create_all is usually critical.
+            raise e
 
 # Auto-seed admin user
 def seed_admin():
@@ -466,13 +485,6 @@ def delete_schedule(schedule_id: int, db: Session = Depends(database.get_db), cu
     db.commit()
     return {"message": "Schedule deleted"}
 
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os
-
-# ... (keep existing imports and setup)
-
-# Place this AFTER all your @app.get/post routes
 # Serve Frontend Static Files
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
 
@@ -485,4 +497,4 @@ if os.path.exists(frontend_path):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
