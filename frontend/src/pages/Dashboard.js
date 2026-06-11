@@ -56,6 +56,19 @@ const Dashboard = () => {
         }
     };
 
+    const handleClearActivity = async () => {
+        if (window.confirm('Are you sure you want to clear all recent activity and reset today\'s usage?')) {
+            try {
+                await API.delete('/class-history');
+                setRecentActivity([]);
+                setStats(prev => ({ ...prev, bookings: 0 }));
+            } catch (err) {
+                console.error("Failed to clear history:", err);
+                alert("Failed to clear activity.");
+            }
+        }
+    };
+
     // --- RENDER HOD DASHBOARD ---
     if (role === 'hod') {
         return (
@@ -184,7 +197,15 @@ const Dashboard = () => {
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <h2 className="text-xl font-black text-gray-900">Recent Activity</h2>
-                        <button className="text-indigo-600 font-bold text-sm hover:underline text-left">View All</button>
+                        <div className="flex items-center space-x-4">
+                            <button
+                                onClick={handleClearActivity}
+                                className="text-red-500 font-bold text-sm hover:underline text-left transition-colors hover:text-red-700"
+                            >
+                                Clear All
+                            </button>
+                            <button className="text-indigo-600 font-bold text-sm hover:underline text-left">View All</button>
+                        </div>
                     </div>
                     <div className="space-y-6">
                         {recentActivity.map((activity, index) => (

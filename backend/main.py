@@ -456,6 +456,17 @@ def get_room_history(room_id: int, db: Session = Depends(database.get_db)):
         logger.error(f"Error fetching room history: {str(e)}")
         return []
 
+@api_router.delete("/class-history")
+def clear_class_history(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.check_admin)):
+    try:
+        db.query(models.ClassSession).delete()
+        db.commit()
+        return {"message": "All class history cleared successfully"}
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error clearing class history: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to clear history.")
+
 # Schedule APIs
 @api_router.get("/schedules", response_model=List[schemas.Schedule])
 def get_schedules(db: Session = Depends(database.get_db)):
