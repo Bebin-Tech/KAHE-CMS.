@@ -95,12 +95,17 @@ const UserDirectory = () => {
                         setFormData({ name: '', email: '', password: '', faculty_id: '', role: 'faculty' });
                         setShowModal(true);
                     }}
-                    className="w-full sm:w-auto bg-orange-500 text-white px-8 py-3 rounded-2xl font-black shadow-lg hover:bg-orange-600 transition flex items-center justify-center space-x-2"
+                    className="w-full sm:w-64 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-4 group"
                 >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                    <span>Create User</span>
+                    <div className="h-12 w-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors duration-300">
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                    </div>
+                    <div className="text-left">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Admin</p>
+                        <p className="text-sm font-black text-gray-800">Create User</p>
+                    </div>
                 </button>
             </header>
 
