@@ -37,21 +37,20 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] relative overflow-hidden px-4 sm:px-6 lg:px-8">
-            {/* Aesthetic Mesh Gradient Background */}
-            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                {/* Primary glow blobs */}
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-200/40 blur-[120px] animate-pulse"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/40 blur-[120px] animate-pulse" style={{animationDelay: '1s'}}></div>
-                <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-purple-200/30 blur-[100px] animate-pulse" style={{animationDelay: '2s'}}></div>
-                <div className="absolute bottom-[20%] left-[10%] w-[30%] h-[30%] rounded-full bg-teal-100/30 blur-[100px] animate-pulse" style={{animationDelay: '3s'}}></div>
-
-                {/* Subtle Grid Pattern Overlay */}
-                <div className="absolute inset-0 opacity-[0.05]"
-                     style={{backgroundImage: 'linear-gradient(#4f46e5 0.5px, transparent 0.5px), linear-gradient(90deg, #4f46e5 0.5px, transparent 0.5px)', backgroundSize: '30px 30px'}}></div>
+        <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6 lg:px-8">
+            {/* Premium Aesthetic Background Image */}
+            <div
+                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-[10000ms] ease-linear animate-slow-pan"
+                style={{
+                    backgroundImage: 'url("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2069")',
+                }}
+            >
+                {/* Elegant Multi-layered Overlay */}
+                <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px]"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-transparent to-slate-900/40"></div>
             </div>
 
-            <div className="max-w-md w-full space-y-8 bg-white/70 backdrop-blur-2xl p-8 md:p-12 rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] border border-white/60 relative z-10 animate-in fade-in zoom-in duration-1000">
+            <div className="max-w-md w-full space-y-8 bg-white/80 backdrop-blur-2xl p-8 md:p-12 rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] border border-white/40 relative z-10 animate-in fade-in zoom-in duration-1000">
                 <div className="text-center">
                     <div className="flex justify-center mb-6">
                         <img
