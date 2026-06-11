@@ -262,14 +262,14 @@ const Bookings = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowModal(false)}
-                                className="flex-1 font-black text-gray-400 py-3 sm:py-4 hover:bg-gray-50 rounded-2xl transition text-sm sm:text-base"
+                                className="flex-1 border-2 border-gray-300 text-gray-500 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 form="bookingForm"
-                                className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition text-sm sm:text-base"
+                                className="flex-1 border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors"
                             >
                                 Confirm Booking
                             </button>
@@ -344,8 +344,20 @@ const Bookings = () => {
                             </form>
                         </div>
                         <div className="p-6 sm:p-8 bg-white border-t flex flex-col sm:flex-row gap-3 sm:gap-4 flex-shrink-0">
-                            <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 font-black text-gray-400 text-sm sm:text-base">Cancel</button>
-                            <button type="submit" form="editBookingForm" className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-black shadow-lg text-sm sm:text-base">Save Changes</button>
+                            <button
+                                type="button"
+                                onClick={() => setShowEditModal(false)}
+                                className="flex-1 border-2 border-gray-300 text-gray-500 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                form="editBookingForm"
+                                className="flex-1 border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors"
+                            >
+                                Save Changes
+                            </button>
                         </div>
                     </div>
                 </div>

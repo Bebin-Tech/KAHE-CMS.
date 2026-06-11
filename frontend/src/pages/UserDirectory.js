@@ -308,7 +308,7 @@ const UserDirectory = () => {
 
                                 <button
                                     type="submit"
-                                    className="w-full bg-[#1e1b4b] text-white py-4 md:py-5 rounded-2xl font-black shadow-xl hover:bg-[#1a1744] transition-all transform active:scale-95 uppercase tracking-wider mt-4"
+                                    className="w-full border-2 border-indigo-900 text-[#1e1b4b] py-4 rounded-2xl font-bold hover:bg-slate-50 transition-colors uppercase tracking-wider mt-4"
                                 >
                                     {isEditing ? 'Update Account' : 'Create Account'}
                                 </button>

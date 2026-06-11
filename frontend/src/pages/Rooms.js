@@ -356,7 +356,7 @@ const Rooms = () => {
                                                 });
                                                 setShowStartModal(true);
                                             }}
-                                            className="flex-1 bg-green-600 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-green-700 transition shadow-lg shadow-green-100 active:scale-[0.98] flex items-center justify-center space-x-2"
+                                            className="flex-1 border-2 border-green-600 text-green-600 py-2.5 rounded-xl font-bold text-xs hover:bg-green-50 transition active:scale-[0.98] flex items-center justify-center space-x-2"
                                         >
                                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
                                             <span>START CLASS</span>
@@ -366,13 +366,13 @@ const Rooms = () => {
                                         (role === 'admin' || activeSessions[room.id]?.faculty_user_id === currentUserId) ? (
                                             <button
                                                 onClick={() => handleEndClass(room.id)}
-                                                className="flex-1 bg-red-600 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-red-700 transition shadow-lg shadow-red-100 active:scale-[0.98] flex items-center justify-center space-x-2"
+                                                className="flex-1 border-2 border-red-600 text-red-600 py-2.5 rounded-xl font-bold text-xs hover:bg-red-50 transition active:scale-[0.98] flex items-center justify-center space-x-2"
                                             >
                                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                                                 <span>END CLASS</span>
                                             </button>
                                         ) : (
-                                            <div className="flex-1 bg-gray-100 text-gray-400 py-3.5 rounded-2xl font-black text-xs flex items-center justify-center cursor-not-allowed">
+                                            <div className="flex-1 border-2 border-gray-200 text-gray-400 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center cursor-not-allowed">
                                                 <span>OCCUPIED</span>
                                             </div>
                                         )
@@ -380,7 +380,7 @@ const Rooms = () => {
                                     {role === 'admin' && (
                                         <button
                                             onClick={() => handleDeleteRoom(room.id, room.room_number, room.status)}
-                                            className="bg-gray-100 text-red-500 px-4 rounded-2xl hover:bg-red-50 transition border border-gray-200 active:scale-95 group/del"
+                                            className="border-2 border-red-500 text-red-500 px-4 rounded-xl hover:bg-red-50 transition active:scale-95 group/del"
                                             title="Delete Classroom"
                                         >
                                             <svg className="h-5 w-5 group-hover/del:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -427,7 +427,20 @@ const Rooms = () => {
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-4 sm:p-6 bg-white border-t flex flex-col sm:flex-row gap-3 sm:gap-4"><button onClick={() => setShowStartModal(false)} className="flex-1 bg-gray-100 py-3 sm:py-4 rounded-2xl font-black text-sm sm:text-base">Cancel</button><button onClick={handleStartClass} className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-black shadow-lg text-sm sm:text-base">Confirm & Start</button></div>
+                            <div className="p-4 sm:p-6 bg-white border-t flex flex-col sm:flex-row gap-3 sm:gap-4">
+                                <button
+                                    onClick={() => setShowStartModal(false)}
+                                    className="flex-1 border-2 border-gray-300 text-gray-500 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleStartClass}
+                                    className="flex-1 border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors"
+                                >
+                                    Confirm & Start
+                                </button>
+                            </div>
                     </div>
                 </div>
             )}
@@ -527,14 +540,14 @@ const Rooms = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowAddRoomModal(false)}
-                                className="flex-1 bg-gray-100 text-gray-500 py-3 sm:py-4 md:py-5 rounded-[1.2rem] sm:rounded-[1.5rem] font-black hover:bg-gray-200 transition text-base sm:text-lg"
+                                className="flex-1 border-2 border-gray-300 text-gray-500 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 form="addRoomForm"
-                                className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 md:py-5 rounded-[1.2rem] sm:rounded-[1.5rem] font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition text-base sm:text-lg"
+                                className="flex-1 border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors"
                             >
                                 Create Room
                             </button>
@@ -620,14 +633,14 @@ const Rooms = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowEditRoomModal(false)}
-                                className="flex-1 bg-gray-100 text-gray-500 py-3 sm:py-4 md:py-5 rounded-[1.2rem] sm:rounded-[1.5rem] font-black hover:bg-gray-200 transition text-base sm:text-lg"
+                                className="flex-1 border-2 border-gray-300 text-gray-500 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 form="editRoomForm"
-                                className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 md:py-5 rounded-[1.2rem] sm:rounded-[1.5rem] font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition text-base sm:text-lg"
+                                className="flex-1 border-2 border-indigo-600 text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors"
                             >
                                 Save Changes
                             </button>
