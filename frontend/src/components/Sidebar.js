@@ -41,16 +41,15 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
             <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition duration-300 ease-in-out w-72 bg-white border-r border-gray-200 flex flex-col h-screen shadow-xl lg:shadow-sm z-50 overflow-hidden`}>
 
-                {/* Ultra-Compact Header for Mobile Accessibility */}
-                <div className="p-4 lg:p-8 flex items-center lg:flex-col lg:space-y-4 relative border-b lg:border-none border-gray-50 bg-white z-10">
+                {/* Compact Header */}
+                <div className="p-6 lg:p-8 flex items-center lg:flex-col lg:space-y-4 relative">
                     <img
                         src="/logo.svg"
                         alt="KAHE Logo"
-                        className="w-10 h-10 lg:w-24 lg:h-24 object-contain mr-3 lg:mr-0 lg:mb-2"
+                        className="w-10 h-10 lg:w-20 lg:h-20 object-contain mr-3 lg:mr-0 lg:mb-2"
                     />
                     <div className="flex flex-col lg:items-center">
                         <span className="text-lg lg:text-2xl font-bold text-gray-800 tracking-tight leading-tight">KAHE CMS</span>
-                        <span className="lg:hidden text-[8px] font-bold text-gray-400 uppercase tracking-widest">Campus Portal</span>
                     </div>
                     <button
                         onClick={() => setIsOpen(false)}
@@ -62,8 +61,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     </button>
                 </div>
 
-                {/* Main Menu Section - Scrollable if necessary */}
-                <nav className="flex-1 px-4 py-2 lg:py-4 space-y-1 overflow-y-auto custom-scrollbar">
+                {/* Main Menu Section */}
+                <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto custom-scrollbar">
                     <p className="px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Main Menu</p>
                     {menuItems.map((item) => (
                         <Link
@@ -84,20 +83,20 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     ))}
                 </nav>
 
-                {/* Fixed Bottom Section - Guaranteed Visibility */}
-                <div className="p-4 lg:p-6 border-t border-gray-100 bg-white mt-auto">
-                    <div className="mb-3 lg:mb-4 px-2">
-                        <p className="text-[8px] lg:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Authenticated Account</p>
-                        <div className="flex items-center space-x-2 lg:space-x-3">
-                            <div className={`h-10 w-10 lg:h-12 lg:w-12 text-white rounded-xl flex items-center justify-center font-black text-sm lg:text-lg shadow-md ${
+                {/* Footer Section */}
+                <div className="p-6 border-t border-gray-100 bg-white">
+                    <div className="mb-4 px-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Authenticated Account</p>
+                        <div className="flex items-center space-x-3">
+                            <div className={`h-10 w-10 text-white rounded-xl flex items-center justify-center font-black text-lg ${
                                 role === 'admin' ? 'bg-green-600' : 'bg-violet-600'
                             }`}>
                                 {role?.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                                <p className="text-xs lg:text-sm font-black text-gray-900 leading-tight truncate uppercase">{role}</p>
-                                <p className="text-[8px] lg:text-[10px] text-green-500 font-bold flex items-center">
-                                    <span className="h-1 lg:h-1.5 w-1 lg:w-1.5 bg-green-500 rounded-full mr-1 lg:mr-1.5"></span>
+                                <p className="text-xs font-black text-gray-900 leading-tight truncate uppercase">{role}</p>
+                                <p className="text-[10px] text-green-500 font-bold flex items-center">
+                                    <span className="h-1.5 w-1.5 bg-green-500 rounded-full mr-1.5"></span>
                                     Active Now
                                 </p>
                             </div>
@@ -106,9 +105,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-3 px-4 py-4 lg:py-5 text-red-600 bg-red-50 hover:bg-red-100 rounded-2xl transition duration-200 font-black text-xs lg:text-sm uppercase tracking-[0.2em] shadow-sm border border-red-100"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 bg-red-50 hover:bg-red-100 rounded-2xl transition duration-200 font-black text-xs uppercase tracking-widest border border-red-100"
                     >
-                        <svg className="h-5 w-5 lg:h-6 lg:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                         <span>Logout</span>
