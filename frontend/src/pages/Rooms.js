@@ -47,6 +47,21 @@ const Rooms = () => {
         remarks: ''
     });
 
+    useEffect(() => {
+        let interval;
+        if (showStartModal) {
+            interval = setInterval(() => {
+                const now = new Date();
+                setSessionData(prev => ({
+                    ...prev,
+                    date: now.toISOString().split('T')[0],
+                    start_time_display: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+                }));
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [showStartModal]);
+
     const departments = [
         "Languages",
         "Computer Science",
@@ -383,7 +398,26 @@ const Rooms = () => {
                                 <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Department</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.department} onChange={(e) => setSessionData({...sessionData, department: e.target.value, subject: ''})} required><option value="">Select Department</option>{departments.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
                                 <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Subject</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.subject} onChange={(e) => setSessionData({...sessionData, subject: e.target.value})} required disabled={!sessionData.department}><option value="">Select Subject</option>{sessionData.department && subjectMap[sessionData.department]?.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
                                 <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Section</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.section} onChange={(e) => setSessionData({...sessionData, section: e.target.value})} required><option value="">Select Section</option>{['A','B','C','D','E','F'].map(s => <option key={s} value={s}>Section {s}</option>)}</select></div>
-                                <div className="flex gap-4"><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase">Date</label><input type="date" className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.date} readOnly/></div><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase">Time</label><input type="time" className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.start_time_display} readOnly/></div></div>
+                                <div className="flex gap-4">
+                                    <div className="flex-1">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase">Date</label>
+                                        <input
+                                            type="date"
+                                            className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm focus:ring-2 ring-indigo-500"
+                                            value={sessionData.date}
+                                            onChange={(e) => setSessionData({...sessionData, date: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase">Time</label>
+                                        <input
+                                            type="time"
+                                            className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm focus:ring-2 ring-indigo-500"
+                                            value={sessionData.start_time_display}
+                                            onChange={(e) => setSessionData({...sessionData, start_time_display: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                             <div className="p-4 sm:p-6 bg-white border-t flex flex-col sm:flex-row gap-3 sm:gap-4"><button onClick={() => setShowStartModal(false)} className="flex-1 bg-gray-100 py-3 sm:py-4 rounded-2xl font-black text-sm sm:text-base">Cancel</button><button onClick={handleStartClass} className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-black shadow-lg text-sm sm:text-base">Confirm & Start</button></div>
                     </div>
