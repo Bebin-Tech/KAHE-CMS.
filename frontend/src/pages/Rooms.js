@@ -240,17 +240,9 @@ const Rooms = () => {
                 {role === 'admin' && (
                     <button
                         onClick={() => setShowAddRoomModal(true)}
-                        className="w-full sm:w-64 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-4 group"
+                        className="w-full sm:w-auto px-8 py-3 border-2 border-indigo-600 text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 transition-colors text-sm uppercase tracking-wider"
                     >
-                        <div className="h-12 w-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                            </svg>
-                        </div>
-                        <div className="text-left">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Action</p>
-                            <p className="text-sm font-black text-gray-800">Add New Room</p>
-                        </div>
+                        Add New Room
                     </button>
                 )}
             </header>
