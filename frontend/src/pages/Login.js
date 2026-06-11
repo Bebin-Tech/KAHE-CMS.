@@ -37,16 +37,21 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden px-4 sm:px-6 lg:px-8">
-            {/* Aesthetic Background Decorations */}
-            <div className="absolute top-0 left-0 w-full h-full z-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-indigo-100/50 blur-[100px] animate-pulse"></div>
-                <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-blue-100/50 blur-[100px] animate-pulse" style={{animationDelay: '1s'}}></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.03]"
-                     style={{backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '40px 40px'}}></div>
+        <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] relative overflow-hidden px-4 sm:px-6 lg:px-8">
+            {/* Aesthetic Mesh Gradient Background */}
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                {/* Primary glow blobs */}
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-200/40 blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-200/40 blur-[120px] animate-pulse" style={{animationDelay: '1s'}}></div>
+                <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-purple-200/30 blur-[100px] animate-pulse" style={{animationDelay: '2s'}}></div>
+                <div className="absolute bottom-[20%] left-[10%] w-[30%] h-[30%] rounded-full bg-teal-100/30 blur-[100px] animate-pulse" style={{animationDelay: '3s'}}></div>
+
+                {/* Subtle Grid Pattern Overlay */}
+                <div className="absolute inset-0 opacity-[0.05]"
+                     style={{backgroundImage: 'linear-gradient(#4f46e5 0.5px, transparent 0.5px), linear-gradient(90deg, #4f46e5 0.5px, transparent 0.5px)', backgroundSize: '30px 30px'}}></div>
             </div>
 
-            <div className="max-w-md w-full space-y-8 bg-white/80 backdrop-blur-xl p-8 md:p-12 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white/50 relative z-10 animate-in fade-in zoom-in duration-700">
+            <div className="max-w-md w-full space-y-8 bg-white/70 backdrop-blur-2xl p-8 md:p-12 rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] border border-white/60 relative z-10 animate-in fade-in zoom-in duration-1000">
                 <div className="text-center">
                     <div className="flex justify-center mb-6">
                         <img
