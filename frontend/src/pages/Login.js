@@ -117,10 +117,6 @@ const Login = () => {
                             />
                             <span className="text-xs font-bold text-slate-500 group-hover:text-indigo-600 transition">Keep me signed in</span>
                         </label>
-
-                        <button type="button" className="text-xs font-black text-indigo-600 hover:text-indigo-700 transition uppercase tracking-wider">
-                            Reset Access
-                        </button>
                     </div>
 
                     <div>
@@ -139,7 +135,7 @@ const Login = () => {
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                             ) : (
-                                "Sign In to Portal"
+                                "Sign In"
                             )}
                         </button>
                     </div>
