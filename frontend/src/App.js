@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -16,9 +16,32 @@ const PrivateRoute = ({ children }) => {
 };
 
 function App() {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
+    const [token, setToken] = useState(localStorage.getItem('token'));
+    const [role, setRole] = useState(localStorage.getItem('role'));
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Listen for changes in localStorage (login/logout from other tabs)
+    useEffect(() => {
+        const handleStorageChange = () => {
+            setToken(localStorage.getItem('token'));
+            setRole(localStorage.getItem('role'));
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
+    // A small hack to force App to check localStorage after Login redirects
+    // because standard routing doesn't trigger state changes in parent components.
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const currentToken = localStorage.getItem('token');
+            if (currentToken !== token) {
+                setToken(currentToken);
+                setRole(localStorage.getItem('role'));
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [token]);
 
     return (
         <Router>

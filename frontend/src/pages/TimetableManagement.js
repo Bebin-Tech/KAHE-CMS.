@@ -30,13 +30,13 @@ const TimetableManagement = () => {
                 API.get('/working-days'),
                 API.get('/period-timings')
             ]);
-            setStats(statsRes.data);
-            setDepartments(deptRes.data);
-            setPrograms(progRes.data);
-            setSemesters(semRes.data);
-            setSubjects(subRes.data);
-            setWorkingDays(wdRes.data);
-            setPeriods(ptRes.data);
+            setStats(statsRes.data || {});
+            setDepartments(Array.isArray(deptRes.data) ? deptRes.data : []);
+            setPrograms(Array.isArray(progRes.data) ? progRes.data : []);
+            setSemesters(Array.isArray(semRes.data) ? semRes.data : []);
+            setSubjects(Array.isArray(subRes.data) ? subRes.data : []);
+            setWorkingDays(Array.isArray(wdRes.data) ? wdRes.data : []);
+            setPeriods(Array.isArray(ptRes.data) ? ptRes.data : []);
             setLoading(false);
         } catch (err) {
             console.error(err);
@@ -141,7 +141,7 @@ const TimetableManagement = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {subjects.map(s => (
+                                {Array.isArray(subjects) && subjects.map(s => (
                                     <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50 transition">
                                         <td className="p-6"><span className="bg-slate-100 px-3 py-1 rounded-lg text-xs font-black text-slate-700">{s.code}</span></td>
                                         <td className="p-6 font-bold text-gray-700">{s.name}</td>
@@ -216,7 +216,7 @@ const TimetableManagement = () => {
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Target Semester</label>
                                 <select className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 outline-none appearance-none">
                                     <option>Select Semester...</option>
-                                    {semesters.map(s => <option key={s.id} value={s.id}>Semester {s.number}</option>)}
+                                    {Array.isArray(semesters) && semesters.map(s => <option key={s.id} value={s.id}>Semester {s.number}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -256,7 +256,7 @@ const TimetableManagement = () => {
                             <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Subject Code</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-indigo-500 transition" value={newSubject.code} onChange={e => setNewSubject({...newSubject, code: e.target.value})} required placeholder="e.g. CS101"/></div>
                             <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Subject Name</label><input className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-indigo-500 transition" value={newSubject.name} onChange={e => setNewSubject({...newSubject, name: e.target.value})} required placeholder="e.g. Operating Systems"/></div>
                             <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Department</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none appearance-none" value={newSubject.department_id} onChange={e => setNewSubject({...newSubject, department_id: e.target.value})} required><option value="">Select Dept</option>{departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Semester</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none appearance-none" value={newSubject.semester_id} onChange={e => setNewSubject({...newSubject, semester_id: e.target.value})} required><option value="">Select Sem</option>{semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number}</option>)}</select></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Semester</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none appearance-none" value={newSubject.semester_id} onChange={e => setNewSubject({...newSubject, semester_id: e.target.value})} required><option value="">Select Sem</option>{Array.isArray(semesters) && semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number}</option>)}</select></div>
                             <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Type</label><select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none appearance-none" value={newSubject.type} onChange={e => setNewSubject({...newSubject, type: e.target.value})} required><option value="Theory">Theory</option><option value="Lab">Lab</option></select></div>
                             <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Credits</label><input type="number" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-indigo-500 transition" value={newSubject.credits} onChange={e => setNewSubject({...newSubject, credits: e.target.value})} required/></div>
                             <div className="p-2 md:col-span-2 border-t border-gray-50 flex gap-4 mt-4">

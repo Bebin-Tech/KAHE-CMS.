@@ -85,10 +85,10 @@ const Rooms = () => {
                 API.get('/active-sessions')
             ]);
 
-            setRooms(roomsRes.data || []);
+            setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : []);
 
             const sessions = {};
-            if (sessionsRes.data) {
+            if (Array.isArray(sessionsRes.data)) {
                 sessionsRes.data.forEach(s => {
                     sessions[s.room_id] = s;
                 });
@@ -395,8 +395,8 @@ const Rooms = () => {
                             <div className="p-6 sm:p-8 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                 <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Faculty Name</label><input className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500 text-sm" value={sessionData.faculty_name} onChange={(e) => setSessionData({...sessionData, faculty_name: e.target.value})} required/></div>
                                 <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Faculty ID</label><input className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500 text-sm" value={sessionData.faculty_id_display} onChange={(e) => setSessionData({...sessionData, faculty_id_display: e.target.value})} required/></div>
-                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Department</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.department} onChange={(e) => setSessionData({...sessionData, department: e.target.value, subject: ''})} required><option value="">Select Department</option>{departments.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
-                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Subject</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.subject} onChange={(e) => setSessionData({...sessionData, subject: e.target.value})} required disabled={!sessionData.department}><option value="">Select Subject</option>{sessionData.department && subjectMap[sessionData.department]?.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Department</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.department} onChange={(e) => setSessionData({...sessionData, department: e.target.value, subject: ''})} required><option value="">Select Department</option>{Array.isArray(departments) && departments.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Subject</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.subject} onChange={(e) => setSessionData({...sessionData, subject: e.target.value})} required disabled={!sessionData.department}><option value="">Select Subject</option>{sessionData.department && Array.isArray(subjectMap[sessionData.department]) && subjectMap[sessionData.department].map(s => <option key={s} value={s}>{s}</option>)}</select></div>
                                 <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase">Section</label><select className="w-full p-3 sm:p-4 bg-gray-50 rounded-2xl font-bold outline-none text-sm" value={sessionData.section} onChange={(e) => setSessionData({...sessionData, section: e.target.value})} required><option value="">Select Section</option>{['A','B','C','D','E','F'].map(s => <option key={s} value={s}>Section {s}</option>)}</select></div>
                                 <div className="flex gap-4">
                                     <div className="flex-1">
@@ -522,7 +522,7 @@ const Rooms = () => {
                                         onChange={(e) => setNewRoomData({...newRoomData, department: e.target.value})}
                                         required
                                     >
-                                        {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                                        {Array.isArray(departments) && departments.map(d => <option key={d} value={d}>{d}</option>)}
                                     </select>
                                 </div>
                             </form>
