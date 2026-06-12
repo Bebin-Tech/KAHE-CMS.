@@ -16,14 +16,18 @@ const Dashboard = () => {
                 const historyRes = await API.get('/class-history');
                 const notifRes = await API.get('/notifications');
 
-                setRooms(roomsRes.data || []);
+                const rData = roomsRes.data || [];
+                const hData = historyRes.data || [];
+                const nData = notifRes.data || [];
+
+                setRooms(rData);
                 setStats({
-                    rooms: roomsRes.data.length,
-                    bookings: historyRes.data.length,
-                    active: roomsRes.data.filter(r => r.status === 'IN_USE').length
+                    rooms: rData.length,
+                    bookings: hData.length,
+                    active: rData.filter(r => r.status === 'IN_USE').length
                 });
-                setRecentActivity(historyRes.data.slice(0, 5)); // Get last 5 activities
-                setNotifications(notifRes.data.filter(n => !n.is_read));
+                setRecentActivity(hData.slice(0, 5));
+                setNotifications(nData.filter(n => !n.is_read));
             } catch (err) {
                 console.error(err);
             }
