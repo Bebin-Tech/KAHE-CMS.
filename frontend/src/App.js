@@ -20,28 +20,22 @@ function App() {
     const [role, setRole] = useState(localStorage.getItem('role'));
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-    // Listen for changes in localStorage (login/logout from other tabs)
+    // This effect ensures that the App component re-renders and picks up the new token
+    // immediately after a successful login in the Login component.
     useEffect(() => {
-        const handleStorageChange = () => {
+        const syncState = () => {
             setToken(localStorage.getItem('token'));
             setRole(localStorage.getItem('role'));
         };
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, []);
 
-    // A small hack to force App to check localStorage after Login redirects
-    // because standard routing doesn't trigger state changes in parent components.
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const currentToken = localStorage.getItem('token');
-            if (currentToken !== token) {
-                setToken(currentToken);
-                setRole(localStorage.getItem('role'));
-            }
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [token]);
+        window.addEventListener('storage', syncState);
+        const interval = setInterval(syncState, 500); // Fast check to avoid white screen lag
+
+        return () => {
+            window.removeEventListener('storage', syncState);
+            clearInterval(interval);
+        };
+    }, []);
 
     return (
         <Router>
@@ -89,6 +83,8 @@ function App() {
                                     {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
                                 </PrivateRoute>
                             } />
+                            {/* Catch-all for undefined routes */}
+                            <Route path="*" element={<Navigate to="/" />} />
                         </Routes>
                     </main>
                 </div>

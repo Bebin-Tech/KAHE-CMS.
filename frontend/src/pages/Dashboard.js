@@ -6,15 +6,19 @@ const Dashboard = () => {
     const [recentActivity, setRecentActivity] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
+
     const role = localStorage.getItem('role')?.toLowerCase();
-    const userName = localStorage.getItem('name'); // Assuming name is stored in localStorage
+    const userName = localStorage.getItem('name');
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const roomsRes = await API.get('/rooms');
-                const historyRes = await API.get('/class-history');
-                const notifRes = await API.get('/notifications');
+                const [roomsRes, historyRes, notifRes] = await Promise.all([
+                    API.get('/rooms'),
+                    API.get('/class-history'),
+                    API.get('/notifications')
+                ]);
 
                 const rData = Array.isArray(roomsRes.data) ? roomsRes.data : [];
                 const hData = Array.isArray(historyRes.data) ? historyRes.data : [];
@@ -28,19 +32,24 @@ const Dashboard = () => {
                 });
                 setRecentActivity(hData.slice(0, 5));
                 setNotifications(nData.filter(n => !n?.is_read));
+                setLoading(false);
             } catch (err) {
                 console.error(err);
+                setLoading(false);
             }
         };
 
         if (role === 'admin') {
             fetchStats();
-            const interval = setInterval(fetchStats, 30000); // Optimized: 30 seconds for dashboard stats
+            const interval = setInterval(fetchStats, 30000);
             return () => clearInterval(interval);
+        } else {
+            setLoading(false);
         }
     }, [role]);
 
     const getTimeAgo = (dateStr) => {
+        if (!dateStr) return '';
         const date = new Date(dateStr);
         const now = new Date();
         const diffInSeconds = Math.floor((now - date) / 1000);
@@ -54,7 +63,7 @@ const Dashboard = () => {
     const markRead = async (id) => {
         try {
             await API.post(`/notifications/read/${id}`);
-            setNotifications(notifications.filter(n => n.id !== id));
+            setNotifications(notifications.filter(n => n?.id !== id));
         } catch (err) {
             console.error(err);
         }
@@ -73,41 +82,16 @@ const Dashboard = () => {
         }
     };
 
-    // --- RENDER HOD DASHBOARD ---
-    if (role === 'hod') {
-        return (
-            <div className="p-6 sm:p-10 bg-gray-50 min-h-screen flex items-center justify-center">
-                <div className="text-center animate-in fade-in zoom-in duration-700">
-                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
-                        Welcome back, <span className="text-violet-600">{userName || 'HOD'}</span>.
-                    </h1>
-                    <p className="mt-4 text-gray-500 font-medium text-sm sm:text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
-                </div>
-            </div>
-        );
-    }
+    if (loading) return <div className="p-10 text-center animate-pulse font-black text-gray-400">SYNCING DASHBOARD...</div>;
 
-    // --- RENDER FACULTY DASHBOARD (Landing Page) ---
-    if (role === 'faculty') {
-        return (
-            <div className="p-6 sm:p-10 bg-gray-50 min-h-screen flex items-center justify-center">
-                <div className="text-center animate-in fade-in zoom-in duration-700">
-                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
-                        Welcome back, <span className="text-indigo-600">{userName || 'Faculty'}</span>.
-                    </h1>
-                    <p className="mt-4 text-gray-500 font-medium text-sm sm:text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
-                </div>
-            </div>
-        );
-    }
-
-    // --- RENDER DEFAULT DASHBOARD (For Students/Staff/etc) ---
+    // --- RENDER HOD/FACULTY/DEFAULT DASHBOARD (SIMPLIFIED) ---
     if (role !== 'admin') {
+        const dashboardColor = role === 'hod' ? 'text-violet-600' : (role === 'faculty' ? 'text-indigo-600' : 'text-slate-600');
         return (
             <div className="p-6 sm:p-10 bg-gray-50 min-h-screen flex items-center justify-center">
                 <div className="text-center animate-in fade-in zoom-in duration-700">
                     <h1 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
-                        Welcome back, <span className="text-slate-600">{userName || 'User'}</span>.
+                        Welcome back, <span className={dashboardColor}>{userName || role?.toUpperCase() || 'User'}</span>.
                     </h1>
                     <p className="mt-4 text-gray-500 font-medium text-sm sm:text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
                     <p className="mt-2 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Campus Management System</p>
@@ -170,10 +154,10 @@ const Dashboard = () => {
             </div>
 
             {/* Notifications */}
-            {notifications.length > 0 && (
+            {Array.isArray(notifications) && notifications.length > 0 && (
                 <div className="mt-8 space-y-4">
                     {notifications.map(n => (
-                        <div key={n.id} className="bg-indigo-600 text-white p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-bounce">
+                        <div key={n?.id} className="bg-indigo-600 text-white p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-bounce">
                             <div className="flex items-center space-x-4">
                                 <div className="bg-white/20 p-3 rounded-2xl hidden sm:block">
                                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -182,12 +166,12 @@ const Dashboard = () => {
                                 </div>
                                 <div>
                                     <p className="font-black text-base sm:text-lg">Class Room Available!</p>
-                                    <p className="font-medium text-sm opacity-90">{n.message}</p>
+                                    <p className="font-medium text-sm opacity-90">{n?.message}</p>
                                 </div>
                             </div>
                             <button
-                                onClick={() => markRead(n.id)}
-                                className="w-full sm:w-auto bg-white text-indigo-600 px-6 py-2 rounded-xl font-black text-xs hover:bg-indigo-50 transition"
+                                onClick={() => markRead(n?.id)}
+                                className="w-full sm:w-auto px-4 py-2 border-2 border-white text-white rounded-xl font-bold text-xs hover:bg-white/10 transition"
                             >
                                 DISMISS
                             </button>
@@ -214,20 +198,20 @@ const Dashboard = () => {
                         </div>
                     </div>
                     <div className="space-y-6">
-                        {recentActivity.map((activity, index) => (
-                            <div key={activity.id} className="flex items-center space-x-4 border-b border-gray-50 pb-4 last:border-0">
+                        {Array.isArray(recentActivity) && recentActivity.map((activity, index) => (
+                            <div key={activity?.id} className="flex items-center space-x-4 border-b border-gray-50 pb-4 last:border-0">
                                 <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 text-xs font-bold">
                                     {index + 1}
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold text-gray-800">
-                                        Room {rooms.find(r => r.id === activity.room_id)?.room_number || activity.room_id} is {activity.status === 'ACTIVE' ? 'currently occupied' : 'now available'} by {activity.faculty_name}
+                                        Room {rooms.find(r => r?.id === activity?.room_id)?.room_number || activity?.room_id} is {activity?.status === 'ACTIVE' ? 'currently occupied' : 'now available'} by {activity?.faculty_name}
                                     </p>
-                                    <p className="text-xs text-gray-500">{getTimeAgo(activity.start_time)}</p>
+                                    <p className="text-xs text-gray-500">{getTimeAgo(activity?.start_time)}</p>
                                 </div>
                             </div>
                         ))}
-                        {recentActivity.length === 0 && (
+                        {(!recentActivity || recentActivity.length === 0) && (
                             <p className="text-center py-10 text-gray-400 font-medium italic">No recent campus activity detected.</p>
                         )}
                     </div>
