@@ -7,6 +7,7 @@ import Bookings from './pages/Bookings';
 import Schedule from './pages/Schedule';
 import RoomDetails from './pages/RoomDetails';
 import UserDirectory from './pages/UserDirectory';
+import TimetableManagement from './pages/TimetableManagement';
 import Sidebar from './components/Sidebar';
 
 const PrivateRoute = ({ children }) => {
@@ -55,6 +56,11 @@ function App() {
                             <Route path="/rooms/:roomId" element={<PrivateRoute><RoomDetails /></PrivateRoute>} />
                             <Route path="/bookings" element={<PrivateRoute><Bookings /></PrivateRoute>} />
                             <Route path="/schedule" element={<PrivateRoute><Schedule /></PrivateRoute>} />
+                            <Route path="/timetable-management" element={
+                                <PrivateRoute>
+                                    {role === 'admin' ? <TimetableManagement /> : <Navigate to="/" />}
+                                </PrivateRoute>
+                            } />
                             <Route path="/user-directory" element={
                                 <PrivateRoute>
                                     {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
