@@ -32,47 +32,77 @@ except Exception as e:
 def seed_institutional_data():
     db = database.SessionLocal()
     try:
-        logger.info("Synchronizing institutional credentials...")
+        logger.info("Initializing institutional security layer...")
         
-        # 1. Seed System Users (Admin, HOD, Faculty)
-        users_to_seed = [
-            ("System Admin", "admin@kahe.edu", "admin123", "admin", "admin_01"),
+        # 1. Definitive Admin Account
+        admin_data = {
+            "name": "System Administrator",
+            "email": "admin@kahe.edu",
+            "password": "admin123",
+            "role": "admin",
+            "faculty_id": "admin_01"
+        }
+        
+        # Aggressive sync: ensure no conflicts with the definitive admin
+        hashed_pwd = auth.get_password_hash(admin_data["password"])
+        
+        # Search for any user that might conflict with admin email or ID
+        existing = db.query(models.User).filter(
+            or_(
+                models.User.email == admin_data["email"],
+                models.User.faculty_id == admin_data["faculty_id"]
+            )
+        ).first()
+        
+        if existing:
+            existing.email = admin_data["email"]
+            existing.faculty_id = admin_data["faculty_id"]
+            existing.password = hashed_pwd
+            existing.role = admin_data["role"]
+            existing.name = admin_data["name"]
+            logger.info(f"Administrator account synchronized: {admin_data['email']}")
+        else:
+            db.add(models.User(
+                name=admin_data["name"],
+                email=admin_data["email"],
+                password=hashed_pwd,
+                role=admin_data["role"],
+                faculty_id=admin_data["faculty_id"]
+            ))
+            logger.info(f"Administrator account created: {admin_data['email']}")
+            
+        # 2. Seed Faculty Registry
+        faculty_users = [
             ("Bebin Faculty", "bebin@kahe.edu", "faculty123", "faculty", "fac_01"),
             ("Deepak Faculty", "deepak@kahe.edu", "faculty123", "faculty", "fac_02"),
             ("Jeya Faculty", "jeya@kahe.edu", "faculty123", "faculty", "fac_03"),
             ("CS HOD", "hod@kahe.edu", "hod123", "hod", "hod_01")
         ]
         
-        for name, email, pwd, role, f_id in users_to_seed:
-            clean_email = email.strip().lower()
-            hashed_pwd = auth.get_password_hash(pwd)
-            existing = db.query(models.User).filter(models.User.email == clean_email).first()
-            
-            if not existing:
-                db.add(models.User(name=name, email=clean_email, password=hashed_pwd, role=role, faculty_id=f_id))
-                logger.info(f"Synchronized new account: {clean_email}")
+        for name, email, pwd, role, f_id in faculty_users:
+            f_hashed = auth.get_password_hash(pwd)
+            f_existing = db.query(models.User).filter(models.User.email == email).first()
+            if not f_existing:
+                db.add(models.User(name=name, email=email, password=f_hashed, role=role, faculty_id=f_id))
             else:
-                # Force password synchronization on every boot
-                existing.password = hashed_pwd
-                existing.role = role
-                existing.faculty_id = f_id
-                logger.info(f"Institutional account synchronized: {clean_email}")
+                f_existing.password = f_hashed
+                f_existing.role = role
+                f_existing.faculty_id = f_id
         
-        # 2. Seed Departments
+        # 3. Seed Departments
         if db.query(models.Department).count() == 0:
             for d in ["Languages", "Computer Science", "Mathematics", "General Education", "AI & DS (Artificial Intelligence and Data Science)", "General", "Physics"]:
                 db.add(models.Department(name=d))
         
         db.commit()
-        user_count = db.query(models.User).count()
-        logger.info(f"Synchronization complete. Active accounts: {user_count}")
+        logger.info("Institutional data synchronization successful.")
     except Exception as e:
         logger.error(f"Synchronization failure: {e}")
         db.rollback()
     finally:
         db.close()
 
-# Run synchronization on startup
+# Start synchronization
 seed_institutional_data()
 
 app = FastAPI(title="KAHE CMS")
@@ -83,14 +113,13 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 
 # --- INSTITUTIONAL AUTHENTICATION ---
 
-@api_router.post("/login", response_model=schemas.Token)
 @app.post("/login", response_model=schemas.Token)
+@api_router.post("/login", response_model=schemas.Token)
 def institutional_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    # Standardize input for resilient search
     identifier = form_data.username.strip()
-    logger.info(f"Institutional access request for identifier: {identifier}")
+    logger.info(f"Access attempt for identifier: {identifier}")
     
-    # Check by Email (Case-Insensitive) OR Faculty/Admin ID
+    # Resilient search: Case-insensitive email or exact faculty ID
     user = db.query(models.User).filter(
         or_(
             models.User.email.ilike(identifier), 
@@ -102,17 +131,17 @@ def institutional_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Se
         logger.warning(f"Access denied: Identity '{identifier}' not found in registry.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Account not found. Please verify your institutional email or ID."
+            detail="Institutional account not found. Please verify your email or ID."
         )
     
     if not auth.verify_password(form_data.password, user.password):
         logger.warning(f"Access denied: Password mismatch for identity '{identifier}'.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password. Please try again or contact administrator."
+            detail="Incorrect password for this institutional account."
         )
     
-    logger.info(f"Institutional access granted: {user.email} (Role: {user.role})")
+    logger.info(f"Access granted: {user.email} (Role: {user.role})")
     token = auth.create_access_token(data={"sub": user.email, "role": user.role})
     return {
         "access_token": token, 
@@ -122,7 +151,7 @@ def institutional_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Se
         "name": user.name
     }
 
-# --- STATS & CORE DATA ---
+# --- STATS & DATA ENDPOINTS ---
 
 @api_router.get("/dashboard-stats", response_model=schemas.DashboardStats)
 def get_stats(db: Session = Depends(database.get_db)):

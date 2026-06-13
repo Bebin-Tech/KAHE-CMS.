@@ -16,11 +16,17 @@ const Login = () => {
         setError('');
 
         try {
-            const formData = new FormData();
-            formData.append('username', email);
-            formData.append('password', password);
+            // Standard OAuth2 form encoding for FastAPI
+            const params = new URLSearchParams();
+            params.append('username', email.trim());
+            params.append('password', password);
 
-            const response = await API.post('/login', formData);
+            const response = await API.post('/login', params, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+
             localStorage.setItem('token', response.data.access_token);
             localStorage.setItem('role', response.data.role);
             localStorage.setItem('user_id', response.data.user_id);
@@ -30,7 +36,8 @@ const Login = () => {
             window.location.reload();
         } catch (err) {
             console.error("Login error:", err);
-            setError(err.response?.data?.detail || 'Invalid institutional credentials. Please try again.');
+            const message = err.response?.data?.detail || 'Invalid institutional credentials. Please try again.';
+            setError(message);
         } finally {
             setIsLoading(false);
         }
@@ -40,9 +47,7 @@ const Login = () => {
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6 lg:px-8 bg-[#113b46]">
             {/* Aesthetic Background matched to provided image */}
             <div className="absolute inset-0 z-0 bg-[#113b46]">
-                {/* Subtle vignette for depth */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/10"></div>
-                {/* Fine grain texture to match image feel */}
                 <div className="absolute inset-0 opacity-[0.1] pointer-events-none mix-blend-soft-light"
                      style={{backgroundImage: 'url("https://www.transparenttextures.com/patterns/dark-leather.png")'}}></div>
             </div>
