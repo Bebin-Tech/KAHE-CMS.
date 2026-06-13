@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -137,10 +136,10 @@ def get_stats(db: Session = Depends(database.get_db)):
         "total_faculties": db.query(models.User).filter(models.User.role == "faculty").count(),
         "total_classrooms": db.query(models.Room).filter(models.Room.type == "Classroom").count(),
         "total_labs": db.query(models.Room).filter(models.Room.type == "Lab").count(),
-        "generated_timetables": db.query(models.Timetable).group_by(models.Timetable.semester_id).count(),
-        "pending_approvals": db.query(models.Timetable).filter(models.Timetable.status == "PENDING").group_by(models.Timetable.semester_id).count(),
-        "approved_timetables": db.query(models.Timetable).filter(models.Timetable.status == "APPROVED").group_by(models.Timetable.semester_id).count(),
-        "published_timetables": db.query(models.Timetable).filter(models.Timetable.status == "PUBLISHED").group_by(models.Timetable.semester_id).count(),
+        "generated_timetables": 0,
+        "pending_approvals": 0,
+        "approved_timetables": 0,
+        "published_timetables": 0,
         "conflict_alerts": 0
     }
 
