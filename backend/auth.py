@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -12,30 +12,34 @@ try:
 except ImportError:
     import database, models, schemas
 
-# Set up logging for security monitoring
+# Set up logging
 logger = logging.getLogger(__name__)
 
 # Security Constants
-# On Render, SECRET_KEY should be set in environment variables for stability across instances
-SECRET_KEY = os.getenv("SECRET_KEY", "KAHE_SECURE_INSTITUTIONAL_KEY_2024_PROD")
+# Use a static key for dev, environment for production.
+# IMPORTANT: On Render, ensure SECRET_KEY is set in environment variables.
+SECRET_KEY = os.getenv("SECRET_KEY", "KAHE_SECURE_INSTITUTIONAL_KEY_2024_STABLE")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 hour session for faculty convenience
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 hour session
 
-# Security Context: Explicitly defining bcrypt for cross-platform reliability (Windows dev -> Linux production)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Explicitly defining bcrypt configuration for cross-platform stability
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=12 # Standard rounds
+)
 
-# The tokenUrl is relative to the root if not starting with /
-# In our main.py, we have login at both /api/login and /login
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login", auto_error=False)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifies a plain password against its hashed version."""
     if not plain_password or not hashed_password:
         return False
     try:
+        # Some legacy hashes might start with $2y$ (PHP) or $2b$. passlib handles this.
         return pwd_context.verify(plain_password, hashed_password)
     except Exception as e:
-        logger.error(f"Security Engine Verification Error: {e}")
+        logger.error(f"Password Verification Engine Error: {e}")
         return False
 
 def get_password_hash(password: str) -> str:
@@ -46,20 +50,23 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Generates a JWT access token."""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
-    """Validates the current session token and retrieves the institutional identity."""
+    """Validates the current session token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Session expired or invalid institutional credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if not token:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
@@ -73,24 +80,24 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     
     user = db.query(models.User).filter(models.User.email == token_data.email).first()
     if user is None:
-        logger.warning(f"User identity from token '{token_data.email}' not found in registry.")
+        logger.warning(f"Identity '{token_data.email}' not found in registry.")
         raise credentials_exception
     return user
 
 def check_admin(user: models.User = Depends(get_current_user)):
-    """Enforces administrative access control."""
+    """Enforces admin access."""
     if user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Administrative access required for this institutional module."
+            detail="Administrative access required."
         )
     return user
 
 def check_faculty(user: models.User = Depends(get_current_user)):
-    """Enforces faculty/staff level access control."""
+    """Enforces faculty/hod level access."""
     if user.role not in ["admin", "faculty", "hod"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Faculty/Staff level access required."
+            detail="Faculty access required."
         )
     return user
