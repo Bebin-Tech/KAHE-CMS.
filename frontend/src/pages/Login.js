@@ -27,6 +27,7 @@ const Login = () => {
             localStorage.setItem('name', response.data.name);
 
             navigate('/');
+            window.location.reload();
         } catch (err) {
             console.error("Login error:", err);
             setError(err.response?.data?.detail || 'Invalid institutional credentials. Please try again.');
