@@ -5,7 +5,6 @@ const Bookings = () => {
     const [bookings, setBookings] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [showModal, setShowModal] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [loading, setLoading] = useState(true);
     const role = localStorage.getItem('role');
@@ -50,19 +49,6 @@ const Bookings = () => {
             alert('Booking successful!');
         } catch (err) {
             alert(err.response?.data?.detail || 'Booking failed');
-        }
-    };
-
-    const handleUpdateBooking = async (e) => {
-        if (e) e.preventDefault();
-        try {
-            const data = { ...editBooking, room_id: parseInt(editBooking.room_id) };
-            await API.put(`/bookings/${selectedBooking?.id}`, data);
-            setShowEditModal(false);
-            fetchData();
-            alert('Booking updated successfully!');
-        } catch (err) {
-            alert('Update failed');
         }
     };
 
@@ -136,7 +122,7 @@ const Bookings = () => {
                                     {role === 'admin' && (
                                         <td className="p-6">
                                             <div className="flex justify-center space-x-2">
-                                                <button onClick={() => { setSelectedBooking(b); setEditBooking(b); setShowEditModal(true); }} className="text-indigo-600 font-bold text-xs hover:underline">Edit</button>
+                                                <button onClick={() => { setSelectedBooking(b); setEditBooking(b); }} className="text-indigo-600 font-bold text-xs hover:underline">Edit</button>
                                                 <button onClick={() => handleDeleteBooking(b.id)} className="text-red-500 font-bold text-xs hover:underline">Remove</button>
                                             </div>
                                         </td>

@@ -20,7 +20,6 @@ const Dashboard = () => {
     });
     const [recentActivity, setRecentActivity] = useState([]);
     const [rooms, setRooms] = useState([]);
-    const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const role = localStorage.getItem('role')?.toLowerCase();
@@ -30,17 +29,15 @@ const Dashboard = () => {
         const fetchDashboardData = async () => {
             try {
                 // Fetch stats and rooms in parallel
-                const [statsRes, roomsRes, historyRes, notifRes] = await Promise.allSettled([
+                const [statsRes, roomsRes, historyRes] = await Promise.allSettled([
                     API.get('/dashboard-stats'),
                     API.get('/rooms'),
-                    API.get('/class-history'),
-                    API.get('/notifications')
+                    API.get('/class-history')
                 ]);
 
                 if (statsRes.status === 'fulfilled') setStats(prev => ({ ...prev, ...statsRes.value.data }));
                 if (roomsRes.status === 'fulfilled') setRooms(Array.isArray(roomsRes.value.data) ? roomsRes.value.data : []);
                 if (historyRes.status === 'fulfilled') setRecentActivity(Array.isArray(historyRes.value.data) ? historyRes.value.data.slice(0, 5) : []);
-                if (notifRes.status === 'fulfilled') setNotifications(Array.isArray(notifRes.value.data) ? notifRes.value.data.filter(n => !n?.is_read) : []);
 
                 setLoading(false);
             } catch (err) {
@@ -63,15 +60,6 @@ const Dashboard = () => {
         if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
         return date.toLocaleDateString();
-    };
-
-    const markRead = async (id) => {
-        try {
-            await API.post(`/notifications/read/${id}`);
-            setNotifications(notifications.filter(n => n?.id !== id));
-        } catch (err) {
-            console.error(err);
-        }
     };
 
     const handleClearActivity = async () => {
@@ -114,7 +102,7 @@ const Dashboard = () => {
             {/* Admin Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { label: 'Total Rooms', value: stats.rooms || stats.total_classrooms + stats.total_labs, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
+                    { label: 'Total Rooms', value: stats.rooms || (stats.total_classrooms + stats.total_labs), icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
                     { label: 'Today\'s Usage', value: stats.bookings, icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
                     { label: 'Active Classes', value: stats.active, icon: 'M13 10V3L4 14h7v7l9-11h-7z', color: 'text-red-500' },
                     { label: 'Conflicts', value: stats.conflict_alerts, icon: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: stats.conflict_alerts > 0 ? 'text-orange-500' : 'text-green-500' }
@@ -123,7 +111,7 @@ const Dashboard = () => {
                         <div className="p-4 rounded-2xl mb-4 bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
                             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} /></svg>
                         </div>
-                        <p className={`text-4xl font-black ${item.color || 'text-gray-900'}`}>{item.value}</p>
+                        <p className={`text-4xl font-black ${item.color || 'text-gray-900'}`}>{item.value || 0}</p>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">{item.label}</p>
                     </div>
                 ))}

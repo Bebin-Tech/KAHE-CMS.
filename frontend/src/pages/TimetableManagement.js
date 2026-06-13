@@ -22,7 +22,6 @@ const TimetableManagement = () => {
     const [newAssignment, setNewAssignment] = useState({ subject_id: '', semester_id: '' });
 
     const [selectedSemester, setSelectedSemester] = useState('');
-    const [approvalComments, setApprovalComments] = useState('');
     const [selectedSlot, setSelectedSlot] = useState(null);
 
     const fetchInitialData = useCallback(async () => {
@@ -106,7 +105,7 @@ const TimetableManagement = () => {
 
     const updateStatus = async (semId, status) => {
         try {
-            await API.post(`/timetable-approval?semester_id=${semId}&status=${status}&comments=${approvalComments}`);
+            await API.post(`/timetable-approval?semester_id=${semId}&status=${status}`);
             alert(`Timetable ${status}`);
             fetchTimetable(semId);
             fetchInitialData();
@@ -270,6 +269,44 @@ const TimetableManagement = () => {
                                         <td className="p-8"><p className="font-black text-gray-800 uppercase text-sm leading-none">{s.name}</p><p className="text-[10px] text-gray-400 font-bold mt-2 tracking-widest uppercase">{s.type} • {s.weekly_hours}h per week</p></td>
                                         <td className="p-8"><span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Sem {s.semester_id}</span></td>
                                         <td className="p-8 text-center"><button className="text-red-300 hover:text-red-500 transition font-black text-[10px] uppercase tracking-widest">Retire</button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* FACULTY ALLOCATION */}
+            {activeTab === 'faculty allocation' && (
+                <div className="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-500">
+                    <div className="p-8 border-b border-gray-50">
+                        <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Institutional Resource Mapping</h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                                <tr><th className="p-8">Faculty</th><th className="p-8">ID</th><th className="p-8">Specialization</th><th className="p-8 text-center">Operation</th></tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {faculties.map(f => (
+                                    <tr key={f.id} className="hover:bg-gray-50/50 transition">
+                                        <td className="p-8">
+                                            <div className="flex items-center space-x-4">
+                                                <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black">{f.name.charAt(0)}</div>
+                                                <span className="font-black text-gray-800 uppercase text-sm">{f.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="p-8"><span className="text-xs font-bold text-gray-400">@{f.faculty_id}</span></td>
+                                        <td className="p-8"><span className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-lg">Technical Faculty</span></td>
+                                        <td className="p-8 text-center">
+                                            <button
+                                                onClick={() => { setSelectedFaculty(f); setShowAssignModal(true); }}
+                                                className="px-6 py-2 border-2 border-indigo-600 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition"
+                                            >
+                                                Assign Load
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

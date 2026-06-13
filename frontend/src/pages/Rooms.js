@@ -8,25 +8,12 @@ const Rooms = () => {
     const [loading, setLoading] = useState(true);
     const [showStartModal, setShowStartModal] = useState(false);
     const [showAddRoomModal, setShowAddRoomModal] = useState(false);
-    const [showEditRoomModal, setShowEditRoomModal] = useState(false);
-    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-    const [successMessage, setSuccessMessage] = useState({ title: '', sub: '' });
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [activeSessions, setActiveSessions] = useState({});
     const role = localStorage.getItem('role');
     const currentUserId = parseInt(localStorage.getItem('user_id'));
 
     const [newRoomData, setNewRoomData] = useState({
-        room_number: '',
-        room_name: '',
-        floor: '',
-        building: '',
-        type: 'Classroom',
-        capacity: 60,
-        department: 'Computer Science'
-    });
-
-    const [editRoomData, setEditRoomData] = useState({
         room_number: '',
         room_name: '',
         floor: '',
@@ -128,9 +115,7 @@ const Rooms = () => {
             });
             setShowStartModal(false);
             fetchRooms();
-            setSuccessMessage({ title: 'Class Started!', sub: 'Session is now live and active' });
-            setShowSuccessPopup(true);
-            setTimeout(() => setShowSuccessPopup(false), 3000);
+            alert('Class Started!');
         } catch (err) {
             alert(err.response?.data?.detail || 'Failed to start class');
         }
@@ -142,9 +127,7 @@ const Rooms = () => {
             if (activeRes.data && activeRes.data.id) {
                 await API.post(`/end-class/${activeRes.data.id}`);
                 fetchRooms();
-                setSuccessMessage({ title: 'Class Ended!', sub: 'Session completed successfully' });
-                setShowSuccessPopup(true);
-                setTimeout(() => setShowSuccessPopup(false), 3000);
+                alert('Class Ended!');
             } else {
                 fetchRooms();
             }
@@ -163,24 +146,10 @@ const Rooms = () => {
                 type: 'Classroom', capacity: 60, department: 'Computer Science'
             });
             fetchRooms();
-            setSuccessMessage({ title: 'Classroom Created!', sub: 'Successfully saved to directory' });
-            setShowSuccessPopup(true);
-            setTimeout(() => setShowSuccessPopup(false), 3000);
+            alert('Classroom Created!');
         } catch (err) {
             const detail = err.response?.data?.detail;
             alert(typeof detail === 'string' ? detail : 'Failed to add room');
-        }
-    };
-
-    const handleUpdateRoom = async (e) => {
-        if (e) e.preventDefault();
-        try {
-            await API.put(`/rooms/${selectedRoom?.id}`, editRoomData);
-            setShowEditRoomModal(false);
-            fetchRooms();
-            alert('Room updated successfully!');
-        } catch (err) {
-            alert('Failed to update room');
         }
     };
 
@@ -244,19 +213,6 @@ const Rooms = () => {
                         <div className={`h-1.5 w-full ${room?.status === 'IN_USE' ? 'bg-red-500' : 'bg-green-500'}`}></div>
 
                         <div className="p-8 flex flex-col flex-1">
-                            {role === 'admin' && (
-                                <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                    <button
-                                        onClick={() => { setSelectedRoom(room); setEditRoomData(room); setShowEditRoomModal(true); }}
-                                        className="bg-white/90 backdrop-blur-md text-indigo-600 p-2.5 rounded-xl shadow-lg border border-indigo-50 hover:bg-indigo-600 hover:text-white transition-all"
-                                    >
-                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            )}
-
                             <div className="flex justify-between items-start mb-6">
                                 <div className="cursor-pointer group/link" onClick={() => navigate(`/rooms/${room?.id}`)}>
                                     <div className="flex items-center space-x-2 mb-1">
