@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 
 raw_url = os.getenv("DATABASE_URL", "sqlite:///./kahe_cms.db").strip()
 
-# Cleanup for DATABASE_URL
+# Robust cleanup for DATABASE_URL (handles Render/Heroku env quirks)
 if '="' in raw_url:
     import re
     match = re.search(r'"([^"]*)"', raw_url)
@@ -23,15 +23,17 @@ if (SQLALCHEMY_DATABASE_URL.startswith('"') and SQLALCHEMY_DATABASE_URL.endswith
    (SQLALCHEMY_DATABASE_URL.startswith("'") and SQLALCHEMY_DATABASE_URL.endswith("'")):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL[1:-1]
 
-# Fix the Render 'postgres' vs 'postgresql' driver requirement
+# Fix Render 'postgres' vs 'postgresql' driver requirement
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Configure engine arguments based on database type
 engine_kwargs = {
     "pool_pre_ping": True,
 }
 
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    # SQLite doesn't support pool_size or max_overflow
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
     # Postgres specific settings
@@ -40,11 +42,12 @@ else:
         "max_overflow": 20,
         "pool_recycle": 1800
     })
+    # Ensure SSL for production Postgres
     if "sslmode" not in SQLALCHEMY_DATABASE_URL:
         sep = "&" if "?" in SQLALCHEMY_DATABASE_URL else "?"
         SQLALCHEMY_DATABASE_URL += f"{sep}sslmode=require"
 
-# Create engine with environment-appropriate arguments
+# Create engine with appropriate arguments
 engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

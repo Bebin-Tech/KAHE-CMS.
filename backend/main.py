@@ -32,12 +32,13 @@ except Exception as e:
 def seed_data():
     db = database.SessionLocal()
     try:
-        logger.info("Synchronizing institutional credentials...")
+        logger.info("Starting institutional account synchronization...")
         
-        # 1. Seed Users (Admin, HOD, Faculty)
+        # 1. Unified User List
         users_to_seed = [
-            ("Admin User", "admin@kahe.edu", "admin123", "admin", "admin_01"),
-            ("HOD User", "hod@kahe.edu", "hod123", "hod", "hod_01"),
+            ("System Administrator", "admin@kahe.edu", "admin123", "admin", "admin_01"),
+            ("HOD Computer Science", "hod@kahe.edu", "hod123", "hod", "hod_01"),
+            ("General Faculty", "faculty@kahe.edu", "faculty123", "faculty", "fac_00"),
             ("bebin", "bebin@kahe.edu", "faculty123", "faculty", "fac_01"),
             ("deepak", "deepak@kahe.edu", "faculty123", "faculty", "fac_02"),
             ("jeya", "jeya@kahe.edu", "faculty123", "faculty", "fac_03")
@@ -45,18 +46,21 @@ def seed_data():
         
         for name, email, pwd, role, f_id in users_to_seed:
             hashed_pwd = auth.get_password_hash(pwd)
-            # Find by email
+            # Find existing user by email
             user = db.query(models.User).filter(models.User.email == email).first()
             
             if not user:
-                user = models.User(
+                # Fallback check by faculty_id
+                user = db.query(models.User).filter(models.User.faculty_id == f_id).first()
+            
+            if not user:
+                db.add(models.User(
                     name=name, email=email, password=hashed_pwd, 
                     role=role, faculty_id=f_id
-                )
-                db.add(user)
-                logger.info(f"Created account: {email}")
+                ))
+                logger.info(f"Seeded account: {email}")
             else:
-                # Force password update to ensure it matches the seeding
+                # Force update password and metadata to ensure correct access
                 user.password = hashed_pwd
                 user.role = role
                 user.name = name
@@ -65,20 +69,48 @@ def seed_data():
         
         db.commit()
 
-        # 2. Seed Departments if empty
+        # 2. Seed Departments
         if db.query(models.Department).count() == 0:
             for d in ["Languages", "Computer Science", "Mathematics", "General Education", "AI & DS (Artificial Intelligence and Data Science)", "General", "Physics"]:
                 db.add(models.Department(name=d))
             db.commit()
-            logger.info("Departments synchronized.")
+            logger.info("Departments seeded.")
 
+        # 3. Seed Rooms
+        if db.query(models.Room).count() == 0:
+            rooms_data = [
+                ("B-205", "Lab", 30, "Physics", "AVAILABLE", "Physics Lab", "2", "B Block"),
+                ("S-01", "Seminar Hall", 200, "General", "AVAILABLE", "Seminar Hall 1", "G", "S Block"),
+                ("C-302", "Office", 2, "Mathematics", "AVAILABLE", "Math Office", "3", "C Block"),
+            ]
+            for floor in ["2", "3", "4"]:
+                for i in range(1, 11):
+                    r_num = f"S-{floor}{str(i).zfill(2)}"
+                    rooms_data.append((r_num, "Classroom", 60, "General", "AVAILABLE", f"Room {r_num}", floor, "S Block"))
+            
+            rooms_data.extend([
+                ("s-500", "Classroom", 800, "Computer Science", "AVAILABLE", "Mega Class", "6", "S Block"),
+                ("s-900", "Classroom", 650, "Computer Science", "AVAILABLE", "Grand Hall", "7", "S-Block")
+            ])
+
+            for r in rooms_data:
+                dept = db.query(models.Department).filter(models.Department.name == r[3]).first()
+                db.add(models.Room(
+                    room_number=r[0], type=r[1], capacity=r[2],
+                    department_id=dept.id if dept else None,
+                    status=r[4], room_name=r[5], floor=r[6], building=r[7]
+                ))
+            db.commit()
+            logger.info("Room directory seeded.")
+
+        logger.info("Institutional data synchronization complete.")
     except Exception as e:
-        logger.error(f"Seeding failure: {e}")
+        logger.error(f"Critical Seeding error: {e}")
         db.rollback()
     finally:
         db.close()
 
-# Initialize app and seed database
+# Initial database setup
 seed_data()
 
 app = FastAPI(title="KAHE CMS")
@@ -87,31 +119,24 @@ api_router = APIRouter(prefix="/api")
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-@app.post("/login", response_model=schemas.Token)
+# --- AUTHENTICATION ---
 @api_router.post("/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    logger.info(f"Login attempt for identifier: {form_data.username}")
+    logger.info(f"Login attempt for: {form_data.username}")
     
-    # Authenticate via Email OR User ID (faculty_id)
+    # Authenticate via Email OR Faculty ID
     user = db.query(models.User).filter(
         or_(models.User.email == form_data.username, models.User.faculty_id == form_data.username)
     ).first()
     
-    if not user:
-        logger.warning(f"No user found with identifier: {form_data.username}")
+    if not user or not auth.verify_password(form_data.password, user.password):
+        logger.warning(f"Failed login attempt for: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid institutional credentials. Account not found."
+            detail="Invalid institutional credentials. Please try again."
         )
     
-    if not auth.verify_password(form_data.password, user.password):
-        logger.warning(f"Password mismatch for user: {user.email}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid institutional credentials. Incorrect password."
-        )
-    
-    logger.info(f"Login successful for user: {user.email}")
+    logger.info(f"Successful login: {user.email} (Role: {user.role})")
     
     token = auth.create_access_token(data={"sub": user.email, "role": user.role})
     return {
@@ -122,7 +147,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "name": user.name
     }
 
-# --- STATS ---
+# --- MODULES & DATA ---
 @api_router.get("/dashboard-stats", response_model=schemas.DashboardStats)
 def get_stats(db: Session = Depends(database.get_db)):
     return {
@@ -140,7 +165,6 @@ def get_stats(db: Session = Depends(database.get_db)):
         "conflict_alerts": 0
     }
 
-# --- DIRECTORY ---
 @api_router.get("/rooms", response_model=List[schemas.Room])
 def get_rooms(db: Session = Depends(database.get_db)):
     return db.query(models.Room).all()
@@ -161,28 +185,9 @@ def get_active_sessions(db: Session = Depends(database.get_db)):
 def get_active_room_session(room_id: int, db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).filter(models.ClassSession.room_id == room_id, models.ClassSession.status == "ACTIVE").first()
 
-# --- ACADEMIC SETTINGS ---
-@api_router.get("/working-days", response_model=List[schemas.WorkingDay])
-def list_days(db: Session = Depends(database.get_db)): return db.query(models.WorkingDay).all()
-
-@api_router.get("/period-timings", response_model=List[schemas.PeriodTiming])
-def list_periods(db: Session = Depends(database.get_db)): return db.query(models.PeriodTiming).order_by(models.PeriodTiming.period_number).all()
-
-@api_router.get("/departments", response_model=List[schemas.Department])
-def list_depts(db: Session = Depends(database.get_db)): return db.query(models.Department).all()
-
-@api_router.get("/programs", response_model=List[schemas.Program])
-def list_progs(db: Session = Depends(database.get_db)): return db.query(models.Program).all()
-
-@api_router.get("/semesters", response_model=List[schemas.Semester])
-def list_sems(db: Session = Depends(database.get_db)): return db.query(models.Semester).all()
-
-@api_router.get("/subjects", response_model=List[schemas.Subject])
-def list_subs(db: Session = Depends(database.get_db)): return db.query(models.Subject).all()
-
 app.include_router(api_router)
 
-# Serve Frontend Build
+# --- FRONTEND SERVING ---
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
