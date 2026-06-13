@@ -25,10 +25,6 @@ const TimetableManagement = () => {
     const [approvalComments, setApprovalComments] = useState('');
     const [selectedSlot, setSelectedSlot] = useState(null);
 
-    useEffect(() => {
-        fetchInitialData();
-    }, []);
-
     const fetchInitialData = async () => {
         try {
             const [statsRes, deptRes, progRes, semRes, subRes, wdRes, ptRes, userRes] = await Promise.all([
@@ -56,6 +52,10 @@ const TimetableManagement = () => {
         }
     };
 
+    useEffect(() => {
+        fetchInitialData();
+    }, []);
+
     const handleGenerate = async (params = {}) => {
         try {
             const queryParams = new URLSearchParams(params).toString();
@@ -81,7 +81,7 @@ const TimetableManagement = () => {
         if (e) e.preventDefault();
         try {
             await API.post('/faculty-assignments', {
-                faculty_id: selectedFaculty.id,
+                faculty_id: selectedFaculty?.id,
                 subject_id: parseInt(newAssignment.subject_id),
                 semester_id: parseInt(newAssignment.semester_id)
             });
@@ -121,6 +121,18 @@ const TimetableManagement = () => {
         } catch (err) {
             alert("Swap failed");
             setSelectedSlot(null);
+        }
+    };
+
+    const handleAddSubject = async (e) => {
+        if (e) e.preventDefault();
+        try {
+            await API.post('/subjects', newSubject);
+            setShowSubModal(false);
+            setNewSubject({ name: '', code: '', type: 'Theory', credits: 3, weekly_hours: 3, semester_id: '', department_id: '' });
+            fetchInitialData();
+        } catch (err) {
+            alert("Error adding subject");
         }
     };
 
