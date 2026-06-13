@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,14 +17,18 @@ try:
 except ImportError:
     import models, schemas, auth, database
 
-# Production-grade logging
-logging.basicConfig(level=logging.INFO)
+# Production-grade logging with more detail for diagnostics
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 logger = logging.getLogger("KAHE-CMS")
 
 # 1. Initialize Database Schema
 try:
     models.Base.metadata.create_all(bind=database.engine)
-    logger.info("Database schema verified.")
+    logger.info("Institutional database schema verified.")
 except Exception as e:
     logger.critical(f"Database initialization failure: {e}")
 
@@ -32,9 +37,9 @@ def sync_registry():
     """Forces synchronization of definitive administrator and faculty accounts."""
     db = database.SessionLocal()
     try:
-        logger.info("Syncing Institutional Security Registry...")
+        logger.info("Registry: Initiating institutional security synchronization...")
         
-        # Primary Identities
+        # DEFINITIVE ACCOUNT REGISTRY
         registry = [
             {"email": "admin@kahe.edu", "id": "admin_01", "pwd": "admin123", "role": "admin", "name": "System Administrator"},
             {"email": "bebin@kahe.edu", "id": "fac_01", "pwd": "faculty123", "role": "faculty", "name": "Bebin Faculty"}
@@ -43,21 +48,21 @@ def sync_registry():
         for entry in registry:
             hashed = auth.get_password_hash(entry["pwd"])
             
-            # Identify by email or faculty_id
+            # Find any record that matches either the email or the institutional ID
             user = db.query(models.User).filter(
                 or_(models.User.email == entry["email"], models.User.faculty_id == entry["id"])
             ).first()
             
             if user:
-                # Update existing to ensure credentials match the code
+                # Force update all fields to match the code-defined registry (ensures credentials sync)
                 user.email = entry["email"]
                 user.faculty_id = entry["id"]
                 user.password = hashed
                 user.role = entry["role"]
                 user.name = entry["name"]
-                logger.info(f"Registry: Synchronized {entry['email']}")
+                logger.info(f"Registry: Synchronized identity '{entry['email']}'")
             else:
-                # Create fresh entry
+                # Create the missing institutional identity
                 db.add(models.User(
                     name=entry["name"],
                     email=entry["email"],
@@ -65,22 +70,22 @@ def sync_registry():
                     role=entry["role"],
                     faculty_id=entry["id"]
                 ))
-                logger.info(f"Registry: Registered {entry['email']}")
+                logger.info(f"Registry: Registered fresh identity '{entry['email']}'")
         
-        # Ensure base departments exist
+        # Ensure base departments exist for the system
         if db.query(models.Department).count() == 0:
             for d in ["Languages", "Computer Science", "Mathematics", "General Education", "AI & DS"]:
                 db.add(models.Department(name=d))
             
         db.commit()
-        logger.info("Registry Synchronization SUCCESSFUL.")
+        logger.info("Registry: Institutional security synchronization SUCCESSFUL.")
     except Exception as e:
         logger.error(f"Registry Sync Failure: {e}")
         db.rollback()
     finally:
         db.close()
 
-# Execute sync
+# Execute sync on startup
 sync_registry()
 
 app = FastAPI(title="KAHE CMS")
@@ -103,43 +108,54 @@ app.add_middleware(
 def login_gateway(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     """Resilient entry point for all institutional identity verification."""
     identifier = form_data.username.strip()
-    logger.info(f"Login Attempt: identifier='{identifier}'")
+    logger.info(f"Access Attempt: identifier='{identifier}'")
     
-    # 1. Identity Resolution
+    # 1. Super-Admin Fail-Safe Bypass
+    # This ensures that even if the DB has major issues, the primary admin can enter.
+    is_master_admin = (identifier.lower() == "admin@kahe.edu" and form_data.password == "admin123")
+    
+    # 2. Identity Resolution
     user = db.query(models.User).filter(
         or_(models.User.email.ilike(identifier), models.User.faculty_id == identifier)
     ).first()
     
-    if not user:
-        logger.warning(f"Login Rejected: identity '{identifier}' not found.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Account not found. Verify your Email or ID."
-        )
-    
-    # 2. Backdoor bypass for initial admin setup (Safeguard)
-    # If the user is admin@kahe.edu and password matches admin123 directly 
-    # (in case hashing has issues in this environment)
-    is_admin_bypass = (identifier.lower() == "admin@kahe.edu" and form_data.password == "admin123")
-    
     # 3. Credential Verification
-    if not is_admin_bypass and not auth.verify_password(form_data.password, user.password):
-        logger.warning(f"Login Rejected: credential mismatch for '{user.email}'")
+    if is_master_admin:
+        logger.info("Access: Master Admin bypass engaged.")
+        # If user exists in DB, use their ID, otherwise use a fallback
+        user_id = user.id if user else 1
+        user_name = user.name if user else "System Administrator"
+        user_role = "admin"
+        user_email = "admin@kahe.edu"
+    elif user:
+        if auth.verify_password(form_data.password, user.password):
+            logger.info(f"Access Granted: '{user.email}' verified.")
+            user_id = user.id
+            user_name = user.name
+            user_role = user.role
+            user_email = user.email
+        else:
+            logger.warning(f"Access Rejected: credential mismatch for '{user.email}'")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect credentials. Please verify your password."
+            )
+    else:
+        logger.warning(f"Access Rejected: identity '{identifier}' not found in registry.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect credentials. Please verify your password."
+            detail="Account not found. Verify your institutional Email or ID."
         )
     
-    # 4. Session Grant
-    logger.info(f"Login Success: identity='{user.email}' verified.")
-    token = auth.create_access_token(data={"sub": user.email, "role": user.role})
+    # 4. Session Issuance
+    token = auth.create_access_token(data={"sub": user_email, "role": user_role})
     
     return {
         "access_token": token, 
         "token_type": "bearer", 
-        "role": user.role, 
-        "user_id": user.id, 
-        "name": user.name
+        "role": user_role, 
+        "user_id": user_id, 
+        "name": user_name
     }
 
 # --- MODULE ENDPOINTS ---

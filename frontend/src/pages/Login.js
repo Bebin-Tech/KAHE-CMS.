@@ -17,12 +17,10 @@ const Login = () => {
 
         try {
             // Standard OAuth2 form encoding for FastAPI (application/x-www-form-urlencoded)
-            // Using URLSearchParams ensures correct formatting for the FastAPI security dependency
             const params = new URLSearchParams();
             params.append('username', email.trim());
             params.append('password', password);
 
-            // Log identifiers for debugging purposes (Console only)
             console.log("Portal Access Attempt: identity resolved for", email.trim());
 
             const response = await API.post('/login', params, {
@@ -48,12 +46,14 @@ const Login = () => {
             // Distinguish between rejection and connectivity issues
             if (err.response) {
                 // The server responded with a status code that falls out of the range of 2xx
-                setError(err.response.data?.detail || 'Portal access denied. Check your institutional Email/ID and Password.');
+                // We show the specific detail from the backend (e.g., "Incorrect password")
+                const backendDetail = err.response.data?.detail;
+                setError(backendDetail || 'Portal access denied. Check your institutional Email/ID and Password.');
             } else if (err.request) {
                 // The request was made but no response was received
                 setError('Institutional security gateway is unreachable. Please verify your connection.');
             } else {
-                setError('Institutional portal error. Please contact administrative support.');
+                setError('Institutional portal configuration error. Please contact administrative support.');
             }
         } finally {
             setIsLoading(false);
@@ -62,7 +62,7 @@ const Login = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6 lg:px-8 bg-[#113b46]">
-            {/* Aesthetic Background Layer */}
+            {/* Aesthetic Background matched to provided image */}
             <div className="absolute inset-0 z-0 bg-[#113b46]">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/10"></div>
                 <div className="absolute inset-0 opacity-[0.1] pointer-events-none mix-blend-soft-light"
