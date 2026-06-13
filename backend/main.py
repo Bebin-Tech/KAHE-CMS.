@@ -84,9 +84,12 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     logger.info(f"Login attempt for: {form_data.username}")
     
-    # Check by Email OR User ID
+    # Check by Email (Case Insensitive) OR User ID (Exact)
     user = db.query(models.User).filter(
-        or_(models.User.email == form_data.username, models.User.faculty_id == form_data.username)
+        or_(
+            models.User.email.ilike(form_data.username), 
+            models.User.faculty_id == form_data.username
+        )
     ).first()
     
     if not user:
