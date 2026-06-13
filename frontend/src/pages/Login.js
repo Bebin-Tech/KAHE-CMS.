@@ -73,16 +73,15 @@ const Login = () => {
                 <form className="mt-8 space-y-6" onSubmit={handleLogin} autoComplete="off">
                     <div className="space-y-5">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Institutional Email / ID</label>
                             <input
-                                type="email"
-                                name="email_field"
+                                type="text"
+                                name="username_field"
                                 required
                                 className="w-full p-4 bg-slate-50 border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-slate-700 outline-none"
-                                placeholder="Enter your email"
+                                placeholder="Enter your email or user ID"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                autoComplete="new-password"
                             />
                         </div>
                         <div className="space-y-2">
