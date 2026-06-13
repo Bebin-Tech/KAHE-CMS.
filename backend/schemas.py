@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     email: EmailStr
     role: str
     faculty_id: Optional[str] = None
+    department_id: Optional[int] = None
 
 class UserCreate(UserBase):
     password: str
@@ -16,6 +17,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[str] = None
     faculty_id: Optional[str] = None
+    department_id: Optional[int] = None
     password: Optional[str] = None
 
 class User(UserBase):
@@ -41,7 +43,7 @@ class RoomBase(BaseModel):
     building: Optional[str] = None
     type: str
     capacity: int
-    department: str
+    department_id: Optional[int] = None
     status: str = "AVAILABLE"
 
 class RoomCreate(BaseModel):
@@ -51,7 +53,7 @@ class RoomCreate(BaseModel):
     building: Optional[str] = None
     type: str
     capacity: int
-    department: str
+    department_id: Optional[int] = None
 
 class Room(RoomBase):
     id: int
@@ -88,7 +90,7 @@ class Semester(SemesterBase):
 class SubjectBase(BaseModel):
     name: str
     code: str
-    type: str
+    type: str # Theory, Lab
     credits: int
     weekly_hours: int
     semester_id: int
@@ -123,6 +125,7 @@ class PeriodTimingBase(BaseModel):
     start_time: str
     end_time: str
     is_break: Optional[bool] = False
+    type: str = "CLASS" # CLASS, BREAK, LUNCH
 
 class PeriodTiming(PeriodTimingBase):
     id: int
@@ -151,6 +154,7 @@ class TimetableBase(BaseModel):
 class Timetable(TimetableBase):
     id: int
     status: str
+    approval_comments: Optional[str] = None
     subject: Subject
     faculty: User
     room: Room
@@ -172,6 +176,7 @@ class DashboardStats(BaseModel):
     generated_timetables: int
     pending_approvals: int
     approved_timetables: int
+    published_timetables: int
     conflict_alerts: int
 
 class BookingBase(BaseModel):
@@ -211,5 +216,17 @@ class ClassSession(ClassSessionBase):
     start_time: datetime
     end_time: Optional[datetime] = None
     status: str
+    class Config:
+        from_attributes = True
+
+class FacultyAssignmentBase(BaseModel):
+    faculty_id: int
+    subject_id: int
+    semester_id: int
+
+class FacultyAssignment(FacultyAssignmentBase):
+    id: int
+    faculty: User
+    subject: Subject
     class Config:
         from_attributes = True

@@ -18,15 +18,19 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     menuItems.push({ name: 'Class Room', path: '/rooms', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' });
     menuItems.push({ name: 'Schedule', path: '/schedule', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' });
 
-    // CR Booking - Hide for students, show for Faculty and Admin
-    if (role === 'faculty' || role === 'admin') {
+    // CR Booking - Hide for students, show for Faculty, HOD and Admin
+    if (role === 'faculty' || role === 'admin' || role === 'hod') {
         menuItems.push({ name: 'CR Booking', path: '/bookings', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' });
     }
 
-    // Admin Only Modules
-    if (role === 'admin') {
+    // Admin & HOD Modules
+    if (role === 'admin' || role === 'hod') {
         menuItems.unshift({ name: 'Dashboard', path: '/', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' });
-        menuItems.push({ name: 'Timetable Module', path: '/timetable-management', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' });
+        menuItems.push({ name: 'Timetable Module', path: '/timetable-management', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' });
+    }
+
+    // Admin Only
+    if (role === 'admin') {
         menuItems.push({ name: 'User Directory', path: '/user-directory', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' });
     }
 
@@ -42,15 +46,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
             <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition duration-300 ease-in-out w-72 bg-white border-r border-gray-200 flex flex-col h-screen shadow-xl lg:shadow-sm z-50 overflow-hidden`}>
 
-                {/* Compact Header */}
-                <div className="p-6 lg:p-8 flex items-center lg:flex-col lg:space-y-4 relative">
+                {/* Ultra-Compact Header */}
+                <div className="p-4 lg:p-8 flex items-center lg:flex-col lg:space-y-4 relative border-b lg:border-none border-gray-50 bg-white z-10">
                     <img
                         src="/logo.svg"
                         alt="KAHE Logo"
-                        className="w-10 h-10 lg:w-20 lg:h-20 object-contain mr-3 lg:mr-0 lg:mb-2"
+                        className="w-10 h-10 lg:w-24 lg:h-24 object-contain mr-3 lg:mr-0 lg:mb-2"
                     />
                     <div className="flex flex-col lg:items-center">
                         <span className="text-lg lg:text-2xl font-bold text-gray-800 tracking-tight leading-tight">KAHE CMS</span>
+                        <span className="lg:hidden text-[8px] font-bold text-gray-400 uppercase tracking-widest">Campus Portal</span>
                     </div>
                     <button
                         onClick={() => setIsOpen(false)}
@@ -63,7 +68,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 </div>
 
                 {/* Main Menu Section */}
-                <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto custom-scrollbar">
+                <nav className="flex-1 px-4 py-2 lg:py-4 space-y-1 overflow-y-auto custom-scrollbar">
                     <p className="px-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Main Menu</p>
                     {menuItems.map((item) => (
                         <Link
@@ -72,7 +77,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             onClick={() => setIsOpen(false)}
                             className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition duration-200 group ${
                                 location.pathname === item.path
-                                    ? 'bg-indigo-50 text-indigo-700'
+                                    ? 'bg-indigo-50 text-indigo-700 shadow-sm'
                                     : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600'
                             }`}
                         >
@@ -84,20 +89,20 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     ))}
                 </nav>
 
-                {/* Footer Section */}
-                <div className="p-6 border-t border-gray-100 bg-white">
-                    <div className="mb-4 px-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Authenticated Account</p>
-                        <div className="flex items-center space-x-3">
-                            <div className={`h-10 w-10 text-white rounded-xl flex items-center justify-center font-black text-lg ${
+                {/* Fixed Bottom Section */}
+                <div className="p-4 lg:p-6 border-t border-gray-100 bg-white mt-auto">
+                    <div className="mb-3 lg:mb-4 px-2">
+                        <p className="text-[8px] lg:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Authenticated Account</p>
+                        <div className="flex items-center space-x-2 lg:space-x-3">
+                            <div className={`h-10 w-10 lg:h-12 lg:w-12 text-white rounded-xl flex items-center justify-center font-black text-sm lg:text-lg shadow-md ${
                                 role === 'admin' ? 'bg-green-600' : 'bg-violet-600'
                             }`}>
                                 {role?.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                                <p className="text-xs font-black text-gray-900 leading-tight truncate uppercase">{role}</p>
-                                <p className="text-[10px] text-green-500 font-bold flex items-center">
-                                    <span className="h-1.5 w-1.5 bg-green-500 rounded-full mr-1.5"></span>
+                                <p className="text-xs lg:text-sm font-black text-gray-900 leading-tight truncate uppercase">{role}</p>
+                                <p className="text-[8px] lg:text-[10px] text-green-500 font-bold flex items-center">
+                                    <span className="h-1 lg:h-1.5 w-1 lg:w-1.5 bg-green-500 rounded-full mr-1 lg:mr-1.5"></span>
                                     Active Now
                                 </p>
                             </div>

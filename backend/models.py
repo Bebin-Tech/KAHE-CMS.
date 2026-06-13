@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Boolean, Time, Table
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Boolean, Time, Table, Text
 from sqlalchemy.orm import relationship
 try:
     from .database import Base
@@ -11,6 +11,7 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
     FACULTY = "faculty"
     STUDENT = "student"
+    HOD = "hod"
 
 class RoomType(str, enum.Enum):
     CLASSROOM = "Classroom"
@@ -19,8 +20,10 @@ class RoomType(str, enum.Enum):
     SEMINAR_HALL = "Seminar Hall"
 
 class TimetableStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
     PENDING = "PENDING"
     APPROVED = "APPROVED"
+    PUBLISHED = "PUBLISHED"
 
 class User(Base):
     __tablename__ = "users"
@@ -29,13 +32,17 @@ class User(Base):
     name = Column(String)
     email = Column(String, unique=True, index=True)
     password = Column(String)
-    role = Column(String) # admin, faculty, student
+    role = Column(String) # admin, faculty, student, hod
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    
+    department = relationship("Department", back_populates="users")
 
 class Department(Base):
     __tablename__ = "departments"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     programs = relationship("Program", back_populates="department")
+    users = relationship("User", back_populates="department")
 
 class Program(Base):
     __tablename__ = "programs"
@@ -48,7 +55,7 @@ class Program(Base):
 class Semester(Base):
     __tablename__ = "semesters"
     id = Column(Integer, primary_key=True, index=True)
-    number = Column(Integer) # 1 to 8
+    number = Column(Integer)
     program_id = Column(Integer, ForeignKey("programs.id"))
     program = relationship("Program", back_populates="semesters")
     is_active = Column(Boolean, default=True)
@@ -66,6 +73,16 @@ class Subject(Base):
     semester = relationship("Semester", back_populates="subjects")
     department_id = Column(Integer, ForeignKey("departments.id"))
 
+class FacultyAssignment(Base):
+    __tablename__ = "faculty_assignments"
+    id = Column(Integer, primary_key=True, index=True)
+    faculty_id = Column(Integer, ForeignKey("users.id"))
+    subject_id = Column(Integer, ForeignKey("subjects.id"))
+    semester_id = Column(Integer, ForeignKey("semesters.id"))
+    
+    faculty = relationship("User")
+    subject = relationship("Subject")
+
 class Room(Base):
     __tablename__ = "rooms"
     id = Column(Integer, primary_key=True, index=True)
@@ -75,7 +92,7 @@ class Room(Base):
     building = Column(String)
     type = Column(String) # Classroom, Lab
     capacity = Column(Integer)
-    department = Column(String)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     status = Column(String, default="AVAILABLE")
 
 class AcademicSetting(Base):
@@ -97,7 +114,8 @@ class PeriodTiming(Base):
     period_number = Column(Integer)
     start_time = Column(String) # HH:MM
     end_time = Column(String)
-    is_break = Column(Boolean, default=False) # For Lunch Break
+    is_break = Column(Boolean, default=False)
+    type = Column(String, default="CLASS") # CLASS, BREAK, LUNCH
 
 class Holiday(Base):
     __tablename__ = "holidays"
@@ -116,12 +134,21 @@ class Timetable(Base):
     subject_id = Column(Integer, ForeignKey("subjects.id"))
     faculty_id = Column(Integer, ForeignKey("users.id"))
     room_id = Column(Integer, ForeignKey("rooms.id"))
-    status = Column(String, default="PENDING") # PENDING, APPROVED
+    status = Column(String, default="DRAFT") # DRAFT, PENDING, APPROVED, PUBLISHED
+    approval_comments = Column(Text, nullable=True)
     
     subject = relationship("Subject")
     faculty = relationship("User")
     room = relationship("Room")
     period = relationship("PeriodTiming")
+
+class Conflict(Base):
+    __tablename__ = "conflicts"
+    id = Column(Integer, primary_key=True)
+    timetable_id = Column(Integer, ForeignKey("timetables.id"))
+    conflict_type = Column(String) # Faculty, Room, Lab
+    message = Column(String)
+    resolved = Column(Boolean, default=False)
 
 class ClassSession(Base):
     __tablename__ = "class_sessions"
@@ -167,7 +194,7 @@ class Notification(Base):
 
     user = relationship("User")
 
-class Schedule(Base): # Keeping existing for backward compatibility if any
+class Schedule(Base):
     __tablename__ = "schedules"
     id = Column(Integer, primary_key=True, index=True)
     faculty_id = Column(Integer, ForeignKey("users.id"))
