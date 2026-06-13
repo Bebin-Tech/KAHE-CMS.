@@ -17,9 +17,13 @@ const Login = () => {
 
         try {
             // Standard OAuth2 form encoding for FastAPI (application/x-www-form-urlencoded)
+            // Using URLSearchParams ensures correct formatting for the FastAPI security dependency
             const params = new URLSearchParams();
             params.append('username', email.trim());
             params.append('password', password);
+
+            // Log identifiers for debugging purposes (Console only)
+            console.log("Portal Access Attempt: identity resolved for", email.trim());
 
             const response = await API.post('/login', params, {
                 headers: {
@@ -27,20 +31,30 @@ const Login = () => {
                 }
             });
 
-            // On successful login
+            // On successful validation
             localStorage.setItem('token', response.data.access_token);
             localStorage.setItem('role', response.data.role);
             localStorage.setItem('user_id', response.data.user_id);
             localStorage.setItem('name', response.data.name);
 
-            // Directly navigate and refresh to initialize all components
+            console.log("Portal Access GRANTED. Initializing secure session...");
+
+            // Critical transition: refresh ensures all navigation state is rebuilt with the new token
             navigate('/');
             window.location.reload();
         } catch (err) {
-            console.error("Institutional Login Error:", err);
-            // Show detailed error if provided by backend, otherwise default
-            const message = err.response?.data?.detail || 'Invalid institutional credentials. Please try again.';
-            setError(message);
+            console.error("Institutional Portal Access Failure:", err);
+
+            // Distinguish between rejection and connectivity issues
+            if (err.response) {
+                // The server responded with a status code that falls out of the range of 2xx
+                setError(err.response.data?.detail || 'Portal access denied. Check your institutional Email/ID and Password.');
+            } else if (err.request) {
+                // The request was made but no response was received
+                setError('Institutional security gateway is unreachable. Please verify your connection.');
+            } else {
+                setError('Institutional portal error. Please contact administrative support.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -48,7 +62,7 @@ const Login = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6 lg:px-8 bg-[#113b46]">
-            {/* Dynamic Background Layer */}
+            {/* Aesthetic Background Layer */}
             <div className="absolute inset-0 z-0 bg-[#113b46]">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/10"></div>
                 <div className="absolute inset-0 opacity-[0.1] pointer-events-none mix-blend-soft-light"
@@ -81,13 +95,13 @@ const Login = () => {
                 <form className="mt-8 space-y-6" onSubmit={handleLogin} autoComplete="off">
                     <div className="space-y-5">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Institutional Identifier (Email/ID)</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Institutional Email / ID</label>
                             <input
                                 type="text"
-                                name="institutional_id"
+                                name="username_field"
                                 required
                                 className="w-full p-4 bg-slate-50 border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-slate-700 outline-none"
-                                placeholder="admin@kahe.edu"
+                                placeholder="Enter your email or user ID"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                             />
@@ -97,12 +111,13 @@ const Login = () => {
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
-                                    name="secure_password"
+                                    name="password_field"
                                     required
                                     className="w-full p-4 bg-slate-50 border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-slate-700 outline-none pr-12"
-                                    placeholder="••••••••"
+                                    placeholder="Enter your password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    autoComplete="new-password"
                                 />
                                 <button
                                     type="button"
