@@ -34,8 +34,8 @@ def synchronize_institutional_registry():
     try:
         logger.info("Synchronizing institutional security protocols...")
         
-        # 1. Definitive Administrator Synchronization
-        admin_registry = [
+        # 1. Definitive Accounts Synchronization
+        institutional_accounts = [
             {
                 "email": "admin@kahe.edu",
                 "pwd": "admin123",
@@ -49,36 +49,54 @@ def synchronize_institutional_registry():
                 "role": "faculty",
                 "id": "fac_01",
                 "name": "Bebin Faculty"
+            },
+            {
+                "email": "hod@kahe.edu",
+                "pwd": "hod123",
+                "role": "hod",
+                "id": "hod_01",
+                "name": "Institutional HOD"
             }
         ]
         
-        for account in admin_registry:
+        for account in institutional_accounts:
             hashed_pwd = auth.get_password_hash(account["pwd"])
-            # Remove any ghost records with this identity
-            db.query(models.User).filter(
+            
+            # Use a fresh query for each account to avoid session state issues
+            existing_user = db.query(models.User).filter(
                 or_(
                     models.User.email == account["email"],
                     models.User.faculty_id == account["id"]
                 )
-            ).delete(synchronize_session=False)
+            ).first()
             
-            # Create a fresh, synchronized institutional account
-            db.add(models.User(
-                name=account["name"],
-                email=account["email"],
-                password=hashed_pwd,
-                role=account["role"],
-                faculty_id=account["id"]
-            ))
-            logger.info(f"Registry Sync: Synchronized identity {account['email']}")
-            
+            if existing_user:
+                # Update existing user to match definitive registry
+                existing_user.email = account["email"]
+                existing_user.faculty_id = account["id"]
+                existing_user.password = hashed_pwd
+                existing_user.role = account["role"]
+                existing_user.name = account["name"]
+                logger.info(f"Registry Sync: Updated account {account['email']}")
+            else:
+                # Create fresh definitive account
+                new_user = models.User(
+                    name=account["name"],
+                    email=account["email"],
+                    password=hashed_pwd,
+                    role=account["role"],
+                    faculty_id=account["id"]
+                )
+                db.add(new_user)
+                logger.info(f"Registry Sync: Created fresh account {account['email']}")
+        
         # 2. Seed Departments
         if db.query(models.Department).count() == 0:
             for d in ["Languages", "Computer Science", "Mathematics", "General Education", "AI & DS (Artificial Intelligence and Data Science)", "General", "Physics"]:
                 db.add(models.Department(name=d))
         
         db.commit()
-        logger.info("Institutional registry synchronization complete.")
+        logger.info("Institutional registry synchronization successful.")
     except Exception as e:
         logger.error(f"Registry Synchronization Failure: {e}")
         db.rollback()
@@ -99,11 +117,11 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 @api_router.post("/login", response_model=schemas.Token)
 @app.post("/login", response_model=schemas.Token)
 def gateway_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    # Standardize identifier
+    # Standardize identifier (trim and standard lowercase for logic, but search is ilike)
     identifier = form_data.username.strip()
-    logger.info(f"Access Request: Verifying institutional credentials for identity '{identifier}'")
+    logger.info(f"Access Request: Verifying credentials for identity '{identifier}'")
     
-    # Resilient case-insensitive search
+    # Resilient search: Case-insensitive email or exact faculty ID
     user = db.query(models.User).filter(
         or_(
             models.User.email.ilike(identifier), 
@@ -115,18 +133,28 @@ def gateway_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session 
         logger.warning(f"Access Rejected: Identity '{identifier}' not found in registry.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Identity '{identifier}' is not registered in the KAHE CMS system."
+            detail="Identity not registered in the institutional portal."
         )
     
-    if not auth.verify_password(form_data.password, user.password):
+    # Direct verify with detailed failure logging
+    try:
+        is_valid = auth.verify_password(form_data.password, user.password)
+    except Exception as e:
+        logger.error(f"Security Engine Error: {e}")
+        raise HTTPException(status_code=500, detail="Security validation engine failed.")
+
+    if not is_valid:
         logger.warning(f"Access Rejected: Credential mismatch for identity '{identifier}'.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="The password provided for this institutional account is incorrect."
+            detail="Incorrect credentials. Please verify your password."
         )
     
     logger.info(f"Access Granted: Institutional identity {user.email} verified (Role: {user.role})")
+    
+    # Create Access Token
     token = auth.create_access_token(data={"sub": user.email, "role": user.role})
+    
     return {
         "access_token": token, 
         "token_type": "bearer", 
@@ -167,7 +195,7 @@ def list_users(db: Session = Depends(database.get_db), admin: models.User = Depe
 def get_history(db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).order_by(models.ClassSession.id.desc()).all()
 
-# registry helper routes
+# Registry helper routes
 @api_router.get("/working-days", response_model=List[schemas.WorkingDay])
 def list_days(db: Session = Depends(database.get_db)): return db.query(models.WorkingDay).all()
 
@@ -192,7 +220,7 @@ app.include_router(api_router)
 @app.get("/api/health")
 @app.get("/health")
 def system_heartbeat():
-    return {"status": "synchronized", "institutional_registry": "verified"}
+    return {"status": "operational", "institutional_registry": "synchronized"}
 
 # Frontend Integration Layer
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
