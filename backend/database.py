@@ -35,9 +35,11 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
     # Postgres specific settings
-    engine_kwargs["pool_size"] = 10
-    engine_kwargs["max_overflow"] = 20
-    engine_kwargs["pool_recycle"] = 1800
+    engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_recycle": 1800
+    })
     if "sslmode" not in SQLALCHEMY_DATABASE_URL:
         sep = "&" if "?" in SQLALCHEMY_DATABASE_URL else "?"
         SQLALCHEMY_DATABASE_URL += f"{sep}sslmode=require"
