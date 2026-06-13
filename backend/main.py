@@ -2,13 +2,12 @@ import logging
 import time
 import os
 import random
-from fastapi import FastAPI, Depends, HTTPException, status, APIRouter, Query
+from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, and_, or_
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime
 from fastapi.staticfiles import StaticFiles
@@ -85,6 +84,15 @@ api_router = APIRouter(prefix="/api")
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+# --- AUTH APIs ---
+@api_router.post("/login", response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    if not user or not auth.verify_password(form_data.password, user.password):
+        raise HTTPException(401, "Invalid institutional credentials")
+    token = auth.create_access_token(data={"sub": user.email, "role": user.role})
+    return {"access_token": token, "token_type": "bearer", "role": user.role, "user_id": user.id, "name": user.name}
 
 # --- DASHBOARD STATS ---
 @api_router.get("/dashboard-stats", response_model=schemas.DashboardStats)
@@ -173,7 +181,7 @@ def assign_faculty(assign: schemas.FacultyAssignmentBase, db: Session = Depends(
     if existing:
         existing.faculty_id = assign.faculty_id
     else:
-        db.add(models.FacultyAssignment(**assign.dict()))
+        db.add(models.FacultyAssignment(**assign.model_dump()))
     db.commit()
     return {"message": "Assigned"}
 
@@ -208,13 +216,13 @@ def list_rooms(db: Session = Depends(database.get_db)): return db.query(models.R
 @api_router.get("/users_list", response_model=List[schemas.User])
 def list_users(db: Session = Depends(database.get_db)): return db.query(models.User).all()
 
-@api_router.post("/login", response_model=schemas.Token)
-def login_api(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not auth.verify_password(form_data.password, user.password):
-        raise HTTPException(401, "Invalid credentials")
-    token = auth.create_access_token(data={"sub": user.email, "role": user.role})
-    return {"access_token": token, "token_type": "bearer", "role": user.role, "user_id": user.id, "name": user.name}
+@api_router.post("/subjects", response_model=schemas.Subject)
+def create_subject(sub: schemas.SubjectBase, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_sub = models.Subject(**sub.model_dump())
+    db.add(db_sub)
+    db.commit()
+    db.refresh(db_sub)
+    return db_sub
 
 app.include_router(api_router)
 
