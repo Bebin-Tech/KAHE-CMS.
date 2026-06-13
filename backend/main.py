@@ -1,14 +1,13 @@
 import logging
 import os
-import random
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -17,24 +16,25 @@ try:
 except ImportError:
     import models, schemas, auth, database
 
-# Configure logging
+# Configure logging to be more descriptive for production debugging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Ensure tables are created
+# Ensure tables are created on startup
 try:
     models.Base.metadata.create_all(bind=database.engine)
-    logger.info("Institutional database registry initialized.")
+    logger.info("Institutional database registry initialized and verified.")
 except Exception as e:
-    logger.error(f"Database initialization critical failure: {e}")
+    logger.critical(f"Database initialization critical failure: {e}")
 
-# Robust Institutional Seeding
+# Robust Institutional Registry Synchronization
+# This ensures that default accounts are ALWAYS present and correct on every boot
 def synchronize_institutional_registry():
     db = database.SessionLocal()
     try:
-        logger.info("Synchronizing institutional security protocols...")
+        logger.info("Synchronizing institutional security registry...")
         
-        # 1. Definitive Accounts Synchronization
+        # 1. Definitive Accounts Registry
         institutional_accounts = [
             {
                 "email": "admin@kahe.edu",
@@ -62,7 +62,7 @@ def synchronize_institutional_registry():
         for account in institutional_accounts:
             hashed_pwd = auth.get_password_hash(account["pwd"])
             
-            # Use a fresh query for each account to avoid session state issues
+            # Resilient search for existing user to avoid duplication/collision
             existing_user = db.query(models.User).filter(
                 or_(
                     models.User.email == account["email"],
@@ -71,15 +71,15 @@ def synchronize_institutional_registry():
             ).first()
             
             if existing_user:
-                # Update existing user to match definitive registry
+                # Force update to match definitive registry (password/role synchronization)
                 existing_user.email = account["email"]
                 existing_user.faculty_id = account["id"]
                 existing_user.password = hashed_pwd
                 existing_user.role = account["role"]
                 existing_user.name = account["name"]
-                logger.info(f"Registry Sync: Updated account {account['email']}")
+                logger.info(f"Registry Sync: Updated identity {account['email']}")
             else:
-                # Create fresh definitive account
+                # Create fresh definitive account if missing
                 new_user = models.User(
                     name=account["name"],
                     email=account["email"],
@@ -88,12 +88,14 @@ def synchronize_institutional_registry():
                     faculty_id=account["id"]
                 )
                 db.add(new_user)
-                logger.info(f"Registry Sync: Created fresh account {account['email']}")
+                logger.info(f"Registry Sync: Registered new identity {account['email']}")
         
-        # 2. Seed Departments
+        # 2. Seed Essential Departments if missing
         if db.query(models.Department).count() == 0:
-            for d in ["Languages", "Computer Science", "Mathematics", "General Education", "AI & DS (Artificial Intelligence and Data Science)", "General", "Physics"]:
+            default_depts = ["Languages", "Computer Science", "Mathematics", "General Education", "AI & DS", "Physics", "General"]
+            for d in default_depts:
                 db.add(models.Department(name=d))
+            logger.info("Registry Sync: Essential departments registered.")
         
         db.commit()
         logger.info("Institutional registry synchronization successful.")
@@ -109,19 +111,26 @@ synchronize_institutional_registry()
 app = FastAPI(title="KAHE CMS")
 api_router = APIRouter(prefix="/api")
 
+# CORS and Security Middlewares
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, this can be tightened to the specific frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- INSTITUTIONAL AUTHENTICATION GATEWAY ---
 
 @api_router.post("/login", response_model=schemas.Token)
-@app.post("/login", response_model=schemas.Token)
-def gateway_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+@app.post("/login", response_model=schemas.Token) # Support both /api/login and /login
+async def gateway_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     # Standardize identifier (trim and standard lowercase for logic, but search is ilike)
     identifier = form_data.username.strip()
-    logger.info(f"Access Request: Verifying credentials for identity '{identifier}'")
+    logger.info(f"Access Request: Verifying institutional credentials for identity '{identifier}'")
     
-    # Resilient search: Case-insensitive email or exact faculty ID
+    # 1. Identity Verification
     user = db.query(models.User).filter(
         or_(
             models.User.email.ilike(identifier), 
@@ -136,12 +145,12 @@ def gateway_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session 
             detail="Identity not registered in the institutional portal."
         )
     
-    # Direct verify with detailed failure logging
+    # 2. Credential Validation
     try:
         is_valid = auth.verify_password(form_data.password, user.password)
     except Exception as e:
-        logger.error(f"Security Engine Error: {e}")
-        raise HTTPException(status_code=500, detail="Security validation engine failed.")
+        logger.error(f"Security Engine Error during verification: {e}")
+        raise HTTPException(status_code=500, detail="Security validation engine failure.")
 
     if not is_valid:
         logger.warning(f"Access Rejected: Credential mismatch for identity '{identifier}'.")
@@ -150,9 +159,8 @@ def gateway_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session 
             detail="Incorrect credentials. Please verify your password."
         )
     
+    # 3. Session Generation
     logger.info(f"Access Granted: Institutional identity {user.email} verified (Role: {user.role})")
-    
-    # Create Access Token
     token = auth.create_access_token(data={"sub": user.email, "role": user.role})
     
     return {
@@ -182,7 +190,7 @@ def get_stats(db: Session = Depends(database.get_db)):
         "conflict_alerts": 0
     }
 
-# --- MODULE DIRECTORY ---
+# --- DIRECTORY SERVICES ---
 
 @api_router.get("/rooms", response_model=List[schemas.Room])
 def get_rooms(db: Session = Depends(database.get_db)): return db.query(models.Room).all()
@@ -195,7 +203,7 @@ def list_users(db: Session = Depends(database.get_db), admin: models.User = Depe
 def get_history(db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).order_by(models.ClassSession.id.desc()).all()
 
-# Registry helper routes
+# Registry and Academic Settings Helpers
 @api_router.get("/working-days", response_model=List[schemas.WorkingDay])
 def list_days(db: Session = Depends(database.get_db)): return db.query(models.WorkingDay).all()
 
@@ -216,19 +224,23 @@ def list_subs(db: Session = Depends(database.get_db)): return db.query(models.Su
 
 app.include_router(api_router)
 
-# System Health & Registry Status
+# System Health and Synchronization Check
 @app.get("/api/health")
 @app.get("/health")
 def system_heartbeat():
-    return {"status": "operational", "institutional_registry": "synchronized"}
+    return {"status": "operational", "registry": "synchronized", "timestamp": datetime.utcnow()}
 
 # Frontend Integration Layer
+# Order is critical: Define API routes BEFORE mounting static files
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
     @app.exception_handler(404)
-    async def institutional_catch_all(request, exc): return FileResponse(os.path.join(frontend_path, "index.html"))
+    async def catch_all_frontend(request, exc): 
+        return FileResponse(os.path.join(frontend_path, "index.html"))
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    # Use environment port for production
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
