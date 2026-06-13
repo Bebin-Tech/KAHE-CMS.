@@ -60,11 +60,11 @@ def seed_data():
                 db.add(new_user)
                 logger.info(f"Created system account: {email}")
             else:
-                # Update existing user to ensure credentials are synced
+                # Force password update to ensure it matches the seeding
                 user.password = hashed_pwd
                 user.role = role
                 user.name = name
-                user.email = email # ensure email is correct
+                user.email = email
                 user.faculty_id = f_id
                 logger.info(f"Synchronized system account: {email}")
         
@@ -76,6 +76,34 @@ def seed_data():
                 db.add(models.Department(name=d))
             db.commit()
             logger.info("Institutional departments synchronized.")
+
+        # 3. Seed Rooms if empty
+        if db.query(models.Room).count() == 0:
+            rooms_data = [
+                ("B-205", "Lab", 30, "Physics", "AVAILABLE", "Physics Lab", "2", "B Block"),
+                ("S-01", "Seminar Hall", 200, "General", "AVAILABLE", "Seminar Hall 1", "G", "S Block"),
+                ("C-302", "Office", 2, "Mathematics", "AVAILABLE", "Math Office", "3", "C Block"),
+            ]
+            for floor in ["2", "3", "4"]:
+                for i in range(1, 21):
+                    r_num = f"S-{floor}{str(i).zfill(2)}"
+                    rooms_data.append((r_num, "Classroom", 60, "General", "AVAILABLE", f"Room {r_num}", floor, "S Block"))
+            
+            rooms_data.extend([
+                ("s-500", "Classroom", 800, "Computer Science", "AVAILABLE", "Mega Class", "6", "S Block"),
+                ("s-900", "Classroom", 650, "Computer Science", "AVAILABLE", "Grand Hall", "7", "S-Block")
+            ])
+
+            for r in rooms_data:
+                dept_name = r[3]
+                dept = db.query(models.Department).filter(models.Department.name == dept_name).first()
+                db.add(models.Room(
+                    room_number=r[0], type=r[1], capacity=r[2],
+                    department_id=dept.id if dept else None,
+                    status=r[4], room_name=r[5], floor=r[6], building=r[7]
+                ))
+            db.commit()
+            logger.info("Rooms synchronized.")
 
         logger.info("Institutional data synchronization complete.")
     except Exception as e:
@@ -98,7 +126,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     logger.info(f"Attempting login for: {form_data.username}")
     
     # Try finding user by email OR faculty_id (institutional ID)
-    # Using case-insensitive search for email to be more helpful
     user = db.query(models.User).filter(
         or_(
             models.User.email.ilike(form_data.username), 
@@ -130,13 +157,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "user_id": user.id, 
         "name": user.name
     }
-
-# --- DIAGNOSTIC ---
-@api_router.get("/diagnostic")
-def diagnostic(db: Session = Depends(database.get_db)):
-    user_count = db.query(models.User).count()
-    users = db.query(models.User.email, models.User.role).all()
-    return {"user_count": user_count, "users": users}
 
 # --- STATS ---
 @api_router.get("/dashboard-stats", response_model=schemas.DashboardStats)
@@ -181,6 +201,7 @@ def get_active_sessions(db: Session = Depends(database.get_db)):
 def get_active_room_session(room_id: int, db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).filter(models.ClassSession.room_id == room_id, models.ClassSession.status == "ACTIVE").first()
 
+# --- HELPERS ---
 @api_router.get("/working-days", response_model=List[schemas.WorkingDay])
 def list_days(db: Session = Depends(database.get_db)): return db.query(models.WorkingDay).all()
 
@@ -198,6 +219,24 @@ def list_sems(db: Session = Depends(database.get_db)): return db.query(models.Se
 
 @api_router.get("/subjects", response_model=List[schemas.Subject])
 def list_subs(db: Session = Depends(database.get_db)): return db.query(models.Subject).all()
+
+@api_router.post("/subjects", response_model=schemas.Subject)
+def create_sub(sub: schemas.SubjectBase, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_sub = models.Subject(**sub.model_dump())
+    db.add(db_sub)
+    db.commit()
+    db.refresh(db_sub)
+    return db_sub
+
+@api_router.post("/faculty-assignments")
+def assign_f(assign: schemas.FacultyAssignmentBase, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db.add(models.FacultyAssignment(**assign.model_dump()))
+    db.commit()
+    return {"message": "Assigned"}
+
+@api_router.post("/generate-timetable")
+def gen_tt(semester_id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    return {"message": "Success"}
 
 app.include_router(api_router)
 
