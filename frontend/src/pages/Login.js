@@ -16,26 +16,24 @@ const Login = () => {
         setError('');
 
         try {
-            // Standard OAuth2 form encoding for FastAPI
-            const params = new URLSearchParams();
-            params.append('username', email.trim());
-            params.append('password', password);
+            // Using FormData for reliable multipart/form-data transmission
+            const formData = new FormData();
+            formData.append('username', email.trim());
+            formData.append('password', password);
 
-            const response = await API.post('/login', params, {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            });
+            const response = await API.post('/login', formData);
 
+            // On successful login
             localStorage.setItem('token', response.data.access_token);
             localStorage.setItem('role', response.data.role);
             localStorage.setItem('user_id', response.data.user_id);
             localStorage.setItem('name', response.data.name);
 
+            // Directly navigate and refresh to initialize all components
             navigate('/');
             window.location.reload();
         } catch (err) {
-            console.error("Login error:", err);
+            console.error("Institutional Login Error:", err);
             const message = err.response?.data?.detail || 'Invalid institutional credentials. Please try again.';
             setError(message);
         } finally {
@@ -45,7 +43,7 @@ const Login = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6 lg:px-8 bg-[#113b46]">
-            {/* Aesthetic Background matched to provided image */}
+            {/* Dynamic Background Layer */}
             <div className="absolute inset-0 z-0 bg-[#113b46]">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/10"></div>
                 <div className="absolute inset-0 opacity-[0.1] pointer-events-none mix-blend-soft-light"
@@ -78,29 +76,28 @@ const Login = () => {
                 <form className="mt-8 space-y-6" onSubmit={handleLogin} autoComplete="off">
                     <div className="space-y-5">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Institutional Email / ID</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Institutional Identifier (Email/ID)</label>
                             <input
                                 type="text"
-                                name="username_field"
+                                name="institutional_id"
                                 required
                                 className="w-full p-4 bg-slate-50 border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-slate-700 outline-none"
-                                placeholder="Enter your email or user ID"
+                                placeholder="admin@kahe.edu"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Secure Password</label>
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
-                                    name="password_field"
+                                    name="secure_password"
                                     required
                                     className="w-full p-4 bg-slate-50 border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-slate-700 outline-none pr-12"
-                                    placeholder="Enter your password"
+                                    placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    autoComplete="new-password"
                                 />
                                 <button
                                     type="button"
