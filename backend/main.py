@@ -24,86 +24,69 @@ logger = logging.getLogger(__name__)
 # Ensure tables are created
 try:
     models.Base.metadata.create_all(bind=database.engine)
-    logger.info("Institutional database schema verified.")
+    logger.info("Institutional database registry initialized.")
 except Exception as e:
-    logger.error(f"Critical Database error: {e}")
+    logger.error(f"Database initialization critical failure: {e}")
 
 # Robust Institutional Seeding
-def seed_institutional_data():
+def synchronize_institutional_registry():
     db = database.SessionLocal()
     try:
-        logger.info("Initializing institutional security layer...")
+        logger.info("Synchronizing institutional security protocols...")
         
-        # 1. Definitive Admin Account
-        admin_data = {
-            "name": "System Administrator",
-            "email": "admin@kahe.edu",
-            "password": "admin123",
-            "role": "admin",
-            "faculty_id": "admin_01"
-        }
-        
-        # Aggressive sync: ensure no conflicts with the definitive admin
-        hashed_pwd = auth.get_password_hash(admin_data["password"])
-        
-        # Search for any user that might conflict with admin email or ID
-        existing = db.query(models.User).filter(
-            or_(
-                models.User.email == admin_data["email"],
-                models.User.faculty_id == admin_data["faculty_id"]
-            )
-        ).first()
-        
-        if existing:
-            existing.email = admin_data["email"]
-            existing.faculty_id = admin_data["faculty_id"]
-            existing.password = hashed_pwd
-            existing.role = admin_data["role"]
-            existing.name = admin_data["name"]
-            logger.info(f"Administrator account synchronized: {admin_data['email']}")
-        else:
-            db.add(models.User(
-                name=admin_data["name"],
-                email=admin_data["email"],
-                password=hashed_pwd,
-                role=admin_data["role"],
-                faculty_id=admin_data["faculty_id"]
-            ))
-            logger.info(f"Administrator account created: {admin_data['email']}")
-            
-        # 2. Seed Faculty Registry
-        faculty_users = [
-            ("Bebin Faculty", "bebin@kahe.edu", "faculty123", "faculty", "fac_01"),
-            ("Deepak Faculty", "deepak@kahe.edu", "faculty123", "faculty", "fac_02"),
-            ("Jeya Faculty", "jeya@kahe.edu", "faculty123", "faculty", "fac_03"),
-            ("CS HOD", "hod@kahe.edu", "hod123", "hod", "hod_01")
+        # 1. Definitive Administrator Synchronization
+        admin_registry = [
+            {
+                "email": "admin@kahe.edu",
+                "pwd": "admin123",
+                "role": "admin",
+                "id": "admin_01",
+                "name": "System Administrator"
+            },
+            {
+                "email": "bebin@kahe.edu",
+                "pwd": "faculty123",
+                "role": "faculty",
+                "id": "fac_01",
+                "name": "Bebin Faculty"
+            }
         ]
         
-        for name, email, pwd, role, f_id in faculty_users:
-            f_hashed = auth.get_password_hash(pwd)
-            f_existing = db.query(models.User).filter(models.User.email == email).first()
-            if not f_existing:
-                db.add(models.User(name=name, email=email, password=f_hashed, role=role, faculty_id=f_id))
-            else:
-                f_existing.password = f_hashed
-                f_existing.role = role
-                f_existing.faculty_id = f_id
-        
-        # 3. Seed Departments
+        for account in admin_registry:
+            hashed_pwd = auth.get_password_hash(account["pwd"])
+            # Remove any ghost records with this identity
+            db.query(models.User).filter(
+                or_(
+                    models.User.email == account["email"],
+                    models.User.faculty_id == account["id"]
+                )
+            ).delete(synchronize_session=False)
+            
+            # Create a fresh, synchronized institutional account
+            db.add(models.User(
+                name=account["name"],
+                email=account["email"],
+                password=hashed_pwd,
+                role=account["role"],
+                faculty_id=account["id"]
+            ))
+            logger.info(f"Registry Sync: Synchronized identity {account['email']}")
+            
+        # 2. Seed Departments
         if db.query(models.Department).count() == 0:
             for d in ["Languages", "Computer Science", "Mathematics", "General Education", "AI & DS (Artificial Intelligence and Data Science)", "General", "Physics"]:
                 db.add(models.Department(name=d))
         
         db.commit()
-        logger.info("Institutional data synchronization successful.")
+        logger.info("Institutional registry synchronization complete.")
     except Exception as e:
-        logger.error(f"Synchronization failure: {e}")
+        logger.error(f"Registry Synchronization Failure: {e}")
         db.rollback()
     finally:
         db.close()
 
-# Start synchronization
-seed_institutional_data()
+# Execute synchronization on boot
+synchronize_institutional_registry()
 
 app = FastAPI(title="KAHE CMS")
 api_router = APIRouter(prefix="/api")
@@ -111,15 +94,16 @@ api_router = APIRouter(prefix="/api")
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-# --- INSTITUTIONAL AUTHENTICATION ---
+# --- INSTITUTIONAL AUTHENTICATION GATEWAY ---
 
-@app.post("/login", response_model=schemas.Token)
 @api_router.post("/login", response_model=schemas.Token)
-def institutional_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+@app.post("/login", response_model=schemas.Token)
+def gateway_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    # Standardize identifier
     identifier = form_data.username.strip()
-    logger.info(f"Access attempt for identifier: {identifier}")
+    logger.info(f"Access Request: Verifying institutional credentials for identity '{identifier}'")
     
-    # Resilient search: Case-insensitive email or exact faculty ID
+    # Resilient case-insensitive search
     user = db.query(models.User).filter(
         or_(
             models.User.email.ilike(identifier), 
@@ -128,20 +112,20 @@ def institutional_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Se
     ).first()
     
     if not user:
-        logger.warning(f"Access denied: Identity '{identifier}' not found in registry.")
+        logger.warning(f"Access Rejected: Identity '{identifier}' not found in registry.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Institutional account not found. Please verify your email or ID."
+            detail=f"Identity '{identifier}' is not registered in the KAHE CMS system."
         )
     
     if not auth.verify_password(form_data.password, user.password):
-        logger.warning(f"Access denied: Password mismatch for identity '{identifier}'.")
+        logger.warning(f"Access Rejected: Credential mismatch for identity '{identifier}'.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password for this institutional account."
+            detail="The password provided for this institutional account is incorrect."
         )
     
-    logger.info(f"Access granted: {user.email} (Role: {user.role})")
+    logger.info(f"Access Granted: Institutional identity {user.email} verified (Role: {user.role})")
     token = auth.create_access_token(data={"sub": user.email, "role": user.role})
     return {
         "access_token": token, 
@@ -151,7 +135,7 @@ def institutional_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Se
         "name": user.name
     }
 
-# --- STATS & DATA ENDPOINTS ---
+# --- STATS & ANALYTICS ---
 
 @api_router.get("/dashboard-stats", response_model=schemas.DashboardStats)
 def get_stats(db: Session = Depends(database.get_db)):
@@ -170,6 +154,8 @@ def get_stats(db: Session = Depends(database.get_db)):
         "conflict_alerts": 0
     }
 
+# --- MODULE DIRECTORY ---
+
 @api_router.get("/rooms", response_model=List[schemas.Room])
 def get_rooms(db: Session = Depends(database.get_db)): return db.query(models.Room).all()
 
@@ -181,15 +167,7 @@ def list_users(db: Session = Depends(database.get_db), admin: models.User = Depe
 def get_history(db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).order_by(models.ClassSession.id.desc()).all()
 
-@api_router.get("/active-sessions", response_model=List[schemas.ClassSession])
-def get_active_sessions(db: Session = Depends(database.get_db)):
-    return db.query(models.ClassSession).filter(models.ClassSession.status == "ACTIVE").all()
-
-@api_router.get("/active-session/{room_id}", response_model=Optional[schemas.ClassSession])
-def get_active_room_session(room_id: int, db: Session = Depends(database.get_db)):
-    return db.query(models.ClassSession).filter(models.ClassSession.room_id == room_id, models.ClassSession.status == "ACTIVE").first()
-
-# Standard institutional registry helper routes
+# registry helper routes
 @api_router.get("/working-days", response_model=List[schemas.WorkingDay])
 def list_days(db: Session = Depends(database.get_db)): return db.query(models.WorkingDay).all()
 
@@ -210,13 +188,13 @@ def list_subs(db: Session = Depends(database.get_db)): return db.query(models.Su
 
 app.include_router(api_router)
 
-# Health & Synchronization Verification
+# System Health & Registry Status
 @app.get("/api/health")
 @app.get("/health")
-def system_health():
-    return {"status": "operational", "institutional_registry": "synchronized"}
+def system_heartbeat():
+    return {"status": "synchronized", "institutional_registry": "verified"}
 
-# Serve Frontend Application
+# Frontend Integration Layer
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
