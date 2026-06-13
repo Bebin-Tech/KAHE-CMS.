@@ -26,10 +26,12 @@ models.Base.metadata.create_all(bind=database.engine)
 
 # Seeding Logic
 def seed_data():
-    db = next(database.get_db())
+    # Use SessionLocal directly for seeding to ensure proper lifecycle
+    db = database.SessionLocal()
     try:
+        logger.info("Starting database synchronization and seeding...")
+        
         # 1. Seed Users (Admin, HOD, Faculty)
-        # Using a fixed salt-like approach or just ensuring re-seeding works
         users_to_seed = [
             ("Admin User", "admin@kahe.edu", "admin123", "admin", "admin_01"),
             ("bebin", "bebin@kahe.edu", "faculty123", "faculty", "fac_01"),
@@ -40,15 +42,24 @@ def seed_data():
         
         for name, email, pwd, role, f_id in users_to_seed:
             existing = db.query(models.User).filter(models.User.email == email).first()
+            hashed_pwd = auth.get_password_hash(pwd)
             if not existing:
                 db.add(models.User(
-                    name=name, email=email,
-                    password=auth.get_password_hash(pwd),
-                    role=role, faculty_id=f_id
+                    name=name, 
+                    email=email, 
+                    password=hashed_pwd, 
+                    role=role, 
+                    faculty_id=f_id
                 ))
+                logger.info(f"Seeded new user: {email}")
             else:
-                # Update password just in case it was corrupted or salt changed
-                existing.password = auth.get_password_hash(pwd)
+                # Force update password and role to ensure they are correct
+                existing.password = hashed_pwd
+                existing.role = role
+                existing.name = name
+                existing.faculty_id = f_id
+                logger.info(f"Synchronized existing user: {email}")
+        
         db.commit()
 
         # 2. Seed Departments
@@ -56,6 +67,7 @@ def seed_data():
             for d in ["Languages", "Computer Science", "Mathematics", "General Education", "AI & DS (Artificial Intelligence and Data Science)", "General", "Physics"]:
                 db.add(models.Department(name=d))
             db.commit()
+            logger.info("Departments seeded.")
 
         # 3. Seed Rooms
         if db.query(models.Room).count() == 0:
@@ -83,8 +95,9 @@ def seed_data():
                     status=r[4], room_name=r[5], floor=r[6], building=r[7]
                 ))
             db.commit()
+            logger.info("Rooms seeded.")
 
-        # 4. Seed Academic Basics
+        # 4. Seed Working Days & Periods
         if db.query(models.WorkingDay).count() == 0:
             for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]:
                 db.add(models.WorkingDay(day_name=d, is_working=True))
@@ -95,14 +108,14 @@ def seed_data():
                 db.add(models.PeriodTiming(period_number=p[0], start_time=p[1], end_time=p[2]))
         
         db.commit()
-        logger.info("Database seeding / synchronization completed.")
+        logger.info("Database seeding / synchronization completed successfully.")
     except Exception as e:
-        logger.error(f"Seeding error: {e}")
+        logger.error(f"Critical Seeding error: {e}")
         db.rollback()
     finally:
         db.close()
 
-# Synchronize on startup
+# Run seed on startup
 seed_data()
 
 app = FastAPI(title="KAHE CMS")
@@ -113,19 +126,33 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 
 @api_router.post("/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    logger.info(f"Login attempt received for: {form_data.username}")
+    
     # Try finding user by email OR faculty_id (User ID)
     user = db.query(models.User).filter(
         or_(models.User.email == form_data.username, models.User.faculty_id == form_data.username)
     ).first()
     
-    if not user or not auth.verify_password(form_data.password, user.password):
-        logger.warning(f"Login failed for user: {form_data.username}")
+    if not user:
+        logger.warning(f"Login failed: User {form_data.username} not found in database.")
         raise HTTPException(status_code=401, detail="Invalid institutional credentials")
     
+    if not auth.verify_password(form_data.password, user.password):
+        logger.warning(f"Login failed: Incorrect password for user {form_data.username}")
+        raise HTTPException(status_code=401, detail="Invalid institutional credentials")
+    
+    logger.info(f"Login successful for user: {user.email} (Role: {user.role})")
+    
     token = auth.create_access_token(data={"sub": user.email, "role": user.role})
-    return {"access_token": token, "token_type": "bearer", "role": user.role, "user_id": user.id, "name": user.name}
+    return {
+        "access_token": token, 
+        "token_type": "bearer", 
+        "role": user.role, 
+        "user_id": user.id, 
+        "name": user.name
+    }
 
-# --- STATS ---
+# --- DASHBOARD STATS ---
 @api_router.get("/dashboard-stats", response_model=schemas.DashboardStats)
 def get_stats(db: Session = Depends(database.get_db)):
     return {
@@ -143,18 +170,43 @@ def get_stats(db: Session = Depends(database.get_db)):
         "conflict_alerts": 0
     }
 
-# --- DIRECTORY ---
+# --- ROOMS ---
 @api_router.get("/rooms", response_model=List[schemas.Room])
 def get_rooms(db: Session = Depends(database.get_db)):
     return db.query(models.Room).all()
 
+@api_router.post("/rooms", response_model=schemas.Room)
+def create_room(room: schemas.RoomCreate, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_room = models.Room(**room.model_dump())
+    db.add(db_room)
+    db.commit()
+    db.refresh(db_room)
+    return db_room
+
+# --- TIMETABLES ---
+@api_router.get("/timetables", response_model=List[schemas.Timetable])
+def list_tt(semester_id: Optional[int] = None, db: Session = Depends(database.get_db)):
+    q = db.query(models.Timetable).options(joinedload(models.Timetable.subject), joinedload(models.Timetable.faculty), joinedload(models.Timetable.room), joinedload(models.Timetable.period))
+    if semester_id: q = q.filter(models.Timetable.semester_id == semester_id)
+    return q.all()
+
+@api_router.post("/generate-timetable")
+def generate_timetable(semester_id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    return {"message": "Timetable generated (Logic simplified for demo)"}
+
+# --- USERS ---
 @api_router.get("/users_list", response_model=List[schemas.User])
 def list_users(db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
     return db.query(models.User).all()
 
+# --- HISTORY ---
 @api_router.get("/class-history", response_model=List[schemas.ClassSession])
 def get_history(db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).order_by(models.ClassSession.id.desc()).all()
+
+@api_router.get("/room-history/{room_id}", response_model=List[schemas.ClassSession])
+def get_room_history(room_id: int, db: Session = Depends(database.get_db)):
+    return db.query(models.ClassSession).filter(models.ClassSession.room_id == room_id).order_by(models.ClassSession.id.desc()).all()
 
 @api_router.get("/active-sessions", response_model=List[schemas.ClassSession])
 def get_active_sessions(db: Session = Depends(database.get_db)):
