@@ -91,9 +91,17 @@ const Bookings = () => {
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
-                    className="w-full sm:w-auto px-8 py-3 border-2 border-indigo-600 text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 transition-colors text-sm uppercase tracking-wider"
+                    className="w-full sm:w-64 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-4 group"
                 >
-                    Book a Room
+                    <div className="h-12 w-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <div className="text-left">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Action</p>
+                        <p className="text-sm font-black text-gray-800">Book a Room</p>
+                    </div>
                 </button>
             </header>
 
