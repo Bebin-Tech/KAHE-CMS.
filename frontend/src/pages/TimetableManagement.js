@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import API from '../api';
 
 const TimetableManagement = () => {
@@ -25,36 +25,47 @@ const TimetableManagement = () => {
     const [approvalComments, setApprovalComments] = useState('');
     const [selectedSlot, setSelectedSlot] = useState(null);
 
-    const fetchInitialData = async () => {
+    const fetchInitialData = useCallback(async () => {
         try {
-            const [statsRes, deptRes, progRes, semRes, subRes, wdRes, ptRes, userRes] = await Promise.all([
-                API.get('/dashboard-stats'),
-                API.get('/departments'),
-                API.get('/programs'),
-                API.get('/semesters'),
-                API.get('/subjects'),
-                API.get('/working-days'),
-                API.get('/period-timings'),
-                API.get('/users_list')
-            ]);
-            setStats(statsRes.data || {});
-            setDepartments(Array.isArray(deptRes.data) ? deptRes.data : []);
-            setPrograms(Array.isArray(progRes.data) ? progRes.data : []);
-            setSemesters(Array.isArray(semRes.data) ? semRes.data : []);
-            setSubjects(Array.isArray(subRes.data) ? subRes.data : []);
-            setWorkingDays(Array.isArray(wdRes.data) ? wdRes.data : []);
-            setPeriods(Array.isArray(ptRes.data) ? ptRes.data : []);
-            setFaculties(Array.isArray(userRes.data) ? userRes.data.filter(u => u.role === 'faculty') : []);
+            // Using separate try-catch for individual requests to prevent a single 403/500 from crashing the whole page
+            const safeFetch = async (url) => {
+                try {
+                    const res = await API.get(url);
+                    return res.data;
+                } catch (e) {
+                    console.warn(`Failed to fetch ${url}:`, e);
+                    return [];
+                }
+            };
+
+            const statsData = await safeFetch('/dashboard-stats');
+            const deptData = await safeFetch('/departments');
+            const progData = await safeFetch('/programs');
+            const semData = await safeFetch('/semesters');
+            const subData = await safeFetch('/subjects');
+            const wdData = await safeFetch('/working-days');
+            const ptData = await safeFetch('/period-timings');
+            const userData = await safeFetch('/users_list');
+
+            setStats(statsData || {});
+            setDepartments(Array.isArray(deptData) ? deptData : []);
+            setPrograms(Array.isArray(progData) ? progData : []);
+            setSemesters(Array.isArray(semData) ? semData : []);
+            setSubjects(Array.isArray(subData) ? subData : []);
+            setWorkingDays(Array.isArray(wdData) ? wdData : []);
+            setPeriods(Array.isArray(ptData) ? ptData : []);
+            setFaculties(Array.isArray(userData) ? userData.filter(u => u.role === 'faculty') : []);
+
             setLoading(false);
         } catch (err) {
-            console.error(err);
+            console.error("Critical fetch error:", err);
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchInitialData();
-    }, []);
+    }, [fetchInitialData]);
 
     const handleGenerate = async (params = {}) => {
         try {
@@ -216,7 +227,7 @@ const TimetableManagement = () => {
                         <h2 className="text-2xl font-black text-gray-900 mb-8 uppercase tracking-tight">Operational Hours</h2>
                         <div className="space-y-4">
                             {periods.map(p => (
-                                <div key={p.id} className={`flex justify-between items-center p-5 rounded-2xl ${p.is_break ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50 border border-gray-100'}`}>
+                                <div key={p.id} className={`flex justify-between items-center p-5 rounded-2xl ${p.is_break ? 'bg-amber-50' : 'bg-gray-50 border border-gray-100'}`}>
                                     <div className="flex items-center space-x-4">
                                         <span className="h-10 w-10 bg-white rounded-xl flex items-center justify-center font-black text-xs text-gray-400">P{p.period_number}</span>
                                         <span className="font-black text-sm text-gray-700">{p.start_time} - {p.end_time}</span>

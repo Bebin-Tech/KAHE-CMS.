@@ -10,13 +10,6 @@ import UserDirectory from './pages/UserDirectory';
 import TimetableManagement from './pages/TimetableManagement';
 import Sidebar from './components/Sidebar';
 
-// Defensive Private Route
-const PrivateRoute = ({ children }) => {
-    const token = localStorage.getItem('token');
-    if (!token) return <Navigate to="/login" replace />;
-    return children;
-};
-
 function App() {
     const [authState, setAuthState] = useState({
         token: localStorage.getItem('token'),
@@ -27,25 +20,39 @@ function App() {
 
     useEffect(() => {
         const syncAuth = () => {
-            setAuthState({
-                token: localStorage.getItem('token'),
-                role: localStorage.getItem('role'),
-                name: localStorage.getItem('name')
-            });
+            const currentToken = localStorage.getItem('token');
+            const currentRole = localStorage.getItem('role');
+            const currentName = localStorage.getItem('name');
+
+            if (currentToken !== authState.token || currentRole !== authState.role) {
+                setAuthState({
+                    token: currentToken,
+                    role: currentRole,
+                    name: currentName
+                });
+            }
         };
 
         window.addEventListener('storage', syncAuth);
-        const timer = setInterval(syncAuth, 1000);
+        const timer = setInterval(syncAuth, 500);
 
         return () => {
             window.removeEventListener('storage', syncAuth);
             clearInterval(timer);
         };
-    }, []);
+    }, [authState]);
+
+    const PrivateRoute = ({ children, allowedRoles = [] }) => {
+        if (!authState.token) return <Navigate to="/login" replace />;
+        if (allowedRoles.length > 0 && !allowedRoles.includes(authState.role)) {
+            return <Navigate to="/" replace />;
+        }
+        return children;
+    };
 
     return (
         <Router>
-            <div className="flex bg-gray-50 h-screen overflow-hidden relative">
+            <div className="flex bg-gray-50 h-screen overflow-hidden relative font-sans">
                 {authState.token && (
                     <Sidebar
                         isOpen={isSidebarOpen}
@@ -67,7 +74,7 @@ function App() {
                             </button>
                             <div className="flex items-center space-x-3">
                                 <img src="/logo.svg" alt="Logo" className="h-8 w-8" />
-                                <span className="font-bold text-gray-800 uppercase tracking-tighter">KAHE CMS</span>
+                                <span className="font-black text-gray-800 uppercase tracking-tighter">KAHE CMS</span>
                             </div>
                         </header>
                     )}
@@ -75,20 +82,20 @@ function App() {
                     <main className="flex-1 overflow-y-auto bg-gray-50">
                         <Suspense fallback={<div className="p-10 text-center font-black text-gray-300">LOADING...</div>}>
                             <Routes>
-                                <Route path="/login" element={<Login />} />
+                                <Route path="/login" element={!authState.token ? <Login /> : <Navigate to="/" replace />} />
                                 <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                                 <Route path="/rooms" element={<PrivateRoute><Rooms /></PrivateRoute>} />
                                 <Route path="/rooms/:roomId" element={<PrivateRoute><RoomDetails /></PrivateRoute>} />
                                 <Route path="/bookings" element={<PrivateRoute><Bookings /></PrivateRoute>} />
                                 <Route path="/schedule" element={<PrivateRoute><Schedule /></PrivateRoute>} />
                                 <Route path="/timetable-management" element={
-                                    <PrivateRoute>
-                                        {authState.role === 'admin' || authState.role === 'hod' ? <TimetableManagement /> : <Navigate to="/" />}
+                                    <PrivateRoute allowedRoles={['admin', 'hod']}>
+                                        <TimetableManagement />
                                     </PrivateRoute>
                                 } />
                                 <Route path="/user-directory" element={
-                                    <PrivateRoute>
-                                        {authState.role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
+                                    <PrivateRoute allowedRoles={['admin']}>
+                                        <UserDirectory />
                                     </PrivateRoute>
                                 } />
                                 <Route path="*" element={<Navigate to="/" replace />} />
