@@ -16,12 +16,16 @@ const Login = () => {
         setError('');
 
         try {
-            // Using FormData for reliable multipart/form-data transmission
-            const formData = new FormData();
-            formData.append('username', email.trim());
-            formData.append('password', password);
+            // Standard OAuth2 form encoding for FastAPI (application/x-www-form-urlencoded)
+            const params = new URLSearchParams();
+            params.append('username', email.trim());
+            params.append('password', password);
 
-            const response = await API.post('/login', formData);
+            const response = await API.post('/login', params, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
 
             // On successful login
             localStorage.setItem('token', response.data.access_token);
@@ -34,6 +38,7 @@ const Login = () => {
             window.location.reload();
         } catch (err) {
             console.error("Institutional Login Error:", err);
+            // Show detailed error if provided by backend, otherwise default
             const message = err.response?.data?.detail || 'Invalid institutional credentials. Please try again.';
             setError(message);
         } finally {

@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,74 +17,115 @@ try:
 except ImportError:
     import models, schemas, auth, database
 
-# Global Institutional Logging
+# Force logging to be visible in all environments
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("KAHE-CMS")
 
-# Database Synchronization
+# Ensure tables exist
 models.Base.metadata.create_all(bind=database.engine)
 
-def sync_registry():
-    """Forces synchronization of core administrator and faculty accounts."""
+def force_sync_admin():
+    """Definitively resets the admin account to ensure login works immediately."""
     db = database.SessionLocal()
     try:
-        logger.info("Registry: Synchronizing institutional security layer...")
-        accounts = [
-            {"email": "admin@kahe.edu", "id": "admin_01", "pwd": "admin123", "role": "admin", "name": "System Administrator"},
-            {"email": "bebin@kahe.edu", "id": "fac_01", "pwd": "faculty123", "role": "faculty", "name": "Bebin Faculty"}
-        ]
-        for acc in accounts:
-            hashed = auth.get_password_hash(acc["pwd"])
-            user = db.query(models.User).filter(or_(models.User.email == acc["email"], models.User.faculty_id == acc["id"])).first()
-            if user:
-                user.email = acc["email"]
-                user.faculty_id = acc["id"]
-                user.password = hashed
-                user.role = acc["role"]
-                user.name = acc["name"]
-            else:
-                db.add(models.User(name=acc["name"], email=acc["email"], password=hashed, role=acc["role"], faculty_id=acc["id"]))
+        logger.info("CRITICAL: Force-syncing Administrator Registry...")
+        
+        # 1. Clean existing collisions
+        db.query(models.User).filter(
+            or_(models.User.email == "admin@kahe.edu", models.User.faculty_id == "admin_01")
+        ).delete(synchronize_session=False)
         db.commit()
-        logger.info("Registry: Synchronization complete.")
+
+        # 2. Register Definitive Admin
+        # Password 'admin123'
+        hashed_p = auth.get_password_hash("admin123")
+        admin = models.User(
+            name="System Administrator",
+            email="admin@kahe.edu",
+            password=hashed_p,
+            role="admin",
+            faculty_id="admin_01"
+        )
+        db.add(admin)
+        
+        # 3. Register Faculty (Bebin)
+        # Password 'faculty123'
+        hashed_f = auth.get_password_hash("faculty123")
+        bebin = models.User(
+            name="Bebin Faculty",
+            email="bebin@kahe.edu",
+            password=hashed_f,
+            role="faculty",
+            faculty_id="fac_01"
+        )
+        db.add(bebin)
+        
+        db.commit()
+        logger.info("CRITICAL: Institutional Registry Synchronization SUCCESSFUL.")
     except Exception as e:
-        logger.error(f"Registry Failure: {e}")
+        logger.error(f"Registry Sync Failure: {e}")
         db.rollback()
     finally:
         db.close()
 
-sync_registry()
+# Synchronize registry on boot
+force_sync_admin()
 
 app = FastAPI(title="KAHE CMS")
 api_router = APIRouter(prefix="/api")
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# --- CORE AUTHENTICATION ---
-
-@app.post("/login", response_model=schemas.Token)
-def login_root(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    """Primary institutional login gateway."""
-    identifier = form_data.username.strip()
-    logger.info(f"Access Request: {identifier}")
-    
-    user = db.query(models.User).filter(
-        or_(models.User.email.ilike(identifier), models.User.faculty_id == identifier)
-    ).first()
-    
-    if not user or not auth.verify_password(form_data.password, user.password):
-        logger.warning(f"Access Denied: {identifier}")
-        raise HTTPException(status_code=401, detail="Invalid institutional credentials.")
-    
-    token = auth.create_access_token(data={"sub": user.email, "role": user.role})
-    return {"access_token": token, "token_type": "bearer", "role": user.role, "user_id": user.id, "name": user.name}
+# --- AUTHENTICATION GATEWAY ---
 
 @api_router.post("/login", response_model=schemas.Token)
-def login_api(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    """Redundant API login endpoint for environment compatibility."""
-    return login_root(form_data, db)
+@app.post("/login", response_model=schemas.Token)
+async def login_gateway(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    identifier = form_data.username.strip()
+    logger.info(f"LOGIN ATTEMPT: identifier='{identifier}'")
+    
+    # Resilient case-insensitive search
+    user = db.query(models.User).filter(
+        or_(
+            models.User.email.ilike(identifier), 
+            models.User.faculty_id == identifier
+        )
+    ).first()
+    
+    if not user:
+        logger.warning(f"LOGIN DENIED: Identity '{identifier}' not found in registry.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account not found. Please verify your Email or ID."
+        )
+    
+    # Password Validation
+    if not auth.verify_password(form_data.password, user.password):
+        logger.warning(f"LOGIN DENIED: Password mismatch for identity '{user.email}'")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password. Access denied."
+        )
+    
+    logger.info(f"LOGIN GRANTED: identity='{user.email}' role='{user.role}'")
+    token = auth.create_access_token(data={"sub": user.email, "role": user.role})
+    
+    return {
+        "access_token": token, 
+        "token_type": "bearer", 
+        "role": user.role, 
+        "user_id": user.id, 
+        "name": user.name
+    }
 
-# --- SYSTEM MODULES ---
+# --- MODULE DIRECTORY ---
 
 @api_router.get("/dashboard-stats", response_model=schemas.DashboardStats)
 def get_stats(db: Session = Depends(database.get_db)):
@@ -113,7 +155,7 @@ def list_users(db: Session = Depends(database.get_db), admin: models.User = Depe
 def get_history(db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).order_by(models.ClassSession.id.desc()).all()
 
-# registry helper routes
+# Helper endpoints
 @api_router.get("/working-days", response_model=List[schemas.WorkingDay])
 def list_days(db: Session = Depends(database.get_db)): return db.query(models.WorkingDay).all()
 
@@ -137,14 +179,16 @@ app.include_router(api_router)
 # System Health
 @app.get("/api/health")
 @app.get("/health")
-def health(): return {"status": "synchronized", "ts": datetime.now(timezone.utc)}
+def system_health():
+    return {"status": "synchronized", "ts": datetime.now(timezone.utc)}
 
-# Frontend Hosting
+# Frontend SPA Hosting
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
     @app.exception_handler(404)
-    async def catch_all(request, exc): return FileResponse(os.path.join(frontend_path, "index.html"))
+    async def spa_handler(request, exc): 
+        return FileResponse(os.path.join(frontend_path, "index.html"))
 
 if __name__ == "__main__":
     import uvicorn
