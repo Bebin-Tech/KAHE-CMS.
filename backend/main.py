@@ -80,7 +80,14 @@ def sync_registry():
         migrate_db(db)
         # Force Clean Period Setup to fix ID and numbering issues
         db.execute(text("DELETE FROM period_timings"))
-        db.execute(text("DELETE FROM sqlite_sequence WHERE name='period_timings'"))
+        
+        # Reset SQLite sequence only if using SQLite and table exists
+        if "sqlite" in str(database.engine.url):
+            try:
+                db.execute(text("DELETE FROM sqlite_sequence WHERE name='period_timings'"))
+            except Exception:
+                pass # sqlite_sequence might not exist in a fresh DB
+
         db.commit()
         
         # Chronological registry: 1, 2 = P1, P2 | 3 = Interval | 4, 5 = P3, P4 | 6 = Lunch | 7, 8 = P5, P6

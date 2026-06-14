@@ -28,7 +28,9 @@ def clean_db_url(url):
         
     # Validation: Must look like a URL
     if "://" not in url:
-        print(f"DATABASE WARNING: Invalid URL format detected (missing '://'): {url[:10]}...")
+        # Silently ignore common non-URL strings often found in shell environments
+        if not any(x in url.lower() for x in ["python", "pip", "bash", "cd "]):
+            print(f"DATABASE WARNING: Ignored invalid DATABASE_URL content: {url[:20]}...")
         return None
         
     # Filter out common 'placeholder' values
