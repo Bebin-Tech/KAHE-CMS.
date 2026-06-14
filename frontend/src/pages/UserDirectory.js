@@ -59,13 +59,20 @@ const UserDirectory = () => {
     };
 
     const handleDelete = async (id) => {
+        if (!id) {
+            alert("Error: Invalid User ID selection.");
+            return;
+        }
         if (window.confirm('Are you sure you want to delete this user?')) {
             try {
-                await API.delete(`/users/${id}`);
+                console.log(`CMS Security: Attempting to purge user identity ID=${id}`);
+                const res = await API.delete(`/users/${id}`);
                 fetchUsers();
-                alert('User deleted');
+                alert(res.data.detail || 'User identity purged successfully.');
             } catch (err) {
-                alert('Delete failed');
+                console.error("purging failed:", err);
+                const errorMessage = err.response?.data?.detail || ' purging failed due to institutional record dependencies or network error.';
+                alert(errorMessage);
             }
         }
     };

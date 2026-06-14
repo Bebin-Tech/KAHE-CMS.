@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Boolean, Time, Table, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Boolean, Time, Table, Text, Float
 from sqlalchemy.orm import relationship
 try:
     from .database import Base
@@ -9,9 +9,12 @@ from datetime import datetime
 
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
+    DEAN = "dean"
+    HOD = "hod"
     FACULTY = "faculty"
     STUDENT = "student"
-    HOD = "hod"
+    STAFF = "staff"
+    ACCOUNTS = "accounts"
 
 class RoomType(str, enum.Enum):
     CLASSROOM = "Classroom"
@@ -32,8 +35,13 @@ class User(Base):
     name = Column(String)
     email = Column(String, unique=True, index=True)
     password = Column(String)
-    role = Column(String) # admin, faculty, student, hod
+    role = Column(String) # admin, dean, hod, faculty, student
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    
+    # Faculty specific
+    max_hours_per_day = Column(Integer, default=6)
+    max_hours_per_week = Column(Integer, default=24)
+    availability_status = Column(String, default="Available") # Available, On Leave
     
     department = relationship("Department", back_populates="users")
 
@@ -48,6 +56,7 @@ class Program(Base):
     __tablename__ = "programs"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
+    type = Column(String) # UG, PG
     department_id = Column(Integer, ForeignKey("departments.id"))
     department = relationship("Department", back_populates="programs")
     semesters = relationship("Semester", back_populates="program")
@@ -69,16 +78,20 @@ class Subject(Base):
     type = Column(String) # Theory, Lab
     credits = Column(Integer)
     weekly_hours = Column(Integer, default=3)
-    semester_id = Column(Integer, ForeignKey("semesters.id"))
+    semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    department_name = Column(String, nullable=True)
+    status = Column(String, default="Active")
+    
     semester = relationship("Semester", back_populates="subjects")
-    department_id = Column(Integer, ForeignKey("departments.id"))
 
 class FacultyAssignment(Base):
     __tablename__ = "faculty_assignments"
     id = Column(Integer, primary_key=True, index=True)
     faculty_id = Column(Integer, ForeignKey("users.id"))
     subject_id = Column(Integer, ForeignKey("subjects.id"))
-    semester_id = Column(Integer, ForeignKey("semesters.id"))
+    semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True)
+    section = Column(String, nullable=True)
     
     faculty = relationship("User")
     subject = relationship("Subject")
@@ -90,9 +103,10 @@ class Room(Base):
     room_name = Column(String)
     floor = Column(String)
     building = Column(String)
-    type = Column(String) # Classroom, Lab
+    type = Column(String) # Classroom, Lab, Seminar Hall
     capacity = Column(Integer)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    department = Column(String, nullable=True)
     status = Column(String, default="AVAILABLE")
 
 class AcademicSetting(Base):
@@ -126,14 +140,19 @@ class Holiday(Base):
 class Timetable(Base):
     __tablename__ = "timetables"
     id = Column(Integer, primary_key=True, index=True)
-    department_id = Column(Integer, ForeignKey("departments.id"))
-    program_id = Column(Integer, ForeignKey("programs.id"))
-    semester_id = Column(Integer, ForeignKey("semesters.id"))
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    program_id = Column(Integer, ForeignKey("programs.id"), nullable=True)
+    semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True)
     day_of_week = Column(String)
-    period_id = Column(Integer, ForeignKey("period_timings.id"))
-    subject_id = Column(Integer, ForeignKey("subjects.id"))
-    faculty_id = Column(Integer, ForeignKey("users.id"))
-    room_id = Column(Integer, ForeignKey("rooms.id"))
+    period_id = Column(Integer, ForeignKey("period_timings.id"), nullable=True)
+    time_slot = Column(String, nullable=True)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True)
+    subject_name = Column(String, nullable=True)
+    faculty_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    faculty_name = Column(String, nullable=True)
+    room_id = Column(Integer, ForeignKey("rooms.id"), nullable=True)
+    room_number = Column(String, nullable=True)
+    section = Column(String, nullable=True)
     status = Column(String, default="DRAFT") # DRAFT, PENDING, APPROVED, PUBLISHED
     approval_comments = Column(Text, nullable=True)
     
@@ -197,8 +216,8 @@ class Notification(Base):
 class Schedule(Base):
     __tablename__ = "schedules"
     id = Column(Integer, primary_key=True, index=True)
-    faculty_id = Column(Integer, ForeignKey("users.id"))
-    room_id = Column(Integer, ForeignKey("rooms.id"))
+    faculty_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    room_id = Column(Integer, ForeignKey("rooms.id"), nullable=True)
     subject = Column(String)
     time_slot = Column(String)
     day_of_week = Column(String)

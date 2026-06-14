@@ -9,6 +9,8 @@ import RoomDetails from './pages/RoomDetails';
 import UserDirectory from './pages/UserDirectory';
 import Sidebar from './components/Sidebar';
 
+import TimetableManager from './pages/TimetableManager';
+
 const PrivateRoute = ({ children }) => {
     const token = localStorage.getItem('token');
     return token ? children : <Navigate to="/login" />;
@@ -58,6 +60,11 @@ function App() {
                             <Route path="/user-directory" element={
                                 <PrivateRoute>
                                     {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
+                                </PrivateRoute>
+                            } />
+                            <Route path="/timetable-manager" element={
+                                <PrivateRoute>
+                                    {(role === 'admin' || role === 'hod' || role === 'dean' || role === 'principal') ? <TimetableManager /> : <Navigate to="/" />}
                                 </PrivateRoute>
                             } />
                         </Routes>

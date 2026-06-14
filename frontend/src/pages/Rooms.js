@@ -95,7 +95,7 @@ const Rooms = () => {
 
     useEffect(() => {
         fetchRooms();
-        const interval = setInterval(fetchRooms, 15000);
+        const interval = setInterval(fetchRooms, 5000); // 5s interval for real-time updates
         return () => clearInterval(interval);
     }, [fetchRooms]);
 

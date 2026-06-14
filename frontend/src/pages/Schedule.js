@@ -2,31 +2,26 @@ import React, { useEffect, useState } from 'react';
 import API from '../api';
 
 const Schedule = () => {
-    const [schedules, setSchedules] = useState([]);
+    const [timetables, setTimetables] = useState([]);
     const [rooms, setRooms] = useState([]);
+    const [periods, setPeriods] = useState([]);
     const [loading, setLoading] = useState(true);
-
-    const timeSlots = [
-        { id: 'I', time: '9:00 AM - 9:50 AM' },
-        { id: 'II', time: '9:50 AM - 10:55 AM' },
-        { id: 'III', time: '11:15 AM - 12:00 PM' },
-        { id: 'IV', time: '12:00 PM - 12:45 PM' },
-        { id: 'V', time: '01:30 PM - 02:20 PM' },
-        { id: 'VI', time: '02:20 PM - 03:10 PM' },
-        { id: 'VII', time: '3:10 PM - 4:00 PM' },
-    ];
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [schRes, roomsRes] = await Promise.all([
-                    API.get('/schedules'),
-                    API.get('/rooms')
+                const [ttRes, roomsRes, periodsRes] = await Promise.all([
+                    API.get('/timetables'),
+                    API.get('/rooms'),
+                    API.get('/period-timings')
                 ]);
-                setSchedules(schRes.data || []);
+                setTimetables(ttRes.data || []);
                 setRooms(roomsRes.data || []);
+                // Strictly sort by ID (forced 1-8 in backend)
+                const sortedPeriods = (periodsRes.data || []).sort((a, b) => a.id - b.id);
+                setPeriods(sortedPeriods);
                 setLoading(false);
             } catch (err) {
                 console.error("Schedule fetch error:", err);
@@ -36,69 +31,72 @@ const Schedule = () => {
         fetchData();
     }, []);
 
-    const getScheduleForCell = (day, slot) => {
-        // Find schedule for this day and slot
-        // Slot.time in backend might be exact string from timeSlots
-        return schedules.find(s => s.day_of_week === day && s.time_slot === slot.time);
+    const getScheduleForCell = (day, periodId) => {
+        return timetables.find(t => t.day_of_week === day && t.period_id === periodId);
     };
 
-    const Cell = ({ day, slot }) => {
-        const item = getScheduleForCell(day, slot);
-        if (!item) return <td className="border border-gray-400"></td>;
-
-        const roomNum = rooms.find(r => r.id === item.room_id)?.room_number || 'N/A';
-        const isLab = item.subject.toLowerCase().includes('lab');
-        const color = isLab ? 'bg-yellow-200' : 'bg-green-300';
-
-        return (
-            <td className={`${color} border border-gray-400 p-2 text-center align-middle h-20`}>
-                <div className="flex flex-col justify-center h-full">
-                    <span className="font-black text-[10px] text-gray-900 leading-tight uppercase">{item.subject}</span>
-                    <div className="w-full h-[1px] bg-gray-600/20 my-1"></div>
-                    <span className="font-bold text-[9px] text-gray-700">ROOM {roomNum}</span>
-                </div>
-            </td>
-        );
-    };
-
-    if (loading) return <div className="p-4 sm:p-10 text-center font-bold text-gray-400 animate-pulse">LOADING TIMETABLE...</div>;
+    if (loading) return <div className="p-4 sm:p-10 text-center font-bold text-gray-400 animate-pulse uppercase tracking-widest">Synchronizing Academic Schedule...</div>;
 
     return (
         <div className="p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen">
-            <header className="mb-6 sm:mb-8">
-                <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">Academic Timetable</h1>
-                <p className="text-gray-500 font-medium mt-1 uppercase tracking-widest text-xs">Official Class Schedule • KAHE CMS</p>
+            <header className="mb-8">
+                <h1 className="text-4xl font-black text-gray-900 tracking-tight">Academic Timetable</h1>
+                <p className="text-gray-500 font-medium mt-1 uppercase tracking-widest text-[10px]">Karpagam Academy of Higher Education • Official Schedule</p>
             </header>
 
-            <div className="bg-white rounded-[2rem] shadow-xl border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full border-collapse table-fixed min-w-[1000px]">
+                    <table className="w-full border-collapse">
                         <thead>
-                            <tr className="bg-[#fef9c3] border-b border-gray-400">
-                                <th rowSpan="2" className="border border-gray-400 p-4 text-center font-black text-gray-800 text-sm w-32 uppercase tracking-tighter">
-                                    Day Order / Hours
-                                </th>
-                                {timeSlots.map(slot => (
-                                    <th key={slot.id} className="border border-gray-400 p-2 text-center font-black text-gray-800 text-sm">
-                                        {slot.id}
-                                    </th>
-                                ))}
-                            </tr>
-                            <tr className="bg-[#fef9c3]">
-                                {timeSlots.map(slot => (
-                                    <th key={slot.time} className="border border-gray-400 p-1 text-[10px] font-bold text-gray-600 text-center uppercase leading-none whitespace-pre-line">
-                                        {slot.time.split(' - ').join('\n-\n')}
-                                    </th>
-                                ))}
+                            <tr className="bg-[#1e1b4b] text-white">
+                                <th className="p-6 border border-white/5 w-44 font-black text-[10px] uppercase tracking-widest">Day \ Period</th>
+                                {periods.map(p => {
+                                    // P1, P2, INTERVAL, P3, P4, LUNCH, P5, P6
+                                    let label = p.type;
+                                    if (p.type === 'CLASS') {
+                                        const classCount = periods.filter(x => x.type === 'CLASS' && x.period_number <= p.period_number).length;
+                                        label = `P${classCount}`;
+                                    }
+                                    return (
+                                        <th key={p.id} className={`p-6 border border-white/5 text-center ${p.is_break ? 'bg-indigo-900/40 text-indigo-200' : ''}`}>
+                                            <span className="block font-black text-[10px] uppercase tracking-wider">{label}</span>
+                                            <span className="text-[8px] opacity-60 font-bold mt-1 block">{p.start_time} - {p.end_time}</span>
+                                        </th>
+                                    );
+                                })}
                             </tr>
                         </thead>
                         <tbody>
                             {days.map(day => (
-                                <tr key={day} className="border-b border-gray-400">
-                                    <td className="bg-[#fef9c3] border border-gray-400 p-4 text-center font-black text-gray-800 text-sm uppercase">{day}</td>
-                                    {timeSlots.map(slot => (
-                                        <Cell key={`${day}-${slot.id}`} day={day} slot={slot} />
-                                    ))}
+                                <tr key={day} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="p-6 border border-gray-100 bg-gray-50/40 font-black text-gray-900 text-xs text-center uppercase tracking-tighter">{day}</td>
+                                    {periods.map(period => {
+                                        const item = period.is_break ? null : getScheduleForCell(day, period.id);
+
+                                        if (period.is_break) return (
+                                            <td key={period.id} className="p-6 border border-gray-100 bg-gray-100/20 text-center">
+                                                <span className="text-[9px] font-black text-gray-300 uppercase tracking-[0.4em] rotate-90 inline-block py-2">{period.type}</span>
+                                            </td>
+                                        );
+
+                                        if (!item) return <td key={period.id} className="p-4 border border-gray-100 text-center text-[8px] font-bold text-gray-200 uppercase">Unallocated</td>;
+
+                                        const n = item.subject_name?.toLowerCase() || '';
+                                        const t = item.subject_type?.toLowerCase() || '';
+                                        const colorClass = (n.includes('practical') || n.includes('lab') || t.includes('practical'))
+                                            ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                                            : (n.includes('community engagement') || n.includes('social responsibility') ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-green-50 border-green-200 text-green-800');
+
+                                        return (
+                                            <td key={period.id} className="p-2 border border-gray-100 text-center min-w-[160px] align-top">
+                                                <div className={`p-4 rounded-2xl border-b-2 h-full flex flex-col justify-center transition-transform hover:scale-95 ${colorClass}`}>
+                                                    <p className="font-black text-[10px] leading-tight uppercase mb-1">{item.subject_name}</p>
+                                                    <div className="h-px w-6 bg-current opacity-10 mx-auto my-1.5"></div>
+                                                    <p className="text-[9px] font-bold opacity-70 uppercase truncate">{item.faculty_name}</p>
+                                                </div>
+                                            </td>
+                                        );
+                                    })}
                                 </tr>
                             ))}
                         </tbody>
@@ -106,14 +104,22 @@ const Schedule = () => {
                 </div>
             </div>
 
-            <div className="mt-8 flex gap-4">
-                <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 rounded bg-yellow-200 border border-gray-300"></div>
-                    <span className="text-xs font-bold text-gray-500 uppercase">Lab Sessions</span>
+            <div className="mt-8 flex flex-wrap gap-6">
+                <div className="flex items-center space-x-3">
+                    <div className="h-4 w-4 rounded-lg bg-green-50 border border-green-200"></div>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Theory Lecture</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 rounded bg-green-300 border border-gray-300"></div>
-                    <span className="text-xs font-bold text-gray-500 uppercase">Theory</span>
+                <div className="flex items-center space-x-3">
+                    <div className="h-4 w-4 rounded-lg bg-yellow-50 border border-yellow-200"></div>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Practical / Laboratory</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                    <div className="h-4 w-4 rounded-lg bg-blue-50 border border-blue-200"></div>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Other Subjects</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                    <div className="h-4 w-4 rounded-lg bg-gray-100/30 border border-gray-100"></div>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Institutional Break</span>
                 </div>
             </div>
         </div>

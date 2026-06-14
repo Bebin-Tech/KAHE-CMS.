@@ -47,7 +47,7 @@ const Dashboard = () => {
         };
 
         fetchDashboardData();
-        const interval = setInterval(fetchDashboardData, 30000);
+        const interval = setInterval(fetchDashboardData, 5000); // 5s interval for real-time updates
         return () => clearInterval(interval);
     }, []);
 
@@ -100,9 +100,10 @@ const Dashboard = () => {
             </header>
 
             {/* Admin Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                 {[
-                    { label: 'Total Rooms', value: stats.rooms || (stats.total_classrooms + stats.total_labs), icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
+                    { label: 'Total Rooms', value: stats.rooms, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
+                    { label: 'Timetables', value: stats.generated_timetables, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', color: 'text-indigo-600' },
                     { label: 'Today\'s Usage', value: stats.bookings, icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
                     { label: 'Active Classes', value: stats.active, icon: 'M13 10V3L4 14h7v7l9-11h-7z', color: 'text-red-500' },
                     { label: 'Conflicts', value: stats.conflict_alerts, icon: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: stats.conflict_alerts > 0 ? 'text-orange-500' : 'text-green-500' }

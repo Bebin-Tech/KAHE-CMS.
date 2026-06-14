@@ -46,13 +46,22 @@ const TimetableManagement = () => {
             const ptData = await safeFetch('/period-timings');
             const userData = await safeFetch('/users_list');
 
+            const sortedPt = (ptData || []).sort((a, b) => {
+                const toMinutes = (t) => {
+                    let [h, m] = t.split(':').map(Number);
+                    if (h < 8) h += 12;
+                    return h * 60 + m;
+                };
+                return toMinutes(a.start_time) - toMinutes(b.start_time);
+            });
+
             setStats(statsData || {});
             setDepartments(Array.isArray(deptData) ? deptData : []);
             setPrograms(Array.isArray(progData) ? progData : []);
             setSemesters(Array.isArray(semData) ? semData : []);
             setSubjects(Array.isArray(subData) ? subData : []);
             setWorkingDays(Array.isArray(wdData) ? wdData : []);
-            setPeriods(Array.isArray(ptData) ? ptData : []);
+            setPeriods(sortedPt);
             setFaculties(Array.isArray(userData) ? userData.filter(u => u.role === 'faculty') : []);
 
             setLoading(false);

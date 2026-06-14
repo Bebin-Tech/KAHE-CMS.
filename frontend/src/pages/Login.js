@@ -43,14 +43,18 @@ const Login = () => {
         } catch (err) {
             console.error("Institutional Portal Access Failure:", err);
 
-            // Distinguish between rejection and connectivity issues
             if (err.response) {
-                // The server responded with a status code that falls out of the range of 2xx
-                // We show the specific detail from the backend (e.g., "Incorrect password")
+                // Handle specific backend error messages
                 const backendDetail = err.response.data?.detail;
-                setError(backendDetail || 'Portal access denied. Check your institutional Email/ID and Password.');
+
+                if (err.response.status === 422) {
+                    setError('Please enter both your Email/ID and Password.');
+                } else if (typeof backendDetail === 'string') {
+                    setError(backendDetail);
+                } else {
+                    setError('Portal access denied. Check your institutional Email/ID and Password.');
+                }
             } else if (err.request) {
-                // The request was made but no response was received
                 setError('Institutional security gateway is unreachable. Please verify your connection.');
             } else {
                 setError('Institutional portal configuration error. Please contact administrative support.');

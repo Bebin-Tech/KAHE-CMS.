@@ -8,6 +8,9 @@ class UserBase(BaseModel):
     role: str
     faculty_id: Optional[str] = None
     department_id: Optional[int] = None
+    max_hours_per_day: Optional[int] = 6
+    max_hours_per_week: Optional[int] = 24
+    availability_status: Optional[str] = "Available"
 
 class UserCreate(UserBase):
     password: str
@@ -19,6 +22,9 @@ class UserUpdate(BaseModel):
     faculty_id: Optional[str] = None
     department_id: Optional[int] = None
     password: Optional[str] = None
+    max_hours_per_day: Optional[int] = None
+    max_hours_per_week: Optional[int] = None
+    availability_status: Optional[str] = None
 
 class User(UserBase):
     id: int
@@ -44,16 +50,11 @@ class RoomBase(BaseModel):
     type: str
     capacity: int
     department_id: Optional[int] = None
+    department: Optional[str] = None
     status: str = "AVAILABLE"
 
-class RoomCreate(BaseModel):
-    room_number: str
-    room_name: Optional[str] = None
-    floor: Optional[str] = None
-    building: Optional[str] = None
-    type: str
-    capacity: int
-    department_id: Optional[int] = None
+class RoomCreate(RoomBase):
+    pass
 
 class Room(RoomBase):
     id: int
@@ -70,6 +71,7 @@ class Department(DepartmentBase):
 
 class ProgramBase(BaseModel):
     name: str
+    type: str # UG, PG
     department_id: int
 
 class Program(ProgramBase):
@@ -89,12 +91,28 @@ class Semester(SemesterBase):
 
 class SubjectBase(BaseModel):
     name: str
-    code: str
-    type: str # Theory, Lab
-    credits: int
-    weekly_hours: int
-    semester_id: int
-    department_id: int
+    code: Optional[str] = "N/A"
+    type: Optional[str] = "Theory" # Theory, Lab
+    credits: Optional[int] = 0
+    weekly_hours: Optional[int] = 3
+    semester_id: Optional[int] = None
+    department_id: Optional[int] = None
+    department_name: Optional[str] = None
+    status: Optional[str] = "Active"
+
+class SubjectCreate(SubjectBase):
+    pass
+
+class SubjectUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    type: Optional[str] = None
+    credits: Optional[int] = None
+    weekly_hours: Optional[int] = None
+    semester_id: Optional[int] = None
+    department_id: Optional[int] = None
+    department_name: Optional[str] = None
+    status: Optional[str] = None
 
 class Subject(SubjectBase):
     id: int
@@ -142,28 +160,27 @@ class Holiday(HolidayBase):
         from_attributes = True
 
 class TimetableBase(BaseModel):
-    department_id: int
-    program_id: int
-    semester_id: int
+    department_id: Optional[int] = None
+    program_id: Optional[int] = None
+    semester_id: Optional[int] = None
     day_of_week: str
-    period_id: int
-    subject_id: int
-    faculty_id: int
-    room_id: int
+    period_id: Optional[int] = None
+    time_slot: Optional[str] = None
+    subject_id: Optional[int] = None
+    subject_name: Optional[str] = None
+    subject_type: Optional[str] = None
+    faculty_id: Optional[int] = None
+    faculty_name: Optional[str] = None
+    room_id: Optional[int] = None
+    room_number: Optional[str] = None
+    section: Optional[str] = None
 
 class Timetable(TimetableBase):
     id: int
     status: str
     approval_comments: Optional[str] = None
-    subject: Subject
-    faculty: User
-    room: Room
-    period: PeriodTiming
     class Config:
         from_attributes = True
-
-class TimetableCreate(TimetableBase):
-    pass
 
 class DashboardStats(BaseModel):
     total_departments: int
@@ -222,7 +239,8 @@ class ClassSession(ClassSessionBase):
 class FacultyAssignmentBase(BaseModel):
     faculty_id: int
     subject_id: int
-    semester_id: int
+    semester_id: Optional[int] = None
+    section: Optional[str] = None
 
 class FacultyAssignment(FacultyAssignmentBase):
     id: int
