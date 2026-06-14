@@ -6,6 +6,7 @@ const TimetableManager = () => {
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
     const [view, setView] = useState('DASHBOARD');
+    const [cycleFilter, setCycleFilter] = useState('ALL');
 
     const [subjects, setSubjects] = useState([]);
     const [faculties, setFaculties] = useState([]);
@@ -24,7 +25,12 @@ const TimetableManager = () => {
     const [selectedFaculty, setSelectedFaculty] = useState(null);
 
     const [newSubject, setNewSubject] = useState({ name: '', code: '', type: 'Theory', credits: 3, weekly_hours: 3, semester_id: '', department_id: '' });
+    const [editingSubject, setEditingSubject] = useState(null);
     const [newAssignment, setNewAssignment] = useState({ subject_id: '', semester_id: '', section: '' });
+
+    const [newDept, setNewDept] = useState({ name: '' });
+    const [newProg, setNewProg] = useState({ name: '', type: 'UG', department_id: '' });
+    const [newSem, setNewSem] = useState({ number: '', program_id: '', is_active: true });
 
     const role = localStorage.getItem('role')?.toLowerCase();
 
@@ -63,7 +69,14 @@ const TimetableManager = () => {
             setTimetables(tData || []);
             setWorkingDays(wdData || []);
 
-            const sortedPt = (ptData || []).sort((a, b) => a.id - b.id);
+            const sortedPt = (ptData || []).sort((a, b) => {
+                const toMin = (t) => {
+                    let [h, m] = (t || "00:00").split(':').map(Number);
+                    if (h < 8) h += 12; // Handle AM/PM logic for 12h formats (e.g., 01:30 -> 13:30)
+                    return h * 60 + m;
+                };
+                return toMin(a.start_time) - toMin(b.start_time);
+            });
             setPeriods(sortedPt);
             setLoading(false);
         } catch (err) {
@@ -109,12 +122,28 @@ const TimetableManager = () => {
     const handleAddSubject = async (e) => {
         if (e) e.preventDefault();
         try {
-            await API.post('/subjects', newSubject);
+            if (editingSubject) {
+                await API.put(`/subjects/${editingSubject.id}`, newSubject);
+                alert('Subject Updated');
+            } else {
+                await API.post('/subjects', newSubject);
+                alert('Subject Registered');
+            }
             setShowModal(false);
+            setEditingSubject(null);
             setNewSubject({ name: '', code: '', type: 'Theory', credits: 3, weekly_hours: 3, semester_id: '', department_id: '' });
             fetchData();
-            alert('Subject Registered');
-        } catch (err) { alert("Error adding subject"); }
+        } catch (err) { alert("Error saving subject"); }
+    };
+
+    const handleDeleteSubject = async (id) => {
+        if (window.confirm("Delete this subject? This will also remove its timetable entries.")) {
+            try {
+                await API.delete(`/subjects/${id}`);
+                fetchData();
+                alert("Subject Purged");
+            } catch (err) { alert("Action failed: Subject may have active dependencies."); }
+        }
     };
 
     const handleAssignFaculty = async (e) => {
@@ -236,34 +265,80 @@ const TimetableManager = () => {
                 {view === 'SUBJECTS' && (
                     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
                         <div className="p-8 flex justify-between items-center border-b border-slate-100">
-                            <div>
-                                <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Core Curriculum</h2>
-                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Manage Institutional Subjects</p>
+                            <div className="flex items-center space-x-8">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Core Curriculum</h2>
+                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Manage Institutional Subjects</p>
+                                </div>
+                                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                    {['ALL', 'ODD', 'EVEN'].map(cycle => (
+                                        <button
+                                            key={cycle}
+                                            onClick={() => setCycleFilter(cycle)}
+                                            className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${cycleFilter === cycle ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                        >
+                                            {cycle}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             {role === 'admin' && <button onClick={() => { setModalType('SUBJECT'); setShowModal(true); }} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all">+ Register Subject</button>}
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50/50 text-[9px] font-black text-slate-500 uppercase tracking-[0.25em]">
-                                    <tr><th className="p-8">Subject Identity</th><th className="p-8">Classification</th><th className="p-8">Load Map</th><th className="p-8 text-center">Status</th></tr>
+                                    <tr><th className="p-8">Subject Identity</th><th className="p-8">Classification</th><th className="p-8">Load Map</th><th className="p-8 text-center">Actions</th></tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {subjects.map(s => (
-                                        <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group text-sm">
-                                            <td className="p-8">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-xs text-slate-500 group-hover:bg-indigo-600 group-hover:text-white transition-all">{s.code?.charAt(0)}</div>
-                                                    <div>
-                                                        <p className="font-black text-slate-800 uppercase">{s.name}</p>
-                                                        <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-tighter">Code: {s.code}</p>
+                                    {subjects.filter(s => {
+                                        if (cycleFilter === 'ALL') return true;
+                                        const sem = semesters.find(sem => sem.id === s.semester_id);
+                                        if (!sem) return true;
+                                        return cycleFilter === 'ODD' ? sem.number % 2 !== 0 : sem.number % 2 === 0;
+                                    }).map(s => {
+                                        const sem = semesters.find(sem => sem.id === s.semester_id);
+                                        const isOdd = sem ? sem.number % 2 !== 0 : null;
+                                        return (
+                                            <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group text-sm">
+                                                <td className="p-8">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-xs text-slate-500 group-hover:bg-indigo-600 group-hover:text-white transition-all">{s.code?.charAt(0)}</div>
+                                                        <div>
+                                                            <p className="font-black text-slate-800 uppercase">{s.name}</p>
+                                                            <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-tighter">Code: {s.code}</p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-8"><span className={`text-[8px] font-black px-3 py-1.5 rounded-full border uppercase tracking-widest ${s.type === 'Practical' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{s.type}</span></td>
-                                            <td className="p-8"><p className="text-[9px] font-black text-indigo-500 uppercase tracking-[0.1em]">Semester {s.semester_id || 'N/A'}</p><p className="text-[8px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{s.weekly_hours} Hours / Week</p></td>
-                                            <td className="p-8 text-center"><span className="h-1.5 w-1.5 bg-emerald-500 rounded-full inline-block animate-pulse mr-2"></span><span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Active</span></td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td className="p-8"><span className={`text-[8px] font-black px-3 py-1.5 rounded-full border uppercase tracking-widest ${s.type === 'Practical' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{s.type}</span></td>
+                                                <td className="p-8">
+                                                    <p className="text-[9px] font-black text-indigo-500 uppercase tracking-[0.1em]">Semester {s.semester_id || 'N/A'}</p>
+                                                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">{isOdd === null ? '' : (isOdd ? 'Odd Cycle' : 'Even Cycle')}</p>
+                                                    <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{s.weekly_hours} Hours / Week</p>
+                                                </td>
+                                                <td className="p-8">
+                                                    <div className="flex items-center justify-center space-x-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingSubject(s);
+                                                                setNewSubject({ ...s });
+                                                                setModalType('SUBJECT');
+                                                                setShowModal(true);
+                                                            }}
+                                                            className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"
+                                                        >
+                                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteSubject(s.id)}
+                                                            className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                                                        >
+                                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -438,11 +513,15 @@ const TimetableManager = () => {
                                             <td className="p-4 border-r border-b border-slate-200 bg-slate-50 font-black text-slate-900 text-[9px] text-center uppercase tracking-widest">{day}</td>
                                             {periods.map(period => {
                                                 const data = period.is_break ? null : (
-                                                    timetables.find(t =>
-                                                        t.day_of_week?.toLowerCase() === day.toLowerCase() &&
-                                                        parseInt(t.period_id) === parseInt(period.id) &&
-                                                        (!selectedSemester || parseInt(t.semester_id) === parseInt(selectedSemester))
-                                                    )
+                                                    timetables.find(t => {
+                                                        const tPeriod = periods.find(p => p.id === t.period_id);
+                                                        if (!tPeriod) return false;
+
+                                                        // Robust matching: match by ID or start_time fallback to handle registry shifts
+                                                        return t.day_of_week?.toLowerCase() === day.toLowerCase() &&
+                                                               (t.period_id === period.id || tPeriod.start_time === period.start_time) &&
+                                                               (!selectedSemester || parseInt(t.semester_id) === parseInt(selectedSemester))
+                                                    })
                                                 );
                                                 if (period.is_break) return (
                                                     <td key={period.id} className="p-4 border-r border-b border-slate-200 bg-slate-100/50 text-center">
@@ -474,13 +553,28 @@ const TimetableManager = () => {
                 )}
 
                 {view === 'SETTINGS' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div className="bg-white p-10 rounded-[3rem] shadow-xl shadow-slate-200/40 border border-slate-200">
-                            <h2 className="text-xl font-black text-slate-800 mb-8 uppercase tracking-tight flex items-center">
-                                <div className="h-10 w-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mr-4 shadow-sm"><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-                                Operational Hours
-                            </h2>
-                            <div className="space-y-3">
+                    <>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="bg-white p-10 rounded-[3rem] shadow-xl shadow-slate-200/40 border border-slate-200">
+                                <div className="flex justify-between items-center mb-8">
+                                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight flex items-center">
+                                        <div className="h-10 w-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mr-4 shadow-sm"><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                                        Operational Hours
+                                    </h2>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await API.post('/sync-registry');
+                                                alert("System Registry Synchronized Successfully!");
+                                                fetchData();
+                                            } catch (e) { alert("Sync Failed"); }
+                                        }}
+                                        className="text-[9px] font-black uppercase text-indigo-600 border-2 border-indigo-600 px-4 py-2 rounded-xl hover:bg-indigo-600 hover:text-white transition-all"
+                                    >
+                                        Sync Registry
+                                    </button>
+                                </div>
+                                <div className="space-y-3">
                                 {periods.map(p => (
                                     <div key={p.id} className={`flex justify-between items-center p-5 rounded-[1.5rem] border transition-all ${p.is_break ? 'bg-slate-50/50 border-slate-100 italic' : 'bg-white border-slate-200 shadow-sm hover:border-indigo-300'}`}>
                                         <div className="flex items-center space-x-4">
@@ -516,6 +610,64 @@ const TimetableManager = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* STRUCTURAL REGISTRY */}
+                    <div className="mt-8 bg-white p-10 rounded-[3rem] shadow-xl shadow-slate-200/40 border border-slate-200">
+                        <h2 className="text-xl font-black text-slate-800 mb-8 uppercase tracking-tight flex items-center">
+                            <div className="h-10 w-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mr-4 shadow-sm"><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" /></svg></div>
+                            Structural Registry
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* DEPARTMENTS */}
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Departments</p>
+                                <div className="flex gap-2">
+                                    <input className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500" placeholder="e.g. CSE" value={newDept.name} onChange={e => setNewDept({ name: e.target.value })} />
+                                    <button onClick={async () => { await API.post('/departments', newDept); setNewDept({ name: '' }); fetchData(); }} className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg></button>
+                                </div>
+                                <div className="max-h-40 overflow-y-auto space-y-1 pr-2">
+                                    {depts.map(d => <div key={d.id} className="p-3 bg-slate-50 rounded-xl text-[10px] font-black text-slate-600 uppercase flex justify-between items-center"><span>{d.name}</span> <span className="opacity-30">#{d.id}</span></div>)}
+                                </div>
+                            </div>
+
+                            {/* PROGRAMS */}
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Programs</p>
+                                <div className="space-y-2">
+                                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={newProg.department_id} onChange={e => setNewProg({ ...newProg, department_id: e.target.value })}>
+                                        <option value="">Select Dept...</option>
+                                        {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    </select>
+                                    <div className="flex gap-2">
+                                        <input className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none" placeholder="e.g. B.Tech IT" value={newProg.name} onChange={e => setNewProg({ ...newProg, name: e.target.value })} />
+                                        <button onClick={async () => { await API.post('/programs', newProg); setNewProg({ name: '', type: 'UG', department_id: '' }); fetchData(); }} className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg></button>
+                                    </div>
+                                </div>
+                                <div className="max-h-40 overflow-y-auto space-y-1 pr-2">
+                                    {programs.map(p => <div key={p.id} className="p-3 bg-slate-50 rounded-xl text-[10px] font-black text-slate-600 uppercase flex justify-between items-center"><span>{p.name}</span> <span className="opacity-30">{depts.find(d => d.id === parseInt(p.department_id))?.name}</span></div>)}
+                                </div>
+                            </div>
+
+                            {/* SEMESTERS */}
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Semesters</p>
+                                <div className="space-y-2">
+                                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={newSem.program_id} onChange={e => setNewSem({ ...newSem, program_id: e.target.value })}>
+                                        <option value="">Select Program...</option>
+                                        {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                    <div className="flex gap-2">
+                                        <input className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none" placeholder="Sem No (1-8)" type="number" value={newSem.number} onChange={e => setNewSem({ ...newSem, number: e.target.value })} />
+                                        <button onClick={async () => { await API.post('/semesters', newSem); setNewSem({ number: '', program_id: '', is_active: true }); fetchData(); }} className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg></button>
+                                    </div>
+                                </div>
+                                <div className="max-h-40 overflow-y-auto space-y-1 pr-2">
+                                    {semesters.map(s => <div key={s.id} className="p-3 bg-slate-50 rounded-xl text-[10px] font-black text-slate-600 uppercase flex justify-between items-center"><span>Sem {s.number} - {programs.find(p => p.id === parseInt(s.program_id))?.name}</span> <span className={s.number % 2 !== 0 ? "text-indigo-500" : "text-emerald-500"}>{s.number % 2 !== 0 ? 'ODD' : 'EVEN'}</span></div>)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </>
                 )}
             </main>
 
@@ -525,9 +677,9 @@ const TimetableManager = () => {
                     <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden flex flex-col border border-white/20 max-h-[95vh]">
                         <div className="bg-slate-900 p-8 text-white flex justify-between items-center shrink-0">
                             <h2 className="text-lg font-black uppercase tracking-[0.2em]">
-                                {modalType === 'SUBJECT' ? 'New Curriculum Registry' : `Allocating ${selectedFaculty?.name}`}
+                                {modalType === 'SUBJECT' ? (editingSubject ? 'Edit Subject Registry' : 'New Curriculum Registry') : `Allocating ${selectedFaculty?.name}`}
                             </h2>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                            <button onClick={() => { setShowModal(false); setEditingSubject(null); setNewSubject({ name: '', code: '', type: 'Theory', credits: 3, weekly_hours: 3, semester_id: '', department_id: '' }); }} className="p-2 hover:bg-white/10 rounded-full transition-colors"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg></button>
                         </div>
 
                         <div className="overflow-y-auto p-10 custom-scrollbar">
@@ -536,7 +688,7 @@ const TimetableManager = () => {
                                     <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase ml-1">Unique Code</label><input className="w-full p-4 bg-slate-50 rounded-xl font-black text-slate-700 outline-none border-2 border-slate-200 focus:border-indigo-500 text-sm" value={newSubject.code} onChange={e => setNewSubject({...newSubject, code: e.target.value})} required/></div>
                                     <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase ml-1">Subject Name</label><input className="w-full p-4 bg-slate-50 rounded-xl font-black text-slate-700 outline-none border-2 border-slate-200 focus:border-indigo-500 text-sm" value={newSubject.name} onChange={e => setNewSubject({...newSubject, name: e.target.value})} required/></div>
                                     <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase ml-1">Classification</label><select className="w-full p-4 bg-slate-50 rounded-xl font-black text-slate-700 outline-none border-2 border-slate-200 text-sm" value={newSubject.type} onChange={e => setNewSubject({...newSubject, type: e.target.value})}><option value="Theory">Theory Lecture</option><option value="Practical">Practical / Lab</option></select></div>
-                                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase ml-1">Semester</label><select className="w-full p-4 bg-slate-50 rounded-xl font-black text-slate-700 outline-none border-2 border-slate-200 text-sm" value={newSubject.semester_id} onChange={e => setNewSubject({...newSubject, semester_id: e.target.value})} required><option value="">Select...</option>{semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number}</option>)}</select></div>
+                                    <div className="space-y-1.5"><label className="text-[9px] font-black text-slate-400 uppercase ml-1">Semester</label><select className="w-full p-4 bg-slate-50 rounded-xl font-black text-slate-700 outline-none border-2 border-slate-200 text-sm" value={newSubject.semester_id} onChange={e => setNewSubject({...newSubject, semester_id: e.target.value})} required><option value="">Select...</option>{semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number} ({s.number % 2 !== 0 ? 'Odd' : 'Even'})</option>)}</select></div>
                                     <div className="md:col-span-2 flex gap-4 mt-6 pt-6 border-t border-slate-100">
                                         <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-slate-200 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancel</button>
                                         <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">Save</button>

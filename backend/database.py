@@ -14,18 +14,26 @@ env_url = os.getenv("DATABASE_URL", "").strip()
 
 def clean_db_url(url):
     if not url: return None
-    # Handle Render/Heroku environment quirks
-    if '="' in url:
-        import re
-        match = re.search(r'"([^"]*)"', url)
-        if match: url = match.group(1)
-    elif url.startswith("DATABASE_URL="):
-        url = url.replace("DATABASE_URL=", "")
     
+    # Handle common formatting errors
     url = url.strip().strip("'").strip('"')
     
+    # If the user literally typed DATABASE_URL=... into the field
+    if url.startswith("DATABASE_URL="):
+        url = url.replace("DATABASE_URL=", "", 1).strip().strip("'").strip('"')
+        
+    # Handle Render/Heroku postgres format
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
+        
+    # Validation: Must look like a URL
+    if "://" not in url:
+        print(f"DATABASE WARNING: Invalid URL format detected (missing '://'): {url[:10]}...")
+        return None
+        
+    # Filter out common 'placeholder' values
+    if url.lower() in ["none", "null", "undefined", "false", "true", "0", "1"]:
+        return None
     
     return url
 
@@ -34,9 +42,10 @@ cleaned_env_url = clean_db_url(env_url)
 # 3. Decision Logic: Use ENV if provided and valid, otherwise use ROOT_DB_URL
 if cleaned_env_url:
     SQLALCHEMY_DATABASE_URL = cleaned_env_url
+    print(f"DATABASE: Using environment-provided database URL (protocol: {SQLALCHEMY_DATABASE_URL.split('://')[0]})")
 else:
-    # FORCE the use of the absolute root database path to prevent data loss
     SQLALCHEMY_DATABASE_URL = ROOT_DB_URL
+    print(f"DATABASE: Using local SQLite fallback (absolute path to {ROOT_DB_PATH})")
 
 # 4. Engine Configuration
 engine_kwargs = {"pool_pre_ping": True}
@@ -44,16 +53,33 @@ engine_kwargs = {"pool_pre_ping": True}
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
+    # Postgres-specific optimizations
     engine_kwargs.update({
         "pool_size": 10,
         "max_overflow": 20,
         "pool_recycle": 1800
     })
+    # Ensure SSL for hosted databases
     if "sslmode" not in SQLALCHEMY_DATABASE_URL:
         sep = "&" if "?" in SQLALCHEMY_DATABASE_URL else "?"
         SQLALCHEMY_DATABASE_URL += f"{sep}sslmode=require"
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
+# Create engine with immediate feedback
+print(f"DATABASE: Attempting to initialize engine...")
+try:
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
+    # Verification of URL parsing
+    from sqlalchemy.engine.url import make_url
+    parsed_url = make_url(SQLALCHEMY_DATABASE_URL)
+    print(f"DATABASE: Engine initialized for {parsed_url.drivername} driver.")
+except Exception as e:
+    print(f"CRITICAL DATABASE ERROR: SQLAlchemy could not parse the URL.")
+    print(f"REASON: {str(e)}")
+    print(f"FALLING BACK TO SQLITE TO PREVENT BOOT CRASH...")
+    SQLALCHEMY_DATABASE_URL = ROOT_DB_URL
+    engine_kwargs = {"pool_pre_ping": True, "connect_args": {"check_same_thread": False}}
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
+    print(f"DATABASE: Fallback successful.")
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

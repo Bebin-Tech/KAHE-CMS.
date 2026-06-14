@@ -78,12 +78,12 @@ def sync_registry():
     db = database.SessionLocal()
     try:
         migrate_db(db)
-        # Force Clean Period Setup
+        # Force Clean Period Setup to fix ID and numbering issues
         db.execute(text("DELETE FROM period_timings"))
         db.execute(text("DELETE FROM sqlite_sequence WHERE name='period_timings'"))
+        db.commit()
         
-        # We explicitly set IDs 1-8 to ensure stable mapping and chronological order
-        # IDs: 1, 2 = P1, P2 | 3 = Interval | 4, 5 = P3, P4 | 6 = Lunch | 7, 8 = P5, P6
+        # Chronological registry: 1, 2 = P1, P2 | 3 = Interval | 4, 5 = P3, P4 | 6 = Lunch | 7, 8 = P5, P6
         periods = [
             (1, 1, "09:00", "09:50", False, "CLASS"),
             (2, 2, "09:50", "10:55", False, "CLASS"),
@@ -111,6 +111,7 @@ def sync_registry():
 async def lifespan(app: FastAPI):
     models.Base.metadata.create_all(bind=database.engine)
     sync_registry()
+    logger.info("KAHE CMS Initialization Complete - Registry Synchronized.")
     yield
 
 app = FastAPI(title="KAHE CMS", lifespan=lifespan)
@@ -269,12 +270,17 @@ def clear_timetables(db: Session = Depends(database.get_db)):
     db.execute(text("DELETE FROM conflicts")); db.query(models.Timetable).delete(); db.commit(); return {"ok": True}
 
 # --- TIMETABLE & GENERATOR ENGINE ---
+@api_router.post("/sync-registry")
+def manual_sync(db: Session = Depends(database.get_db)):
+    sync_registry()
+    return {"status": "Registry Synchronized"}
+
 @api_router.post("/generate-timetable")
 def generate_timetable(semester_type: Optional[str] = None, semester_id: Optional[int] = None, db: Session = Depends(database.get_db)):
     """
     Generates a master timetable ensuring exactly 6 academic periods (P1-P6) for every working day.
     """
-    # 1. Selection & Purge
+    # 1. Selection
     sem_query = db.query(models.Semester)
     if semester_id:
         sem_query = sem_query.filter(models.Semester.id == semester_id)
@@ -290,42 +296,48 @@ def generate_timetable(semester_type: Optional[str] = None, semester_id: Optiona
 
     # 2. Institutional Registry Verification
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-    # We fetch exactly 6 academic slots for P1-P6
-    academic_periods = db.query(models.PeriodTiming).filter(models.PeriodTiming.type == "CLASS").order_by(models.PeriodTiming.id).all()
+    
+    # Robustly fetch academic periods by normalizing time sorting
+    all_periods = db.query(models.PeriodTiming).all()
+    academic_periods = [p for p in all_periods if p.type == "CLASS"]
+    
+    def normalize_time(t):
+        try:
+            h, m = map(int, t.split(':'))
+            if h < 8: h += 12 # Handle 12h format normalization 01:30 -> 13:30
+            return h * 60 + m
+        except: return 0
+    
+    academic_periods.sort(key=lambda x: normalize_time(x.start_time))
+    
+    if len(academic_periods) < 6:
+        raise HTTPException(400, f"Registry Incomplete: Need 6 academic periods, found {len(academic_periods)}. Use Sync Registry.")
+    
+    working_periods = academic_periods[:6]
     rooms = db.query(models.Room).all()
     faculties = db.query(models.User).filter(models.User.role == "faculty").all()
 
-    if len(academic_periods) < 6:
-        raise HTTPException(400, f"Institutional Registry Incomplete: Need 6 CLASS periods, but found only {len(academic_periods)}.")
-    
     if not rooms or not faculties:
-        raise HTTPException(400, "Institutional Registry Incomplete (Need Rooms and Faculty).")
-
-    # Use only the first 6 academic periods to guarantee P1-P6 mapping
-    working_periods = academic_periods[:6]
+        raise HTTPException(400, "Registry Incomplete (Need Rooms and Faculty).")
 
     for sem in target_semesters:
-        # Clear existing timetable for this specific semester to avoid duplicates
+        # Clear existing entries for this semester
         db.query(models.Timetable).filter(models.Timetable.semester_id == sem.id).delete()
         
         subjects = db.query(models.Subject).filter(models.Subject.semester_id == sem.id).all()
         if not subjects:
-            logger.warning(f"No subjects found for semester {sem.number} (ID: {sem.id}). Skipping.")
             continue
 
         for day in days:
-            # Shuffle subjects for the day to ensure variety
+            # Round-robin pool for the day
             day_pool = subjects.copy()
             random.shuffle(day_pool)
             
-            # CRITICAL: Generate EXACTLY 6 periods (P1-P6) for EVERY working day
             for i in range(6):
                 p = working_periods[i]
-                
-                # Rule: Round-robin selection from the shuffled pool to ensure variety and no repeats
                 sub = day_pool[i % len(day_pool)]
                 
-                # Resolve faculty assignment
+                # Faculty lookup
                 assign = db.query(models.FacultyAssignment).filter(
                     models.FacultyAssignment.subject_id == sub.id,
                     models.FacultyAssignment.semester_id == sem.id
@@ -336,10 +348,13 @@ def generate_timetable(semester_type: Optional[str] = None, semester_id: Optiona
                 else:
                     fac = random.choice(faculties)
                 
-                # Resolve room assignment
+                # Room lookup
                 selected_room = random.choice(rooms)
                 
                 db.add(models.Timetable(
+                    department_id=sem.program.department_id if sem.program else None,
+                    program_id=sem.program_id,
+                    semester_id=sem.id,
                     day_of_week=day,
                     period_id=p.id,
                     time_slot=f"{p.start_time}-{p.end_time}",
@@ -350,12 +365,11 @@ def generate_timetable(semester_type: Optional[str] = None, semester_id: Optiona
                     faculty_name=fac.name if fac else "Staff",
                     room_id=selected_room.id,
                     room_number=selected_room.room_number,
-                    semester_id=sem.id,
                     status="PUBLISHED"
                 ))
 
     db.commit()
-    return {"status": "success", "message": "Master Schedule Generated: 100% Fill for P1-P6 across all working days."}
+    return {"status": "success", "message": "Schedule Generated with 6 Full Periods (P1-P6)."}
 
 # --- DASHBOARD & STATS ---
 @api_router.get("/dashboard-stats")
@@ -396,11 +410,23 @@ def save_working_days(days: List[str], db: Session = Depends(database.get_db)):
 @api_router.get("/departments", response_model=List[schemas.Department])
 def list_depts(db: Session = Depends(database.get_db)): return db.query(models.Department).all()
 
+@api_router.post("/departments", response_model=schemas.Department)
+def create_dept(d: schemas.DepartmentBase, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_d = models.Department(**d.dict()); db.add(db_d); db.commit(); db.refresh(db_d); return db_d
+
 @api_router.get("/programs", response_model=List[schemas.Program])
 def list_progs(db: Session = Depends(database.get_db)): return db.query(models.Program).all()
 
+@api_router.post("/programs", response_model=schemas.Program)
+def create_prog(p: schemas.ProgramBase, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_p = models.Program(**p.dict()); db.add(db_p); db.commit(); db.refresh(db_p); return db_p
+
 @api_router.get("/semesters", response_model=List[schemas.Semester])
 def list_sems(db: Session = Depends(database.get_db)): return db.query(models.Semester).all()
+
+@api_router.post("/semesters", response_model=schemas.Semester)
+def create_sem(s: schemas.SemesterBase, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_s = models.Semester(**s.dict()); db.add(db_s); db.commit(); db.refresh(db_s); return db_s
 
 app.include_router(api_router)
 

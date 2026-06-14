@@ -148,6 +148,7 @@ class Timetable(Base):
     time_slot = Column(String, nullable=True)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True)
     subject_name = Column(String, nullable=True)
+    subject_type = Column(String, nullable=True)
     faculty_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     faculty_name = Column(String, nullable=True)
     room_id = Column(Integer, ForeignKey("rooms.id"), nullable=True)
