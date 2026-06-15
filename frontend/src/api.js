@@ -1,11 +1,21 @@
 import axios from 'axios';
 
-// Detect if we are running locally to help with local development
-const isLocal = window.location.hostname === 'localhost';
-const defaultBaseURL = isLocal ? 'http://localhost:8000' : '';
+// Comprehensive URL detection for development and production
+const getBaseURL = () => {
+    // 1. If explicit env var exists, use it
+    if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
+
+    // 2. If running on React Dev Server (port 3000), point to FastAPI (port 8000)
+    if (window.location.port === '3000') {
+        return `http://${window.location.hostname}:8000/api`;
+    }
+
+    // 3. In production (Render/Docker), use relative paths
+    return '/api';
+};
 
 const API = axios.create({
-    baseURL: (process.env.REACT_APP_API_URL || defaultBaseURL) + '/api',
+    baseURL: getBaseURL(),
 });
 
 API.interceptors.request.use((config) => {
@@ -19,10 +29,15 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Only redirect on 401 if it's NOT the login request itself
-        // to prevent loops or hiding the login error message
-        const isLoginRequest = error.config.url.includes('/login');
+        // Log all API errors to help with debugging 404s
+        console.error(`Institutional Gateway Error [${error.response?.status || 'Network'}]:`, {
+            url: error.config?.url,
+            method: error.config?.method,
+            baseURL: error.config?.baseURL,
+            data: error.response?.data
+        });
 
+        const isLoginRequest = error.config?.url?.includes('/login');
         if (error.response && error.response.status === 401 && !isLoginRequest) {
             localStorage.clear();
             window.location.href = '/login';

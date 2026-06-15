@@ -3,7 +3,6 @@ import API from '../api';
 
 const Schedule = () => {
     const [timetables, setTimetables] = useState([]);
-    const [rooms, setRooms] = useState([]);
     const [periods, setPeriods] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -12,13 +11,11 @@ const Schedule = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [ttRes, roomsRes, periodsRes] = await Promise.all([
+                const [ttRes, periodsRes] = await Promise.all([
                     API.get('/timetables'),
-                    API.get('/rooms'),
                     API.get('/period-timings')
                 ]);
                 setTimetables(ttRes.data || []);
-                setRooms(roomsRes.data || []);
                 // Strictly sort by ID (forced 1-8 in backend)
                 const sortedPeriods = (periodsRes.data || []).sort((a, b) => a.id - b.id);
                 setPeriods(sortedPeriods);

@@ -187,6 +187,20 @@ def create_room(r: schemas.RoomCreate, db: Session = Depends(database.get_db), a
 def delete_room(id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
     db.query(models.Room).filter(models.Room.id == id).delete(); db.commit(); return {"ok": True}
 
+# --- BOOKINGS ---
+@api_router.get("/bookings", response_model=List[schemas.Booking])
+def list_bookings(db: Session = Depends(database.get_db)):
+    return db.query(models.Booking).all()
+
+@api_router.post("/book-room", response_model=schemas.Booking)
+def book_room(booking: schemas.BookingCreate, db: Session = Depends(database.get_db)):
+    db_booking = models.Booking(**booking.dict(), user_id=1, status="BOOKED") # Default user_id for now
+    db.add(db_booking); db.commit(); db.refresh(db_booking); return db_booking
+
+@api_router.delete("/bookings/{id}")
+def delete_booking(id: int, db: Session = Depends(database.get_db)):
+    db.query(models.Booking).filter(models.Booking.id == id).delete(); db.commit(); return {"ok": True}
+
 # --- CLASS SESSIONS ---
 @api_router.get("/active-sessions", response_model=List[schemas.ClassSession])
 def list_active_sessions(db: Session = Depends(database.get_db)):
@@ -220,6 +234,10 @@ def end_class(session_id: int, db: Session = Depends(database.get_db)):
 @api_router.get("/class-history", response_model=List[schemas.ClassSession])
 def get_class_history(db: Session = Depends(database.get_db)):
     return db.query(models.ClassSession).order_by(models.ClassSession.start_time.desc()).all()
+
+@api_router.get("/room-history/{room_id}", response_model=List[schemas.ClassSession])
+def get_room_history(room_id: int, db: Session = Depends(database.get_db)):
+    return db.query(models.ClassSession).filter(models.ClassSession.room_id == room_id).order_by(models.ClassSession.start_time.desc()).all()
 
 @api_router.delete("/class-history")
 def clear_class_history(db: Session = Depends(database.get_db)):
@@ -282,6 +300,31 @@ def manual_sync(db: Session = Depends(database.get_db)):
     sync_registry()
     return {"status": "Registry Synchronized"}
 
+@api_router.post("/seed-institution")
+def seed_institution(db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    """Automatically creates a default Department, Program, and 8 Semesters."""
+    # 1. Dept
+    dept = db.query(models.Department).filter(models.Department.name == "School of Computer Science").first()
+    if not dept:
+        dept = models.Department(name="School of Computer Science")
+        db.add(dept); db.commit(); db.refresh(dept)
+    
+    # 2. Program
+    prog = db.query(models.Program).filter(models.Program.name == "B.Tech IT").first()
+    if not prog:
+        prog = models.Program(name="B.Tech IT", type="UG", department_id=dept.id)
+        db.add(prog); db.commit(); db.refresh(prog)
+    
+    # 3. Semesters
+    existing_sems = db.query(models.Semester).filter(models.Semester.program_id == prog.id).count()
+    if existing_sems < 8:
+        for i in range(1, 9):
+            if not db.query(models.Semester).filter(models.Semester.program_id == prog.id, models.Semester.number == i).first():
+                db.add(models.Semester(number=i, program_id=prog.id, is_active=True))
+        db.commit()
+    
+    return {"status": "Institutional Structure Initialized"}
+
 @api_router.post("/generate-timetable")
 def generate_timetable(semester_type: Optional[str] = None, semester_id: Optional[int] = None, db: Session = Depends(database.get_db)):
     """
@@ -299,7 +342,7 @@ def generate_timetable(semester_type: Optional[str] = None, semester_id: Optiona
     
     target_semesters = sem_query.all()
     if not target_semesters:
-        raise HTTPException(400, "Target Semester missing.")
+        raise HTTPException(400, "Institutional Registry is empty. Please initialize a Program and Semesters in the Config tab first.")
 
     # 2. Institutional Registry Verification
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]

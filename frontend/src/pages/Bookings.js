@@ -5,15 +5,10 @@ const Bookings = () => {
     const [bookings, setBookings] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [showModal, setShowModal] = useState(false);
-    const [selectedBooking, setSelectedBooking] = useState(null);
     const [loading, setLoading] = useState(true);
     const role = localStorage.getItem('role');
 
     const [newBooking, setNewBooking] = useState({
-        room_id: '', faculty_name: '', department: '', start_time: '', end_time: ''
-    });
-
-    const [editBooking, setEditBooking] = useState({
         room_id: '', faculty_name: '', department: '', start_time: '', end_time: ''
     });
 
@@ -122,7 +117,6 @@ const Bookings = () => {
                                     {role === 'admin' && (
                                         <td className="p-6">
                                             <div className="flex justify-center space-x-2">
-                                                <button onClick={() => { setSelectedBooking(b); setEditBooking(b); }} className="text-indigo-600 font-bold text-xs hover:underline">Edit</button>
                                                 <button onClick={() => handleDeleteBooking(b.id)} className="text-red-500 font-bold text-xs hover:underline">Remove</button>
                                             </div>
                                         </td>

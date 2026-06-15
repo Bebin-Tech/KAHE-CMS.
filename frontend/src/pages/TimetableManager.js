@@ -92,6 +92,15 @@ const TimetableManager = () => {
     }, [fetchData]);
 
     const handleGenerate = async () => {
+        if (semesters.length === 0) {
+            alert("Cannot Generate: No Semesters found in registry. Please use the 'Auto-Fix Registry' button below.");
+            return;
+        }
+        if (subjects.length === 0) {
+            alert("Cannot Generate: Curriculum is empty. Please add subjects first.");
+            return;
+        }
+
         setGenerating(true);
         try {
             const params = {};
@@ -174,14 +183,6 @@ const TimetableManager = () => {
         }
     };
 
-    const getCellData = (day, periodId) => {
-        return timetables.find(t =>
-            t.day_of_week?.toLowerCase() === day.toLowerCase() &&
-            parseInt(t.period_id) === parseInt(periodId) &&
-            (!selectedSemester || parseInt(t.semester_id) === parseInt(selectedSemester))
-        );
-    };
-
     const getSubjectColor = (name, type) => {
         const n = name?.toLowerCase() || '';
         const t = type?.toLowerCase() || '';
@@ -193,8 +194,8 @@ const TimetableManager = () => {
     if (loading) return <div className="p-10 text-center animate-pulse font-black text-indigo-400 tracking-widest uppercase">Initializing CMS Intelligence...</div>;
 
     return (
-        <div className="p-4 sm:p-6 lg:p-10 bg-[#f8fafc] min-h-screen">
-            <header className="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="p-4 sm:p-6 lg:p-10 bg-[#f8fafc] min-h-screen print:bg-white print:p-0">
+            <header className="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 print:hidden">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tightest">Timetable Manager</h1>
                     <div className="flex items-center space-x-2 mt-2">
@@ -410,53 +411,106 @@ const TimetableManager = () => {
                 )}
 
                 {view === 'GENERATOR' && (
-                    <div className="max-w-4xl mx-auto bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-slate-200/60 border border-slate-200">
-                        <div className="text-center mb-10">
-                            <div className="h-20 w-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-100">
-                                <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                            </div>
-                            <h2 className="text-3xl font-black text-slate-900 tracking-tightest mb-2 italic">CMS ENGINE</h2>
-                            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.5em]">Automated Scheduling</p>
-                        </div>
-
-                        <div className="space-y-8">
-                            <div className="p-10 bg-slate-900 rounded-[3rem] text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 border border-white/5 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
-                                <div className="text-center md:text-left relative z-10">
-                                    <p className="font-black text-xl mb-1 tracking-tight">Process Master Schedule</p>
-                                    <p className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.3em]">Validating Dependencies...</p>
+                    <div className="max-w-4xl mx-auto space-y-8">
+                        {/* MAIN ENGINE CARD */}
+                        <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-slate-200/60 border border-slate-200">
+                            <div className="text-center mb-10">
+                                <div className="h-20 w-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-100">
+                                    <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                                 </div>
-                                <button
-                                    onClick={handleGenerate}
-                                    disabled={generating}
-                                    className="px-12 py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 relative z-10"
-                                >
-                                    {generating ? 'Processing Matrix...' : 'Run Generator'}
-                                </button>
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tightest mb-2 italic">CMS ENGINE</h2>
+                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.5em]">Automated Scheduling</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="p-8 bg-slate-50/50 rounded-[2.5rem] border border-slate-200 flex flex-col gap-4">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Configuration</p>
-                                    <select className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-black text-slate-700 outline-none shadow-sm focus:border-indigo-500 text-xs transition-all" value={semesterType} onChange={(e) => { setSemesterType(e.target.value); setSelectedSemester(''); }}>
-                                        <option value="">Cycle: All Semesters</option>
-                                        <option value="ODD">Odd Cycle (1, 3, 5...)</option>
-                                        <option value="EVEN">Even Cycle (2, 4, 6...)</option>
-                                    </select>
-                                    <select className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-black text-slate-700 outline-none shadow-sm focus:border-indigo-500 text-xs transition-all" value={selectedSemester} onChange={(e) => { setSelectedSemester(e.target.value); setSemesterType(''); }}>
-                                        <option value="">Specific Registry...</option>
-                                        {semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number} - {programs.find(p => p.id === s.program_id)?.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="p-8 bg-slate-50/50 rounded-[2.5rem] border border-slate-200 flex flex-col justify-center items-center text-center">
-                                    <div className="h-14 w-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-                                        <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                            <div className="space-y-8">
+                                <div className={`p-10 rounded-[3rem] text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 border relative overflow-hidden transition-all duration-500 ${semesters.length > 0 && subjects.length > 0 ? 'bg-slate-900 border-white/5' : 'bg-rose-900 border-rose-400/20'}`}>
+                                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24 blur-3xl"></div>
+                                    <div className="text-center md:text-left relative z-10">
+                                        <p className="font-black text-xl mb-1 tracking-tight">
+                                            {semesters.length > 0 && subjects.length > 0 ? 'Process Master Schedule' : 'Registry Incomplete'}
+                                        </p>
+                                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-[0.3em]">
+                                            {semesters.length > 0 && subjects.length > 0 ? 'Validating Dependencies...' : 'Setup required before generation'}
+                                        </p>
                                     </div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
-                                    <p className="text-emerald-700 font-black text-sm uppercase tracking-tight">Registry Ready</p>
+                                    <button
+                                        onClick={handleGenerate}
+                                        disabled={generating || semesters.length === 0 || subjects.length === 0}
+                                        className="px-12 py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale relative z-10"
+                                    >
+                                        {generating ? 'Processing Matrix...' : 'Run Generator'}
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="p-8 bg-slate-50/50 rounded-[2.5rem] border border-slate-200 flex flex-col gap-4">
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Configuration</p>
+                                        <select className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-black text-slate-700 outline-none shadow-sm focus:border-indigo-500 text-xs transition-all" value={semesterType} onChange={(e) => { setSemesterType(e.target.value); setSelectedSemester(''); }}>
+                                            <option value="">Cycle: All Semesters</option>
+                                            <option value="ODD">Odd Cycle (1, 3, 5...)</option>
+                                            <option value="EVEN">Even Cycle (2, 4, 6...)</option>
+                                        </select>
+                                        <select className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-black text-slate-700 outline-none shadow-sm focus:border-indigo-500 text-xs transition-all" value={selectedSemester} onChange={(e) => { setSelectedSemester(e.target.value); setSemesterType(''); }}>
+                                            <option value="">Specific Registry...</option>
+                                            {semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number} - {programs.find(p => p.id === parseInt(s.program_id))?.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="p-8 bg-slate-50/50 rounded-[2.5rem] border border-slate-200 flex flex-col justify-center items-center text-center">
+                                        {semesters.length > 0 && subjects.length > 0 ? (
+                                            <>
+                                                <div className="h-14 w-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                                </div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                                                <p className="text-emerald-700 font-black text-sm uppercase tracking-tight">Registry Ready</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="h-14 w-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                </div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Alert</p>
+                                                <p className="text-amber-700 font-black text-[9px] uppercase tracking-tighter leading-tight mb-2">Missing {semesters.length === 0 ? 'Structure' : 'Subjects'}</p>
+                                                {semesters.length === 0 && (
+                                                    <button onClick={async () => { await API.post('/seed-institution'); fetchData(); }} className="text-[8px] font-black bg-slate-900 text-white px-3 py-1 rounded-lg uppercase hover:bg-black transition-all">Auto-Fix Registry</button>
+                                                )}
+                                                {semesters.length > 0 && subjects.length === 0 && (
+                                                    <button onClick={() => setView('SUBJECTS')} className="text-[8px] font-black bg-indigo-600 text-white px-3 py-1 rounded-lg uppercase hover:bg-indigo-700 transition-all">Add Curriculum</button>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* STEP-BY-STEP GUIDE (Only shows if incomplete) */}
+                        {(semesters.length === 0 || subjects.length === 0) && (
+                            <div className="bg-indigo-50 border-2 border-indigo-100 p-8 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-700">
+                                <h3 className="text-indigo-900 font-black text-xs uppercase tracking-widest mb-6 flex items-center">
+                                    <span className="bg-indigo-600 text-white h-5 w-5 rounded-full flex items-center justify-center text-[10px] mr-2">!</span>
+                                    Quick Startup Guide
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className={`p-6 rounded-2xl bg-white border-b-2 transition-all ${semesters.length > 0 ? 'border-emerald-500 opacity-40' : 'border-indigo-200'}`}>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Step 1</p>
+                                        <p className="text-[11px] font-bold text-slate-700 mb-3">Initialize the Academic Structure</p>
+                                        {semesters.length === 0 && <button onClick={async () => { await API.post('/seed-institution'); fetchData(); }} className="text-[9px] font-black text-indigo-600 uppercase underline">Click here to start</button>}
+                                    </div>
+                                    <div className={`p-6 rounded-2xl bg-white border-b-2 transition-all ${subjects.length > 0 ? 'border-emerald-500 opacity-40' : 'border-indigo-200'}`}>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Step 2</p>
+                                        <p className="text-[11px] font-bold text-slate-700 mb-3">Add subjects to the Curriculum</p>
+                                        {subjects.length === 0 && <button onClick={() => setView('SUBJECTS')} className="text-[9px] font-black text-indigo-600 uppercase underline">Add subjects now</button>}
+                                    </div>
+                                    <div className="p-6 rounded-2xl bg-white border-b-2 border-indigo-200">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Step 3</p>
+                                        <p className="text-[11px] font-bold text-slate-700 mb-3">Run the Automated Generator</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase">Wait for registry setup</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -476,18 +530,18 @@ const TimetableManager = () => {
                                         onChange={(e) => setSelectedSemester(e.target.value)}
                                     >
                                         <option value="">Select Semester View...</option>
-                                        {semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number} - {programs.find(p => p.id === s.program_id)?.name}</option>)}
+                                        {semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number} - {programs.find(p => p.id === parseInt(s.program_id))?.name}</option>)}
                                     </select>
                                 </div>
                             </div>
-                            <div className="flex gap-3">
+                            <div className="flex gap-3 print:hidden">
                                 {role === 'admin' && (
                                     <button onClick={handleDeleteTimetable} className="bg-rose-100 text-rose-700 px-6 py-3 rounded-xl text-[9px] font-black tracking-[0.2em] uppercase hover:bg-rose-600 hover:text-white transition-all shadow-sm">Purge All</button>
                                 )}
-                                <button className="bg-white border-2 border-slate-200 px-6 py-3 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] hover:border-indigo-600 hover:text-indigo-600 transition-all">Download PDF</button>
+                                <button onClick={() => window.print()} className="bg-white border-2 border-slate-200 px-6 py-3 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] hover:border-indigo-600 hover:text-indigo-600 transition-all">Download PDF</button>
                             </div>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto print:overflow-visible">
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="bg-slate-900 text-white font-black text-[9px] uppercase tracking-[0.2em]">
@@ -613,10 +667,24 @@ const TimetableManager = () => {
 
                     {/* STRUCTURAL REGISTRY */}
                     <div className="mt-8 bg-white p-10 rounded-[3rem] shadow-xl shadow-slate-200/40 border border-slate-200">
-                        <h2 className="text-xl font-black text-slate-800 mb-8 uppercase tracking-tight flex items-center">
-                            <div className="h-10 w-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mr-4 shadow-sm"><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" /></svg></div>
-                            Structural Registry
-                        </h2>
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight flex items-center">
+                                <div className="h-10 w-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mr-4 shadow-sm"><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" /></svg></div>
+                                Structural Registry
+                            </h2>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await API.post('/seed-institution');
+                                        alert("Default Institution Structure Created! (Semesters 1-8 Ready)");
+                                        fetchData();
+                                    } catch (e) { alert("Seed Failed: Admin authorization required."); }
+                                }}
+                                className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
+                            >
+                                Initialize Institution
+                            </button>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {/* DEPARTMENTS */}
                             <div className="space-y-4">
