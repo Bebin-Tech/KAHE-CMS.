@@ -300,6 +300,8 @@ const UserDirectory = () => {
                                             onChange={(e) => setFormData({...formData, role: e.target.value})}
                                         >
                                             <option value="admin">Admin</option>
+                                            <option value="dean">Dean</option>
+                                            <option value="hod">HOD</option>
                                             <option value="faculty">Faculty</option>
                                             <option value="staff">Staff</option>
                                             <option value="accounts">Accounts</option>

@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     role: str
     faculty_id: Optional[str] = None
     department_id: Optional[int] = None
+    designation: Optional[str] = None
     max_hours_per_day: Optional[int] = 6
     max_hours_per_week: Optional[int] = 24
     availability_status: Optional[str] = "Available"
@@ -21,6 +22,7 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     faculty_id: Optional[str] = None
     department_id: Optional[int] = None
+    designation: Optional[str] = None
     password: Optional[str] = None
     max_hours_per_day: Optional[int] = None
     max_hours_per_week: Optional[int] = None
@@ -62,6 +64,7 @@ class Room(RoomBase):
         from_attributes = True
 
 class DepartmentBase(BaseModel):
+    code: Optional[str] = None
     name: str
 
 class Department(DepartmentBase):
@@ -174,6 +177,8 @@ class TimetableBase(BaseModel):
     room_id: Optional[int] = None
     room_number: Optional[str] = None
     section: Optional[str] = None
+    academic_year: Optional[str] = None
+    semester_number: Optional[int] = None
 
 class Timetable(TimetableBase):
     id: int

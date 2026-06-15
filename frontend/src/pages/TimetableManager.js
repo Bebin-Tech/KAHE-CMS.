@@ -7,6 +7,8 @@ const TimetableManager = () => {
     const [generating, setGenerating] = useState(false);
     const [view, setView] = useState('DASHBOARD');
     const [cycleFilter, setCycleFilter] = useState('ALL');
+    const [workloadReport, setWorkloadReport] = useState([]);
+    const [utilizationReport, setRoomUtilization] = useState([]);
 
     const [subjects, setSubjects] = useState([]);
     const [faculties, setFaculties] = useState([]);
@@ -23,6 +25,7 @@ const TimetableManager = () => {
     const [selectedSemester, setSelectedSemester] = useState('');
     const [semesterType, setSemesterType] = useState('');
     const [selectedFaculty, setSelectedFaculty] = useState(null);
+    const [selectedSlot, setSelectedSlot] = useState(null);
 
     const [newSubject, setNewSubject] = useState({ name: '', code: '', type: 'Theory', credits: 3, weekly_hours: 3, semester_id: '', department_id: '' });
     const [editingSubject, setEditingSubject] = useState(null);
@@ -46,7 +49,7 @@ const TimetableManager = () => {
                 }
             };
 
-            const [sData, subData, userData, rData, dData, pData, semData, tData, wdData, ptData] = await Promise.all([
+            const [sData, subData, userData, rData, dData, pData, semData, tData, wdData, ptData, wReport, uReport] = await Promise.all([
                 safeFetch('/dashboard-stats'),
                 safeFetch('/subjects'),
                 safeFetch('/users_list'),
@@ -56,7 +59,9 @@ const TimetableManager = () => {
                 safeFetch('/semesters'),
                 safeFetch('/timetables'),
                 safeFetch('/working-days'),
-                safeFetch('/period-timings')
+                safeFetch('/period-timings'),
+                safeFetch('/faculty-workload'),
+                safeFetch('/room-utilization')
             ]);
 
             setStats(sData || {});
@@ -68,6 +73,8 @@ const TimetableManager = () => {
             setSemesters(semData || []);
             setTimetables(tData || []);
             setWorkingDays(wdData || []);
+            setWorkloadReport(wReport || []);
+            setRoomUtilization(uReport || []);
 
             const sortedPt = (ptData || []).sort((a, b) => {
                 const toMin = (t) => {
@@ -92,15 +99,6 @@ const TimetableManager = () => {
     }, [fetchData]);
 
     const handleGenerate = async () => {
-        if (semesters.length === 0) {
-            alert("Cannot Generate: No Semesters found in registry. Please use the 'Auto-Fix Registry' button below.");
-            return;
-        }
-        if (subjects.length === 0) {
-            alert("Cannot Generate: Curriculum is empty. Please add subjects first.");
-            return;
-        }
-
         setGenerating(true);
         try {
             const params = {};
@@ -115,6 +113,29 @@ const TimetableManager = () => {
             alert('Generation Failed: ' + (err.response?.data?.detail || 'Verify Data Registry'));
         } finally {
             setGenerating(false);
+        }
+    };
+
+    const handleDownloadPDF = async () => {
+        if (!selectedSemester && role !== 'faculty') {
+            alert("Please select a specific Semester to download its PDF.");
+            return;
+        }
+        try {
+            const url = role === 'faculty'
+                ? `/timetables/pdf/faculty/${localStorage.getItem('user_id')}`
+                : `/timetables/pdf/semester/${selectedSemester}`;
+
+            const response = await API.get(url, { responseType: 'blob' });
+            const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.setAttribute('download', role === 'faculty' ? 'Personal_Timetable.pdf' : `Timetable_Semester_${selectedSemester}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (err) {
+            alert("Download Failed: Engine not ready or Network error.");
         }
     };
 
@@ -183,6 +204,28 @@ const TimetableManager = () => {
         }
     };
 
+    const handleSwapSlots = async (slot2) => {
+        if (!selectedSlot) {
+            setSelectedSlot(slot2);
+            return;
+        }
+
+        if (selectedSlot.id === slot2.id) {
+            setSelectedSlot(null);
+            return;
+        }
+
+        try {
+            await API.post(`/swap-slots?tt1_id=${selectedSlot.id}&tt2_id=${slot2.id}`);
+            setSelectedSlot(null);
+            fetchData();
+            alert("Slots Swapped Successfully");
+        } catch (err) {
+            alert("Swap Failed: " + (err.response?.data?.detail || "Invalid adjustment"));
+            setSelectedSlot(null);
+        }
+    };
+
     const getSubjectColor = (name, type) => {
         const n = name?.toLowerCase() || '';
         const t = type?.toLowerCase() || '';
@@ -212,6 +255,8 @@ const TimetableManager = () => {
                         { id: 'ROOMS', label: 'Spaces', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
                         { id: 'GENERATOR', label: 'Engine', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
                         { id: 'VIEW', label: 'Matrix', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+                        { id: 'PERSONAL', label: 'My Schedule', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                        { id: 'REPORTS', label: 'Reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
                         { id: 'SETTINGS', label: 'Config', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
                     ].filter(tab => {
                         const roles = {
@@ -221,6 +266,8 @@ const TimetableManager = () => {
                             'ROOMS': ['admin', 'dean', 'hod'],
                             'GENERATOR': ['admin', 'dean'],
                             'VIEW': ['admin', 'dean', 'hod', 'faculty', 'student'],
+                            'PERSONAL': ['faculty'],
+                            'REPORTS': ['admin', 'dean', 'hod'],
                             'SETTINGS': ['admin', 'dean']
                         };
                         return roles[tab.id].includes(role);
@@ -423,22 +470,22 @@ const TimetableManager = () => {
                             </div>
 
                             <div className="space-y-8">
-                                <div className={`p-10 rounded-[3rem] text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 border relative overflow-hidden transition-all duration-500 ${semesters.length > 0 && subjects.length > 0 ? 'bg-slate-900 border-white/5' : 'bg-rose-900 border-rose-400/20'}`}>
+                                <div className={`p-10 rounded-[3rem] text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 border relative overflow-hidden transition-all duration-500 bg-slate-900 border-white/5`}>
                                     <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24 blur-3xl"></div>
                                     <div className="text-center md:text-left relative z-10">
                                         <p className="font-black text-xl mb-1 tracking-tight">
-                                            {semesters.length > 0 && subjects.length > 0 ? 'Process Master Schedule' : 'Registry Incomplete'}
+                                            Process Master Schedule
                                         </p>
                                         <p className="text-white/40 text-[9px] font-bold uppercase tracking-[0.3em]">
-                                            {semesters.length > 0 && subjects.length > 0 ? 'Validating Dependencies...' : 'Setup required before generation'}
+                                            On-Demand Generation Enabled
                                         </p>
                                     </div>
                                     <button
                                         onClick={handleGenerate}
-                                        disabled={generating || semesters.length === 0 || subjects.length === 0}
+                                        disabled={generating}
                                         className="px-12 py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale relative z-10"
                                     >
-                                        {generating ? 'Processing Matrix...' : 'Run Generator'}
+                                        {generating ? 'Processing Matrix...' : (timetables.length > 0 ? 'Regenerate Now' : 'Run Generator')}
                                     </button>
                                 </div>
 
@@ -457,37 +504,21 @@ const TimetableManager = () => {
                                     </div>
 
                                     <div className="p-8 bg-slate-50/50 rounded-[2.5rem] border border-slate-200 flex flex-col justify-center items-center text-center">
-                                        {semesters.length > 0 && subjects.length > 0 ? (
-                                            <>
-                                                <div className="h-14 w-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-                                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                                                </div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
-                                                <p className="text-emerald-700 font-black text-sm uppercase tracking-tight">Registry Ready</p>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="h-14 w-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-                                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                                </div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Alert</p>
-                                                <p className="text-amber-700 font-black text-[9px] uppercase tracking-tighter leading-tight mb-2">Missing {semesters.length === 0 ? 'Structure' : 'Subjects'}</p>
-                                                {semesters.length === 0 && (
-                                                    <button onClick={async () => { await API.post('/seed-institution'); fetchData(); }} className="text-[8px] font-black bg-slate-900 text-white px-3 py-1 rounded-lg uppercase hover:bg-black transition-all">Auto-Fix Registry</button>
-                                                )}
-                                                {semesters.length > 0 && subjects.length === 0 && (
-                                                    <button onClick={() => setView('SUBJECTS')} className="text-[8px] font-black bg-indigo-600 text-white px-3 py-1 rounded-lg uppercase hover:bg-indigo-700 transition-all">Add Curriculum</button>
-                                                )}
-                                            </>
+                                        <div className="h-14 w-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                                            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                        </div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Engine Status</p>
+                                        <p className="text-emerald-700 font-black text-sm uppercase tracking-tight italic">On-Demand Ready</p>
+                                        {(semesters.length === 0 || subjects.length === 0) && (
+                                            <p className="text-[8px] font-bold text-slate-400 mt-2 uppercase tracking-tighter italic">Warning: Registry incomplete, but forced generation enabled.</p>
                                         )}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* STEP-BY-STEP GUIDE (Only shows if incomplete) */}
-                        {(semesters.length === 0 || subjects.length === 0) && (
-                            <div className="bg-indigo-50 border-2 border-indigo-100 p-8 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-700">
+                        {/* STEP-BY-STEP GUIDE (Minimized) */}
+                        <div className="bg-indigo-50 border-2 border-indigo-100 p-8 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-700">
                                 <h3 className="text-indigo-900 font-black text-xs uppercase tracking-widest mb-6 flex items-center">
                                     <span className="bg-indigo-600 text-white h-5 w-5 rounded-full flex items-center justify-center text-[10px] mr-2">!</span>
                                     Quick Startup Guide
@@ -538,7 +569,7 @@ const TimetableManager = () => {
                                 {role === 'admin' && (
                                     <button onClick={handleDeleteTimetable} className="bg-rose-100 text-rose-700 px-6 py-3 rounded-xl text-[9px] font-black tracking-[0.2em] uppercase hover:bg-rose-600 hover:text-white transition-all shadow-sm">Purge All</button>
                                 )}
-                                <button onClick={() => window.print()} className="bg-white border-2 border-slate-200 px-6 py-3 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] hover:border-indigo-600 hover:text-indigo-600 transition-all">Download PDF</button>
+                                <button onClick={handleDownloadPDF} className="bg-white border-2 border-slate-200 px-6 py-3 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] hover:border-indigo-600 hover:text-indigo-600 transition-all">Download PDF</button>
                             </div>
                         </div>
                         <div className="overflow-x-auto print:overflow-visible">
@@ -562,7 +593,7 @@ const TimetableManager = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(day => (
+                                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(day => (
                                         <tr key={day} className="hover:bg-slate-50 transition-colors group">
                                             <td className="p-4 border-r border-b border-slate-200 bg-slate-50 font-black text-slate-900 text-[9px] text-center uppercase tracking-widest">{day}</td>
                                             {periods.map(period => {
@@ -583,7 +614,11 @@ const TimetableManager = () => {
                                                     </td>
                                                 );
                                                 return (
-                                                    <td key={period.id} className="p-1.5 border-r border-b border-slate-100 text-center min-w-[140px] align-top bg-white">
+                                                    <td
+                                                        key={period.id}
+                                                        className={`p-1.5 border-r border-b border-slate-100 text-center min-w-[140px] align-top bg-white cursor-pointer transition-all ${selectedSlot?.id === data?.id && data ? 'ring-2 ring-indigo-500 ring-inset' : ''}`}
+                                                        onClick={() => data && handleSwapSlots(data)}
+                                                    >
                                                         {data ? (
                                                             <div className={`p-3 rounded-xl border-b-2 h-full flex flex-col justify-center animate-in zoom-in duration-500 shadow-sm transition-transform hover:scale-[1.02] ${getSubjectColor(data.subject_name, data.subject_type)}`}>
                                                                 <p className="text-[9px] font-black leading-tight uppercase mb-1.5">{data.subject_name}</p>
@@ -602,6 +637,130 @@ const TimetableManager = () => {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                )}
+
+                {view === 'PERSONAL' && (
+                    <div className="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden">
+                        <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6 bg-indigo-50/30">
+                            <div>
+                                <h2 className="text-2xl font-black text-indigo-900 tracking-tightest uppercase italic">My Personal Timetable</h2>
+                                <p className="text-[10px] font-bold text-indigo-400 mt-1 uppercase tracking-widest">Faculty Reference Copy • {localStorage.getItem('name')}</p>
+                            </div>
+                            <button onClick={handleDownloadPDF} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200 hover:scale-105 transition-all">Download My PDF</button>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-900 text-white font-black text-[9px] uppercase tracking-[0.2em]">
+                                        <th className="p-4 border-r border-white/5 w-32 text-center bg-slate-950">Day</th>
+                                        {periods.map(p => (
+                                            <th key={p.id} className={`p-4 border-r border-white/5 text-center ${p.is_break ? 'bg-slate-800 text-slate-400' : ''}`}>
+                                                <span className="block">{p.type === 'CLASS' ? `P${periods.filter(x => x.type === 'CLASS' && x.period_number <= p.period_number).length}` : p.type}</span>
+                                                <span className="text-[7px] opacity-40 font-bold block tracking-normal mt-0.5">{p.start_time}-{p.end_time}</span>
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(day => (
+                                        <tr key={day} className="hover:bg-indigo-50/30 transition-colors">
+                                            <td className="p-4 border-r border-b border-slate-200 bg-slate-50 font-black text-slate-900 text-[9px] text-center uppercase tracking-widest">{day}</td>
+                                            {periods.map(period => {
+                                                const data = period.is_break ? null : timetables.find(t =>
+                                                    t.day_of_week?.toLowerCase() === day.toLowerCase() &&
+                                                    (t.period_id === period.id || t.time_slot === `${period.start_time}-${period.end_time}`) &&
+                                                    parseInt(t.faculty_id) === parseInt(localStorage.getItem('user_id'))
+                                                );
+                                                if (period.is_break) return <td key={period.id} className="p-4 border-r border-b border-slate-200 bg-slate-100/50 text-center text-[7px] font-black text-slate-300 uppercase tracking-widest italic">{period.type}</td>;
+                                                return (
+                                                    <td key={period.id} className="p-2 border-r border-b border-slate-100 text-center min-w-[150px] align-top bg-white">
+                                                        {data ? (
+                                                            <div className={`p-4 rounded-2xl border-b-2 h-full flex flex-col justify-center shadow-sm ${getSubjectColor(data.subject_name, data.subject_type)}`}>
+                                                                <p className="text-[10px] font-black leading-tight uppercase mb-1">{data.subject_name}</p>
+                                                                <p className="text-[8px] font-bold opacity-60 uppercase">Sem: {data.semester_number} Sec: {data.section}</p>
+                                                                <p className="text-[8px] font-black mt-2 bg-white/40 px-2 py-1 rounded-lg inline-block self-center">RM: {data.room_number}</p>
+                                                            </div>
+                                                        ) : <div className="py-10 opacity-5 text-[7px] font-black uppercase">Free</div>}
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {view === 'REPORTS' && (
+                    <div className="space-y-10">
+                        {/* WORKLOAD REPORT */}
+                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Faculty Workload Report</h2>
+                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Academic Hour Allocation vs Capacity</p>
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50/50 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                        <tr><th className="p-8">Faculty</th><th className="p-8">ID</th><th className="p-8">Assigned</th><th className="p-8">Max Capacity</th><th className="p-8">Utilization</th></tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {workloadReport.map(w => (
+                                            <tr key={w.faculty_id} className="hover:bg-slate-50/50 transition text-sm">
+                                                <td className="p-8 font-black text-slate-800 uppercase">{w.faculty_name}</td>
+                                                <td className="p-8 font-bold text-slate-400">@{w.faculty_id}</td>
+                                                <td className="p-8 font-black text-indigo-600">{w.total_hours_assigned} Periods</td>
+                                                <td className="p-8 font-bold text-slate-500">{w.max_hours_per_week} hrs/wk</td>
+                                                <td className="p-8">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                            <div className={`h-full rounded-full ${w.utilization_rate > 90 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{width: `${w.utilization_rate}%`}}></div>
+                                                        </div>
+                                                        <span className="text-[10px] font-black text-slate-700">{w.utilization_rate}%</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* ROOM UTILIZATION */}
+                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="p-8 border-b border-slate-100">
+                                <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Room Utilization Report</h2>
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Academic Space Occupancy Stats</p>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50/50 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                        <tr><th className="p-8">Room Number</th><th className="p-8">Type</th><th className="p-8">Occupied Slots</th><th className="p-8">Utilization</th></tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {utilizationReport.map(u => (
+                                            <tr key={u.room_number} className="hover:bg-slate-50/50 transition text-sm">
+                                                <td className="p-8 font-black text-slate-800 uppercase">{u.room_number}</td>
+                                                <td className="p-8"><span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 uppercase">{u.type}</span></td>
+                                                <td className="p-8 font-bold text-slate-700">{u.occupied_slots} / {u.total_slots}</td>
+                                                <td className="p-8">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-indigo-500 rounded-full" style={{width: `${u.utilization_rate}%`}}></div>
+                                                        </div>
+                                                        <span className="text-[10px] font-black text-slate-700">{u.utilization_rate}%</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -37,6 +37,7 @@ class User(Base):
     password = Column(String)
     role = Column(String) # admin, dean, hod, faculty, student
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    designation = Column(String, nullable=True)
     
     # Faculty specific
     max_hours_per_day = Column(Integer, default=6)
@@ -48,6 +49,7 @@ class User(Base):
 class Department(Base):
     __tablename__ = "departments"
     id = Column(Integer, primary_key=True, index=True)
+    code = Column(String, unique=True, index=True, nullable=True)
     name = Column(String, unique=True, index=True)
     programs = relationship("Program", back_populates="department")
     users = relationship("User", back_populates="department")
@@ -154,6 +156,8 @@ class Timetable(Base):
     room_id = Column(Integer, ForeignKey("rooms.id"), nullable=True)
     room_number = Column(String, nullable=True)
     section = Column(String, nullable=True)
+    academic_year = Column(String, nullable=True)
+    semester_number = Column(Integer, nullable=True)
     status = Column(String, default="DRAFT") # DRAFT, PENDING, APPROVED, PUBLISHED
     approval_comments = Column(Text, nullable=True)
     

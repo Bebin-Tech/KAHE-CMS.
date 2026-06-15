@@ -11,8 +11,16 @@ const Schedule = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                const role = localStorage.getItem('role')?.toLowerCase();
+                const facultyId = localStorage.getItem('user_id');
+
+                let ttUrl = '/timetables';
+                if (role === 'faculty') {
+                    ttUrl = `/faculty-timetable/${facultyId}`;
+                }
+
                 const [ttRes, periodsRes] = await Promise.all([
-                    API.get('/timetables'),
+                    API.get(ttUrl),
                     API.get('/period-timings')
                 ]);
                 setTimetables(ttRes.data || []);
