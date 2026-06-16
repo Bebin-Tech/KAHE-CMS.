@@ -37,6 +37,9 @@ const TimetableManager = () => {
 
     const role = localStorage.getItem('role')?.toLowerCase();
 
+    const [selectedRoomId, setSelectedRoomId] = useState('');
+    const [selectedFacultyId, setSelectedFacultyId] = useState('');
+
     const fetchData = useCallback(async () => {
         try {
             const safeFetch = async (url) => {
@@ -117,20 +120,33 @@ const TimetableManager = () => {
     };
 
     const handleDownloadPDF = async () => {
-        if (!selectedSemester && role !== 'faculty') {
-            alert("Please select a specific Semester to download its PDF.");
+        if (!selectedSemester && !selectedRoomId && !selectedFacultyId && role !== 'faculty') {
+            alert("Please select a specific Semester, Room, or Faculty to download its PDF.");
             return;
         }
         try {
-            const url = role === 'faculty'
-                ? `/timetables/pdf/faculty/${localStorage.getItem('user_id')}`
-                : `/timetables/pdf/semester/${selectedSemester}`;
+            let url = '';
+            let filename = '';
+
+            if (role === 'faculty') {
+                url = `/timetables/pdf/faculty/${localStorage.getItem('user_id')}`;
+                filename = 'Personal_Timetable.pdf';
+            } else if (selectedFacultyId) {
+                url = `/timetables/pdf/faculty/${selectedFacultyId}`;
+                filename = `Faculty_Timetable_${selectedFacultyId}.pdf`;
+            } else if (selectedRoomId) {
+                url = `/timetables/pdf/room/${selectedRoomId}`;
+                filename = `Room_Utilization_${selectedRoomId}.pdf`;
+            } else {
+                url = `/timetables/pdf/semester/${selectedSemester}`;
+                filename = `Timetable_Semester_${selectedSemester}.pdf`;
+            }
 
             const response = await API.get(url, { responseType: 'blob' });
             const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.setAttribute('download', role === 'faculty' ? 'Personal_Timetable.pdf' : `Timetable_Semester_${selectedSemester}.pdf`);
+            link.setAttribute('download', filename);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -458,90 +474,64 @@ const TimetableManager = () => {
                 )}
 
                 {view === 'GENERATOR' && (
-                    <div className="max-w-4xl mx-auto space-y-8">
+                    <div className="max-w-3xl mx-auto space-y-6">
                         {/* MAIN ENGINE CARD */}
-                        <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-slate-200/60 border border-slate-200">
-                            <div className="text-center mb-10">
-                                <div className="h-20 w-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-100">
-                                    <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-200">
+                            <div className="text-center mb-6">
+                                <div className="h-14 w-14 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-100">
+                                    <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                                 </div>
-                                <h2 className="text-3xl font-black text-slate-900 tracking-tightest mb-2 italic">CMS ENGINE</h2>
-                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.5em]">Automated Scheduling</p>
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tightest mb-1 italic">CMS ENGINE</h2>
+                                <p className="text-slate-400 font-bold text-[9px] uppercase tracking-[0.5em]">Automated Scheduling</p>
                             </div>
 
-                            <div className="space-y-8">
-                                <div className={`p-10 rounded-[3rem] text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 border relative overflow-hidden transition-all duration-500 bg-slate-900 border-white/5`}>
-                                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24 blur-3xl"></div>
+                            <div className="space-y-6">
+                                <div className={`p-8 rounded-[2.5rem] text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 border relative overflow-hidden transition-all duration-500 bg-slate-900 border-white/5`}>
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
                                     <div className="text-center md:text-left relative z-10">
-                                        <p className="font-black text-xl mb-1 tracking-tight">
+                                        <p className="font-black text-lg mb-0.5 tracking-tight">
                                             Process Master Schedule
                                         </p>
-                                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-[0.3em]">
+                                        <p className="text-white/40 text-[8px] font-bold uppercase tracking-[0.3em]">
                                             On-Demand Generation Enabled
                                         </p>
                                     </div>
                                     <button
                                         onClick={handleGenerate}
                                         disabled={generating}
-                                        className="px-12 py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale relative z-10"
+                                        className="px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale relative z-10"
                                     >
                                         {generating ? 'Processing Matrix...' : (timetables.length > 0 ? 'Regenerate Now' : 'Run Generator')}
                                     </button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="p-8 bg-slate-50/50 rounded-[2.5rem] border border-slate-200 flex flex-col gap-4">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Configuration</p>
-                                        <select className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-black text-slate-700 outline-none shadow-sm focus:border-indigo-500 text-xs transition-all" value={semesterType} onChange={(e) => { setSemesterType(e.target.value); setSelectedSemester(''); }}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-6 bg-slate-50/50 rounded-[2rem] border border-slate-200 flex flex-col gap-3">
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Configuration</p>
+                                        <select className="w-full p-3.5 bg-white border border-slate-200 rounded-xl font-black text-slate-700 outline-none shadow-sm focus:border-indigo-500 text-[10px] transition-all" value={semesterType} onChange={(e) => { setSemesterType(e.target.value); setSelectedSemester(''); }}>
                                             <option value="">Cycle: All Semesters</option>
                                             <option value="ODD">Odd Cycle (1, 3, 5...)</option>
                                             <option value="EVEN">Even Cycle (2, 4, 6...)</option>
                                         </select>
-                                        <select className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-black text-slate-700 outline-none shadow-sm focus:border-indigo-500 text-xs transition-all" value={selectedSemester} onChange={(e) => { setSelectedSemester(e.target.value); setSemesterType(''); }}>
+                                        <select className="w-full p-3.5 bg-white border border-slate-200 rounded-xl font-black text-slate-700 outline-none shadow-sm focus:border-indigo-500 text-[10px] transition-all" value={selectedSemester} onChange={(e) => { setSelectedSemester(e.target.value); setSemesterType(''); }}>
                                             <option value="">Specific Registry...</option>
                                             {semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number} - {programs.find(p => p.id === parseInt(s.program_id))?.name}</option>)}
                                         </select>
                                     </div>
 
-                                    <div className="p-8 bg-slate-50/50 rounded-[2.5rem] border border-slate-200 flex flex-col justify-center items-center text-center">
-                                        <div className="h-14 w-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-                                            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    <div className="p-6 bg-slate-50/50 rounded-[2rem] border border-slate-200 flex flex-col justify-center items-center text-center">
+                                        <div className="h-12 w-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-3 shadow-sm">
+                                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                                         </div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Engine Status</p>
-                                        <p className="text-emerald-700 font-black text-sm uppercase tracking-tight italic">On-Demand Ready</p>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Engine Status</p>
+                                        <p className="text-emerald-700 font-black text-xs uppercase tracking-tight italic">On-Demand Ready</p>
                                         {(semesters.length === 0 || subjects.length === 0) && (
-                                            <p className="text-[8px] font-bold text-slate-400 mt-2 uppercase tracking-tighter italic">Warning: Registry incomplete, but forced generation enabled.</p>
+                                            <p className="text-[7px] font-bold text-slate-400 mt-1.5 uppercase tracking-tighter italic leading-tight">Warning: Registry incomplete, but forced generation enabled.</p>
                                         )}
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        {/* STEP-BY-STEP GUIDE (Minimized) */}
-                        <div className="bg-indigo-50 border-2 border-indigo-100 p-8 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-700">
-                                <h3 className="text-indigo-900 font-black text-xs uppercase tracking-widest mb-6 flex items-center">
-                                    <span className="bg-indigo-600 text-white h-5 w-5 rounded-full flex items-center justify-center text-[10px] mr-2">!</span>
-                                    Quick Startup Guide
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className={`p-6 rounded-2xl bg-white border-b-2 transition-all ${semesters.length > 0 ? 'border-emerald-500 opacity-40' : 'border-indigo-200'}`}>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Step 1</p>
-                                        <p className="text-[11px] font-bold text-slate-700 mb-3">Initialize the Academic Structure</p>
-                                        {semesters.length === 0 && <button onClick={async () => { await API.post('/seed-institution'); fetchData(); }} className="text-[9px] font-black text-indigo-600 uppercase underline">Click here to start</button>}
-                                    </div>
-                                    <div className={`p-6 rounded-2xl bg-white border-b-2 transition-all ${subjects.length > 0 ? 'border-emerald-500 opacity-40' : 'border-indigo-200'}`}>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Step 2</p>
-                                        <p className="text-[11px] font-bold text-slate-700 mb-3">Add subjects to the Curriculum</p>
-                                        {subjects.length === 0 && <button onClick={() => setView('SUBJECTS')} className="text-[9px] font-black text-indigo-600 uppercase underline">Add subjects now</button>}
-                                    </div>
-                                    <div className="p-6 rounded-2xl bg-white border-b-2 border-indigo-200">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Step 3</p>
-                                        <p className="text-[11px] font-bold text-slate-700 mb-3">Run the Automated Generator</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase">Wait for registry setup</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
 
@@ -549,7 +539,9 @@ const TimetableManager = () => {
                     <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-300/50 border border-slate-200 overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-50/50">
                             <div>
-                                <h2 className="text-2xl font-black text-slate-900 tracking-tightest uppercase italic">Master Schedule</h2>
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tightest uppercase italic">
+                                    {selectedRoomId ? `Room Matrix: ${rooms.find(r => parseInt(r.id) === parseInt(selectedRoomId))?.room_number}` : 'Master Schedule'}
+                                </h2>
                                 <div className="flex items-center space-x-6 mt-2">
                                     <div className="flex items-center space-x-2">
                                         <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -558,10 +550,26 @@ const TimetableManager = () => {
                                     <select
                                         className="bg-slate-100 border-none rounded-xl px-4 py-2 text-[10px] font-black text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                                         value={selectedSemester}
-                                        onChange={(e) => setSelectedSemester(e.target.value)}
+                                        onChange={(e) => { setSelectedSemester(e.target.value); setSelectedRoomId(''); setSelectedFacultyId(''); }}
                                     >
                                         <option value="">Select Semester View...</option>
                                         {semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number} - {programs.find(p => p.id === parseInt(s.program_id))?.name}</option>)}
+                                    </select>
+                                    <select
+                                        className="bg-slate-100 border-none rounded-xl px-4 py-2 text-[10px] font-black text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                        value={selectedRoomId}
+                                        onChange={(e) => { setSelectedRoomId(e.target.value); setSelectedSemester(''); setSelectedFacultyId(''); }}
+                                    >
+                                        <option value="">Select Room View...</option>
+                                        {rooms.map(r => <option key={r.id} value={r.id}>{r.room_number} ({r.type})</option>)}
+                                    </select>
+                                    <select
+                                        className="bg-slate-100 border-none rounded-xl px-4 py-2 text-[10px] font-black text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                        value={selectedFacultyId}
+                                        onChange={(e) => { setSelectedFacultyId(e.target.value); setSelectedSemester(''); setSelectedRoomId(''); }}
+                                    >
+                                        <option value="">Select Faculty View...</option>
+                                        {faculties.map(f => <option key={f.id} value={f.id}>{f.name} (@{f.faculty_id})</option>)}
                                     </select>
                                 </div>
                             </div>
@@ -603,9 +611,16 @@ const TimetableManager = () => {
                                                         if (!tPeriod) return false;
 
                                                         // Robust matching: match by ID or start_time fallback to handle registry shifts
-                                                        return t.day_of_week?.toLowerCase() === day.toLowerCase() &&
-                                                               (t.period_id === period.id || tPeriod.start_time === period.start_time) &&
-                                                               (!selectedSemester || parseInt(t.semester_id) === parseInt(selectedSemester))
+                                                        const matchBase = t.day_of_week?.toLowerCase() === day.toLowerCase() &&
+                                                                        (t.period_id === period.id || tPeriod.start_time === period.start_time);
+
+                                                        if (selectedRoomId) {
+                                                            return matchBase && parseInt(t.room_id) === parseInt(selectedRoomId);
+                                                        }
+                                                        if (selectedFacultyId) {
+                                                            return matchBase && parseInt(t.faculty_id) === parseInt(selectedFacultyId);
+                                                        }
+                                                        return matchBase && (!selectedSemester || parseInt(t.semester_id) === parseInt(selectedSemester));
                                                     })
                                                 );
                                                 if (period.is_break) return (
@@ -621,9 +636,15 @@ const TimetableManager = () => {
                                                     >
                                                         {data ? (
                                                             <div className={`p-3 rounded-xl border-b-2 h-full flex flex-col justify-center animate-in zoom-in duration-500 shadow-sm transition-transform hover:scale-[1.02] ${getSubjectColor(data.subject_name, data.subject_type)}`}>
-                                                                <p className="text-[9px] font-black leading-tight uppercase mb-1.5">{data.subject_name}</p>
-                                                                <div className="h-[1px] w-5 bg-current opacity-20 mx-auto mb-1.5"></div>
-                                                                <p className="text-[8px] font-bold opacity-60 uppercase truncate italic">{data.faculty_name}</p>
+                                                                <p className="text-[9px] font-black leading-tight uppercase mb-1">{data.subject_name}</p>
+                                                                <p className="text-[7px] font-bold opacity-60 uppercase truncate">{data.faculty_name}</p>
+                                                                <div className="mt-2 pt-1 border-t border-current opacity-10 flex justify-between items-center">
+                                                                    <span className="text-[7px] font-black opacity-80 uppercase tracking-tighter">
+                                                                        {selectedRoomId ? `Sem ${data.semester_number}` : (selectedFacultyId ? `Rm: ${data.room_number}` : `Rm: ${data.room_number}`)}
+                                                                    </span>
+                                                                    {selectedFacultyId && <span className="text-[6px] font-bold opacity-40 uppercase">SEM {data.semester_number}</span>}
+                                                                    {!selectedRoomId && !selectedFacultyId && <span className="text-[6px] font-bold opacity-40 uppercase">SEC {data.section}</span>}
+                                                                </div>
                                                             </div>
                                                         ) : (
                                                             <div className="py-8 opacity-5">
@@ -703,6 +724,20 @@ const TimetableManager = () => {
                                     <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Faculty Workload Report</h2>
                                     <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Academic Hour Allocation vs Capacity</p>
                                 </div>
+                                <button
+                                    onClick={async () => {
+                                        const res = await API.get('/reports/pdf/workload', { responseType: 'blob' });
+                                        const url = window.URL.createObjectURL(new Blob([res.data]));
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.setAttribute('download', 'Faculty_Workload_Report.pdf');
+                                        document.body.appendChild(link);
+                                        link.click();
+                                    }}
+                                    className="bg-slate-900 text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest"
+                                >
+                                    Download PDF
+                                </button>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
@@ -733,9 +768,25 @@ const TimetableManager = () => {
 
                         {/* ROOM UTILIZATION */}
                         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="p-8 border-b border-slate-100">
-                                <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Room Utilization Report</h2>
-                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Academic Space Occupancy Stats</p>
+                            <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Room Utilization Report</h2>
+                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Academic Space Occupancy Stats</p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        const res = await API.get('/reports/pdf/room-utilization', { responseType: 'blob' });
+                                        const url = window.URL.createObjectURL(new Blob([res.data]));
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.setAttribute('download', 'Room_Utilization_Report.pdf');
+                                        document.body.appendChild(link);
+                                        link.click();
+                                    }}
+                                    className="bg-slate-900 text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest"
+                                >
+                                    Download PDF
+                                </button>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">

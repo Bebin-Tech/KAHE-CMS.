@@ -315,11 +315,18 @@ def generate_timetable(semester_type: Optional[str] = None, semester_id: Optiona
             if not db.query(models.Semester).filter(models.Semester.program_id == prog.id, models.Semester.number == i).first():
                 db.add(models.Semester(number=i, program_id=prog.id, is_active=True))
         db.flush()
-        sem3 = db.query(models.Semester).filter(models.Semester.number == 3).first()
-        subs = [("Operating Systems", 4), ("Computer Networks", 4)]
-        for sn, hrs in subs:
-            if not db.query(models.Subject).filter(models.Subject.name == sn).first():
-                db.add(models.Subject(name=sn, department_name="Computer Science", weekly_hours=hrs, semester_id=sem3.id, type="Theory"))
+        
+        # Seed Subjects for both Sem 1 and Sem 3 to ensure data visibility
+        s1 = db.query(models.Semester).filter(models.Semester.program_id == prog.id, models.Semester.number == 1).first()
+        s3 = db.query(models.Semester).filter(models.Semester.program_id == prog.id, models.Semester.number == 3).first()
+        
+        if s1 and db.query(models.Subject).filter(models.Subject.semester_id == s1.id).count() == 0:
+            for sn, hrs in [("Mathematics", 4), ("Technical English", 3), ("Python Programming", 4)]:
+                db.add(models.Subject(name=sn, department_name="Computer Science", weekly_hours=hrs, semester_id=s1.id, type="Theory"))
+        
+        if s3 and db.query(models.Subject).filter(models.Subject.semester_id == s3.id).count() == 0:
+            for sn, hrs in [("Operating Systems", 4), ("Computer Networks", 4)]:
+                db.add(models.Subject(name=sn, department_name="Computer Science", weekly_hours=hrs, semester_id=s3.id, type="Theory"))
         
         # 4. Rooms & Faculty
         if db.query(models.Room).count() == 0:
@@ -368,6 +375,42 @@ def generate_timetable(semester_type: Optional[str] = None, semester_id: Optiona
     db.commit()
     return {"status": "success"}
 
+# --- REPORTS & ANALYTICS ---
+@api_router.get("/faculty-workload")
+def get_faculty_workload(db: Session = Depends(database.get_db)):
+    """Calculates assigned hours vs capacity for all faculty members."""
+    faculties = db.query(models.User).filter(models.User.role == "faculty").all()
+    workload = []
+    for f in faculties:
+        assigned_periods = db.query(models.Timetable).filter(models.Timetable.faculty_id == f.id).count()
+        remaining = max(0, (f.max_hours_per_week or 24) - assigned_periods)
+        workload.append({
+            "faculty_name": f.name,
+            "faculty_id": f.faculty_id,
+            "total_hours_assigned": assigned_periods,
+            "max_hours_per_week": f.max_hours_per_week or 24,
+            "remaining_hours": remaining,
+            "utilization_rate": round((assigned_periods / (f.max_hours_per_week or 24)) * 100, 1) if f.max_hours_per_week else 0
+        })
+    return workload
+
+@api_router.get("/room-utilization")
+def get_room_utilization(db: Session = Depends(database.get_db)):
+    """Reports room occupancy stats across the working week."""
+    rooms = db.query(models.Room).all()
+    total_slots_per_week = 36
+    report = []
+    for r in rooms:
+        occupied_slots = db.query(models.Timetable).filter(models.Timetable.room_id == r.id).count()
+        report.append({
+            "room_number": r.room_number,
+            "type": r.type,
+            "occupied_slots": occupied_slots,
+            "total_slots": total_slots_per_week,
+            "utilization_rate": round((occupied_slots / total_slots_per_week) * 100, 1)
+        })
+    return report
+
 # --- DASHBOARD & STATS ---
 @api_router.get("/dashboard-stats")
 def get_stats(db: Session = Depends(database.get_db)):
@@ -380,8 +423,12 @@ def get_stats(db: Session = Depends(database.get_db)):
             "total_semesters": db.query(models.Semester).count(),
             "total_subjects": db.query(models.Subject).count(),
             "total_faculties": db.query(models.User).filter(models.User.role == "faculty").count(),
+            "total_classrooms": db.query(models.Room).filter(models.Room.type == "Classroom").count(),
+            "total_labs": db.query(models.Room).filter(models.Room.type == "Lab").count(),
             "generated_timetables": db.query(models.Timetable).count() // 36 if db.query(models.Timetable).count() > 0 else 0,
             "bookings": db.query(models.Booking).count(),
+            "pending_approvals": db.query(models.Timetable).filter(models.Timetable.status == "PENDING").count(),
+            "approved_timetables": db.query(models.Timetable).filter(models.Timetable.status == "APPROVED").count(),
             "conflict_alerts": db.query(models.Conflict).filter(models.Conflict.resolved == False).count()
         }
     except Exception as e:
@@ -426,27 +473,30 @@ def export_semester_pdf(sem_id: int, db: Session = Depends(database.get_db)):
     pdf.ln(5)
 
     # Table Header
+    pdf.set_fill_color(240, 240, 240)
     pdf.set_font("Helvetica", "B", 8)
     col_width = 38
-    pdf.cell(25, 10, "Day / Period", border=1, align='C')
+    pdf.cell(25, 10, "Day / Period", border=1, align='C', fill=True)
     for p in periods:
-        pdf.cell(col_width, 10, f"P{p.period_number} ({p.start_time}-{p.end_time})", border=1, align='C')
+        pdf.cell(col_width, 10, f"P{p.period_number} ({p.start_time}-{p.end_time})", border=1, align='C', fill=True)
     pdf.ln()
 
     # Table Body
     pdf.set_font("Helvetica", "", 7)
+    row_height = 15
     for day in days:
-        pdf.cell(25, 15, day, border=1, align='C')
+        curr_y = pdf.get_y()
+        pdf.cell(25, row_height, day, border=1, align='C')
         for p in periods:
             entry = next((t for t in tt_entries if t.day_of_week == day and t.period_id == p.id), None)
+            x, y = pdf.get_x(), pdf.get_y()
             if entry:
                 text = f"{entry.subject_name}\n({entry.faculty_name})\nRm: {entry.room_number}"
-                curr_x, curr_y = pdf.get_x(), pdf.get_y()
-                pdf.multi_cell(col_width, 5, text, border=1, align='C')
-                pdf.set_xy(curr_x + col_width, curr_y)
+                pdf.multi_cell(col_width, 4.5, text, border=1, align='C')
+                pdf.set_xy(x + col_width, y)
             else:
-                pdf.cell(col_width, 15, "-", border=1, align='C')
-        pdf.ln()
+                pdf.cell(col_width, row_height, "-", border=1, align='C')
+        pdf.ln(row_height)
 
     return StreamingResponse(
         io.BytesIO(pdf.output()),
@@ -500,6 +550,95 @@ def export_faculty_pdf(faculty_id: int, db: Session = Depends(database.get_db)):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=Faculty_Timetable_{fac.name.replace(' ','_')}.pdf"}
     )
+
+@api_router.get("/timetables/pdf/room/{room_id}")
+def export_room_pdf(room_id: int, db: Session = Depends(database.get_db)):
+    if not FPDF: raise HTTPException(500, "PDF Engine not ready")
+    room = db.query(models.Room).filter(models.Room.id == room_id).first()
+    if not room: raise HTTPException(404, "Room not found")
+    
+    tt_entries = db.query(models.Timetable).filter(models.Timetable.room_id == room_id).all()
+    periods = db.query(models.PeriodTiming).filter(models.PeriodTiming.type == "CLASS").order_by(models.PeriodTiming.period_number.asc()).all()
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, f"ROOM UTILIZATION MATRIX - {room.room_number}", ln=True, align='C')
+    pdf.set_font("Helvetica", "", 12)
+    pdf.cell(0, 10, f"Type: {room.type} | Capacity: {room.capacity} | Dept: {room.department}", ln=True, align='C')
+    pdf.ln(5)
+
+    pdf.set_font("Helvetica", "B", 8)
+    col_width = 38
+    pdf.cell(25, 10, "Day / Period", border=1, align='C')
+    for p in periods:
+        pdf.cell(col_width, 10, f"P{p.period_number} ({p.start_time}-{p.end_time})", border=1, align='C')
+    pdf.ln()
+
+    pdf.set_font("Helvetica", "", 7)
+    for day in days:
+        pdf.cell(25, 15, day, border=1, align='C')
+        for p in periods:
+            entry = next((t for t in tt_entries if t.day_of_week == day and t.period_id == p.id), None)
+            if entry:
+                text = f"{entry.subject_name}\n({entry.faculty_name})\nSem: {entry.semester_number} Sec: {entry.section}"
+                curr_x, curr_y = pdf.get_x(), pdf.get_y()
+                pdf.multi_cell(col_width, 5, text, border=1, align='C')
+                pdf.set_xy(curr_x + col_width, curr_y)
+            else:
+                pdf.cell(col_width, 15, "-", border=1, align='C')
+        pdf.ln()
+
+    return StreamingResponse(io.BytesIO(pdf.output()), media_type="application/pdf")
+
+@api_router.get("/reports/pdf/workload")
+def export_workload_pdf(db: Session = Depends(database.get_db)):
+    if not FPDF: raise HTTPException(500, "PDF Engine not ready")
+    data = get_faculty_workload(db)
+    
+    pdf = FPDF(unit='mm', format='A4')
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 15, "FACULTY WORKLOAD REPORT", ln=True, align='C')
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(60, 10, "Faculty Name", border=1)
+    pdf.cell(40, 10, "Assigned Hours", border=1)
+    pdf.cell(40, 10, "Capacity", border=1)
+    pdf.cell(40, 10, "Utilization", border=1)
+    pdf.ln()
+    pdf.set_font("Helvetica", "", 9)
+    for f in data:
+        pdf.cell(60, 10, f['faculty_name'], border=1)
+        pdf.cell(40, 10, f"{f['total_hours_assigned']} hrs", border=1)
+        pdf.cell(40, 10, f"{f['max_hours_per_week']} hrs", border=1)
+        pdf.cell(40, 10, f"{f['utilization_rate']}%", border=1)
+        pdf.ln()
+    return StreamingResponse(io.BytesIO(pdf.output()), media_type="application/pdf")
+
+@api_router.get("/reports/pdf/room-utilization")
+def export_rooms_pdf(db: Session = Depends(database.get_db)):
+    if not FPDF: raise HTTPException(500, "PDF Engine not ready")
+    data = get_room_utilization(db)
+    
+    pdf = FPDF(unit='mm', format='A4')
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 15, "ROOM UTILIZATION REPORT", ln=True, align='C')
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(50, 10, "Room Number", border=1)
+    pdf.cell(50, 10, "Type", border=1)
+    pdf.cell(40, 10, "Occupied Slots", border=1)
+    pdf.cell(40, 10, "Utilization Rate", border=1)
+    pdf.ln()
+    pdf.set_font("Helvetica", "", 9)
+    for r in data:
+        pdf.cell(50, 10, r['room_number'], border=1)
+        pdf.cell(50, 10, r['type'], border=1)
+        pdf.cell(40, 10, f"{r['occupied_slots']} / 36", border=1)
+        pdf.cell(40, 10, f"{r['utilization_rate']}%", border=1)
+        pdf.ln()
+    return StreamingResponse(io.BytesIO(pdf.output()), media_type="application/pdf")
 
 app.include_router(api_router)
 
