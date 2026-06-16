@@ -102,9 +102,9 @@ const UserDirectory = () => {
                         setFormData({ name: '', email: '', password: '', faculty_id: '', role: 'faculty' });
                         setShowModal(true);
                     }}
-                    className="bg-[#0f172a] border border-slate-700 rounded-lg px-8 py-3 shadow-2xl transition-all hover:bg-black active:scale-95 group"
+                    className="bg-white border-2 border-indigo-600 rounded-xl px-8 py-3 shadow-sm transition-all hover:bg-indigo-50 active:scale-95 group"
                 >
-                    <span className="text-[#7dd3fc] font-black text-xs uppercase tracking-[0.2em]">Create User</span>
+                    <span className="text-indigo-600 font-black text-[10px] uppercase tracking-widest">Create User</span>
                 </button>
             </header>
 
