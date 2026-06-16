@@ -380,7 +380,9 @@ def get_stats(db: Session = Depends(database.get_db)):
             "total_semesters": db.query(models.Semester).count(),
             "total_subjects": db.query(models.Subject).count(),
             "total_faculties": db.query(models.User).filter(models.User.role == "faculty").count(),
-            "generated_timetables": db.query(models.Timetable).count()
+            "generated_timetables": db.query(models.Timetable).count() // 36 if db.query(models.Timetable).count() > 0 else 0,
+            "bookings": db.query(models.Booking).count(),
+            "conflict_alerts": db.query(models.Conflict).filter(models.Conflict.resolved == False).count()
         }
     except Exception as e:
         logger.error(f"Dashboard Stats Error: {e}")

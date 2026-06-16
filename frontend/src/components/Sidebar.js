@@ -26,7 +26,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     }
 
     // 4. Schedule
-    menuItems.push({ name: 'Schedule', path: '/schedule', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' });
+    menuItems.push({ name: 'Personal Schedule', path: '/schedule', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' });
 
     // 5. Timetable Manager (CMS Core)
     if (['admin', 'dean', 'hod', 'principal'].includes(role)) {

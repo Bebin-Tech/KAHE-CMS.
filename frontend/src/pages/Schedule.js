@@ -6,7 +6,7 @@ const Schedule = () => {
     const [periods, setPeriods] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     useEffect(() => {
         const fetchData = async () => {
@@ -15,6 +15,7 @@ const Schedule = () => {
                 const facultyId = localStorage.getItem('user_id');
 
                 let ttUrl = '/timetables';
+                // If faculty, we show their specific timetable by default
                 if (role === 'faculty') {
                     ttUrl = `/faculty-timetable/${facultyId}`;
                 }
@@ -24,8 +25,14 @@ const Schedule = () => {
                     API.get('/period-timings')
                 ]);
                 setTimetables(ttRes.data || []);
-                // Strictly sort by ID (forced 1-8 in backend)
-                const sortedPeriods = (periodsRes.data || []).sort((a, b) => a.id - b.id);
+                const sortedPeriods = (periodsRes.data || []).sort((a, b) => {
+                    const toMin = (t) => {
+                        let [h, m] = (t || "00:00").split(':').map(Number);
+                        if (h < 8) h += 12;
+                        return h * 60 + m;
+                    };
+                    return toMin(a.start_time) - toMin(b.start_time);
+                });
                 setPeriods(sortedPeriods);
                 setLoading(false);
             } catch (err) {
@@ -36,6 +43,26 @@ const Schedule = () => {
         fetchData();
     }, []);
 
+    const handleDownloadPDF = async () => {
+        try {
+            const role = localStorage.getItem('role')?.toLowerCase();
+            const url = role === 'faculty'
+                ? `/timetables/pdf/faculty/${localStorage.getItem('user_id')}`
+                : `/timetables/pdf/semester/1`; // Default or first sem for general view
+
+            const response = await API.get(url, { responseType: 'blob' });
+            const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.setAttribute('download', 'Institutional_Timetable.pdf');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (err) {
+            alert("Download Failed: Engine not ready.");
+        }
+    };
+
     const getScheduleForCell = (day, periodId) => {
         return timetables.find(t => t.day_of_week === day && t.period_id === periodId);
     };
@@ -44,9 +71,17 @@ const Schedule = () => {
 
     return (
         <div className="p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen">
-            <header className="mb-8">
-                <h1 className="text-4xl font-black text-gray-900 tracking-tight">Academic Timetable</h1>
-                <p className="text-gray-500 font-medium mt-1 uppercase tracking-widest text-[10px]">Karpagam Academy of Higher Education • Official Schedule</p>
+            <header className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">Academic Timetable</h1>
+                    <p className="text-gray-500 font-medium mt-1 uppercase tracking-widest text-[10px]">Karpagam Academy of Higher Education • Official Schedule</p>
+                </div>
+                <button
+                    onClick={handleDownloadPDF}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
+                >
+                    Download PDF
+                </button>
             </header>
 
             <div className="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">

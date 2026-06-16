@@ -2,6 +2,9 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime
 
+from sqlalchemy import true
+
+
 class UserBase(BaseModel):
     name: str
     email: EmailStr
@@ -253,3 +256,4 @@ class FacultyAssignment(FacultyAssignmentBase):
     subject: Subject
     class Config:
         from_attributes = True
+
