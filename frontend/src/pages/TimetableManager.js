@@ -19,6 +19,7 @@ const TimetableManager = () => {
     const [timetables, setTimetables] = useState([]);
     const [workingDays, setWorkingDays] = useState([]);
     const [periods, setPeriods] = useState([]);
+    const [facultyAssignments, setFacultyAssignments] = useState([]);
 
     const [showModal, setShowModal] = useState(false);
     const [modalType, setModalType] = useState('');
@@ -39,6 +40,8 @@ const TimetableManager = () => {
 
     const [selectedRoomId, setSelectedRoomId] = useState('');
     const [selectedFacultyId, setSelectedFacultyId] = useState('');
+    const [facultyPage, setFacultyPage] = useState(1);
+    const FACULTY_PER_PAGE = 6;
 
     const fetchData = useCallback(async () => {
         try {
@@ -52,7 +55,7 @@ const TimetableManager = () => {
                 }
             };
 
-            const [sData, subData, userData, rData, dData, pData, semData, tData, wdData, ptData, wReport, uReport] = await Promise.all([
+            const [sData, subData, userData, rData, dData, pData, semData, tData, wdData, ptData, wReport, uReport, faData] = await Promise.all([
                 safeFetch('/dashboard-stats'),
                 safeFetch('/subjects'),
                 safeFetch('/users_list'),
@@ -64,7 +67,8 @@ const TimetableManager = () => {
                 safeFetch('/working-days'),
                 safeFetch('/period-timings'),
                 safeFetch('/faculty-workload'),
-                safeFetch('/room-utilization')
+                safeFetch('/room-utilization'),
+                safeFetch('/faculty-assignments')
             ]);
 
             setStats(sData || {});
@@ -78,6 +82,7 @@ const TimetableManager = () => {
             setWorkingDays(wdData || []);
             setWorkloadReport(wReport || []);
             setRoomUtilization(uReport || []);
+            setFacultyAssignments(faData || []);
 
             const sortedPt = (ptData || []).sort((a, b) => {
                 const toMin = (t) => {
@@ -100,6 +105,14 @@ const TimetableManager = () => {
         const interval = setInterval(fetchData, 10000);
         return () => clearInterval(interval);
     }, [fetchData]);
+
+    // Reset to page 1 when faculty list changes (new additions / deletions)
+    useEffect(() => {
+        const totalPages = Math.ceil(faculties.length / FACULTY_PER_PAGE);
+        if (facultyPage > totalPages && totalPages > 0) {
+            setFacultyPage(totalPages);
+        }
+    }, [faculties.length, facultyPage, FACULTY_PER_PAGE]);
 
     const handleGenerate = async () => {
         setGenerating(true);
@@ -242,6 +255,30 @@ const TimetableManager = () => {
         }
     };
 
+    const handleUpdateFacultyLoad = async (e) => {
+        if (e) e.preventDefault();
+        try {
+            await API.put(`/users/${selectedFaculty.id}`, { assigned_load_hours: selectedFaculty.assigned_load_hours });
+            setShowModal(false);
+            fetchData();
+            alert('Faculty Load Updated Successfully!');
+        } catch (err) {
+            alert('Failed to update load: ' + (err.response?.data?.detail || 'Network error'));
+        }
+    };
+
+    const handleClearAssignments = async () => {
+        if (window.confirm("Clear all faculty-subject mappings? This will reset the curriculum allocation for the entire institution.")) {
+            try {
+                await API.delete('/faculty-assignments');
+                await fetchData();
+                alert("Institutional Mappings Cleared");
+            } catch (err) {
+                alert("Failed to clear mappings: Admin authorization required.");
+            }
+        }
+    };
+
     const getSubjectColor = (name, type) => {
         const n = name?.toLowerCase() || '';
         const t = type?.toLowerCase() || '';
@@ -263,63 +300,69 @@ const TimetableManager = () => {
                     </div>
                 </div>
 
-                <nav className="flex items-center bg-white p-1 rounded-[1.25rem] shadow-xl shadow-slate-200/40 border border-slate-200 overflow-x-auto no-scrollbar max-w-full">
-                    {[
-                        { id: 'DASHBOARD', label: 'Overview', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
-                        { id: 'SUBJECTS', label: 'Curriculum', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-                        { id: 'FACULTY', label: 'Allocation', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-                        { id: 'ROOMS', label: 'Spaces', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
-                        { id: 'GENERATOR', label: 'Engine', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-                        { id: 'VIEW', label: 'Matrix', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-                        { id: 'PERSONAL', label: 'My Schedule', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-                        { id: 'REPORTS', label: 'Reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-                        { id: 'SETTINGS', label: 'Config', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
-                    ].filter(tab => {
-                        const roles = {
-                            'DASHBOARD': ['admin', 'dean', 'hod'],
-                            'SUBJECTS': ['admin', 'dean', 'hod'],
-                            'FACULTY': ['admin', 'dean', 'hod'],
-                            'ROOMS': ['admin', 'dean', 'hod'],
-                            'GENERATOR': ['admin', 'dean'],
-                            'VIEW': ['admin', 'dean', 'hod', 'faculty', 'student'],
-                            'PERSONAL': ['faculty'],
-                            'REPORTS': ['admin', 'dean', 'hod'],
-                            'SETTINGS': ['admin', 'dean']
-                        };
-                        return roles[tab.id].includes(role);
-                    }).map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setView(tab.id)}
-                            className={`flex items-center space-x-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black tracking-widest uppercase transition-all duration-300 relative group ${
-                                view === tab.id
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200/50'
-                                : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-50'
-                            }`}
-                        >
-                            <svg className={`h-4 w-4 ${view === tab.id ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={tab.icon} />
-                            </svg>
-                            <span>{tab.label}</span>
-                        </button>
-                    ))}
-                </nav>
+                <div className="flex items-center space-x-4">
+                    <nav className="flex items-center bg-white p-1 rounded-[1.25rem] shadow-xl shadow-slate-200/40 border border-slate-200 overflow-x-auto no-scrollbar max-w-full">
+                        {[
+                            { id: 'DASHBOARD', label: 'Overview', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+                            { id: 'SUBJECTS', label: 'Curriculum', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+                            { id: 'FACULTY', label: 'Allocation', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+                            { id: 'ROOMS', label: 'Spaces', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
+                            { id: 'GENERATOR', label: 'Engine', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+                            { id: 'VIEW', label: 'Matrix', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+                            { id: 'PERSONAL', label: 'My Schedule', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                            { id: 'REPORTS', label: 'Reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+                            { id: 'SETTINGS', label: 'Config', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+                        ].filter(tab => {
+                            const roles = {
+                                'DASHBOARD': ['admin', 'dean', 'hod'],
+                                'SUBJECTS': ['admin', 'dean', 'hod'],
+                                'FACULTY': ['admin', 'dean', 'hod'],
+                                'ROOMS': ['admin', 'dean', 'hod'],
+                                'GENERATOR': ['admin', 'dean'],
+                                'VIEW': ['admin', 'dean', 'hod', 'faculty', 'student'],
+                                'PERSONAL': ['faculty'],
+                                'REPORTS': ['admin', 'dean', 'hod'],
+                                'SETTINGS': ['admin', 'dean']
+                            };
+                            return roles[tab.id].includes(role);
+                        }).map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setView(tab.id)}
+                                className={`flex items-center space-x-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black tracking-widest uppercase transition-all duration-300 relative group ${
+                                    view === tab.id
+                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200/50'
+                                    : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-50'
+                                }`}
+                            >
+                                <svg className={`h-4 w-4 ${view === tab.id ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={tab.icon} />
+                                </svg>
+                                <span>{tab.label}</span>
+                            </button>
+                        ))}
+                    </nav>
+                </div>
             </header>
 
             <main className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {view === 'DASHBOARD' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         {[
-                            { label: 'Departments', value: depts.length, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5', color: 'text-blue-600', bg: 'bg-blue-50' },
-                            { label: 'Academic Cycle', value: semesters.length, icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7', color: 'text-violet-600', bg: 'bg-violet-50' },
-                            { label: 'Generated Slots', value: timetables.length, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                            { label: 'Conflicts Found', value: stats.conflict_alerts || 0, icon: 'M12 8v4m0 4h.01', color: 'text-rose-600', bg: 'bg-rose-50' }
+                            { label: 'Departments', value: stats.total_departments || 0, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5', color: 'text-blue-600', bg: 'bg-blue-50' },
+                            { label: 'Curriculum', value: stats.total_subjects || 0, icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                            { label: 'Faculty Count', value: stats.total_faculties || 0, icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', color: 'text-violet-600', bg: 'bg-violet-50' },
+                            { label: 'Classrooms', value: stats.total_classrooms || 0, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                            { label: 'Active Sessions', value: stats.active || 0, icon: 'M13 10V3L4 14h7v7l9-11h-7z', color: 'text-amber-600', bg: 'bg-amber-50' },
+                            { label: 'Generated Slots', value: timetables.length, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2', color: 'text-sky-600', bg: 'bg-sky-50' },
+                            { label: 'Room Utilization', value: `${utilizationReport.length > 0 ? Math.round(utilizationReport.reduce((a,b)=>a+b.utilization_rate,0)/utilizationReport.length) : 0}%`, icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10', color: 'text-slate-600', bg: 'bg-slate-50' },
+                            { label: 'Security Alerts', value: stats.conflict_alerts || 0, icon: 'M12 8v4m0 4h.01', color: 'text-rose-600', bg: 'bg-rose-50' }
                         ].map((item, idx) => (
-                            <div key={idx} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200 flex flex-col items-center text-center group hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
+                            <div key={idx} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200 flex flex-col items-center text-center group hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
                                 <div className={`p-4 rounded-[1.5rem] mb-4 ${item.bg} ${item.color} group-hover:scale-110 transition-transform duration-500`}>
-                                    <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} /></svg>
+                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={item.icon} /></svg>
                                 </div>
-                                <p className={`text-4xl font-black ${item.color}`}>{item.value}</p>
+                                <p className={`text-3xl font-black ${item.color}`}>{item.value}</p>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">{item.label}</p>
                             </div>
                         ))}
@@ -411,39 +454,195 @@ const TimetableManager = () => {
 
                 {view === 'FACULTY' && (
                     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-8 border-b border-slate-100">
-                            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Faculty Resource Mapping</h2>
-                            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Allocate subjects to professors</p>
+                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white">
+                            <div>
+                                <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Faculty Resource Mapping</h2>
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-none">Allocate subjects to professors</p>
+                            </div>
+                            {['admin', 'dean'].includes(role) && (
+                                <button
+                                    onClick={handleClearAssignments}
+                                    className="bg-white border-2 border-rose-600 rounded-xl px-6 py-2.5 shadow-sm transition-all hover:bg-rose-50 active:scale-95 flex items-center space-x-3 group"
+                                >
+                                    <svg className="h-4 w-4 text-rose-600 transition-transform duration-700 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    <span className="text-rose-600 font-black text-[10px] uppercase tracking-widest">Refresh</span>
+                                </button>
+                            )}
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50/50 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                                    <tr><th className="p-8">Faculty</th><th className="p-8">ID</th><th className="p-8">Specialization</th><th className="p-8 text-center">Operation</th></tr>
+                                    <tr>
+                                        <th className="p-8">Faculty</th>
+                                        <th className="p-8">ID</th>
+                                        <th className="p-8 text-center">Assigned Load</th>
+                                        <th className="p-8 text-center">Operation</th>
+                                    </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {faculties.map(f => (
-                                        <tr key={f.id} className="hover:bg-slate-50/50 transition text-sm">
-                                            <td className="p-8">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs">{f.name.charAt(0)}</div>
-                                                    <span className="font-black text-slate-800 uppercase">{f.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-8"><span className="text-[10px] font-bold text-slate-400 tracking-wider">@{f.faculty_id}</span></td>
-                                            <td className="p-8"><span className="text-[8px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-3 py-1.5 rounded-lg">Institutional Faculty</span></td>
-                                            <td className="p-8 text-center">
-                                                <button
-                                                    onClick={() => { setSelectedFaculty(f); setModalType('FACULTY_ASSIGN'); setShowModal(true); }}
-                                                    className="px-6 py-2.5 border-2 border-indigo-600 text-indigo-600 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-indigo-600 hover:text-white transition-all duration-300"
-                                                >
-                                                    Assign Load
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {faculties.slice((facultyPage - 1) * FACULTY_PER_PAGE, facultyPage * FACULTY_PER_PAGE).map(f => {
+                                        const myAssignments = facultyAssignments.filter(a => parseInt(a.faculty_id) === parseInt(f.id));
+                                        return (
+                                            <tr key={f.id} className="hover:bg-slate-50/50 transition text-sm">
+                                                <td className="p-8">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs">{f.name.charAt(0)}</div>
+                                                        <span className="font-black text-slate-800 uppercase">{f.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-8"><span className="text-[10px] font-bold text-slate-400 tracking-wider">@{f.faculty_id}</span></td>
+                                                <td className="p-8">
+                                                    <div className="flex items-center space-x-6">
+                                                        {/* Load Section */}
+                                                        <div className="inline-flex items-center space-x-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 min-w-[110px]">
+                                                            <span className="text-xs font-black text-slate-700">{f.assigned_load_hours || 0} Hrs</span>
+                                                            <button
+                                                                onClick={() => { setSelectedFaculty(f); setModalType('FACULTY_LOAD'); setShowModal(true); }}
+                                                                className="p-1.5 bg-white border border-slate-200 rounded-lg text-indigo-600 hover:border-indigo-500 transition-all shadow-sm"
+                                                            >
+                                                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Subjects Section */}
+                                                        <div className="flex flex-wrap gap-1.5 border-l border-slate-100 pl-6 text-left">
+                                                            {myAssignments.length > 0 ? (
+                                                                myAssignments.map(a => (
+                                                                    <span key={a.id} className="text-[8px] font-black bg-white text-indigo-600 border border-indigo-100 px-3 py-1.5 rounded-lg uppercase tracking-tight shadow-sm flex items-center gap-2">
+                                                                        <span className="h-1 w-1 bg-indigo-400 rounded-full"></span>
+                                                                        {a.subject?.name}
+                                                                        <span className="opacity-40 font-bold ml-1 italic">(S{a.semester_id})</span>
+                                                                    </span>
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest italic">No Curriculum Mapped</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-8 text-center">
+                                                    <button
+                                                        onClick={() => { setSelectedFaculty(f); setModalType('FACULTY_ASSIGN'); setShowModal(true); }}
+                                                        className="px-6 py-2.5 border-2 border-indigo-600 text-indigo-600 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-indigo-600 hover:text-white transition-all duration-300"
+                                                    >
+                                                        Map Subject
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Bar */}
+                        {(() => {
+                            const totalPages = Math.ceil(faculties.length / FACULTY_PER_PAGE);
+                            if (totalPages <= 1) return null;
+                            const getPageNumbers = () => {
+                                const pages = [];
+                                const maxVisible = 5;
+                                let start = Math.max(1, facultyPage - 2);
+                                let end = Math.min(totalPages, start + maxVisible - 1);
+                                if (end === totalPages) start = Math.max(1, end - maxVisible + 1);
+                                for (let i = start; i <= end; i++) pages.push(i);
+                                return pages;
+                            };
+                            return (
+                                <div className="flex items-center justify-between px-8 py-6 border-t border-slate-100 bg-slate-50/30">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Showing {Math.min((facultyPage - 1) * FACULTY_PER_PAGE + 1, faculties.length)} to {Math.min(facultyPage * FACULTY_PER_PAGE, faculties.length)} of {faculties.length} Records
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        {/* Back Button */}
+                                        <button
+                                            disabled={facultyPage === 1}
+                                            onClick={() => setFacultyPage(p => Math.max(1, p - 1))}
+                                            className="flex items-center px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            <svg className="h-3 w-3 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
+                                            Back
+                                        </button>
+
+                                        {/* Page Numbers */}
+                                        <div className="flex items-center gap-1.5 mx-2">
+                                            {getPageNumbers().map(num => (
+                                                <button
+                                                    key={num}
+                                                    onClick={() => setFacultyPage(num)}
+                                                    className={`w-9 h-10 flex items-center justify-center rounded-lg text-[11px] font-black transition-all ${facultyPage === num ? 'bg-black text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                                                >
+                                                    {num}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Next Button */}
+                                        <button
+                                            disabled={facultyPage === totalPages}
+                                            onClick={() => setFacultyPage(p => Math.min(totalPages, p + 1))}
+                                            className="flex items-center px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            Next
+                                            <svg className="h-3 w-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                                            disabled={facultyPage === 1}
+                                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 bg-white text-[10px] font-black text-slate-500 uppercase tracking-widest hover:border-indigo-400 hover:text-indigo-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
+                                            Back
+                                        </button>
+
+                                        {/* First page + ellipsis */}
+                                        {getPageNumbers()[0] > 1 && (
+                                            <>
+                                                <button onClick={() => setFacultyPage(1)} className="w-9 h-9 rounded-xl border border-slate-200 bg-white text-[10px] font-black text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-all">1</button>
+                                                {getPageNumbers()[0] > 2 && <span className="w-9 h-9 flex items-center justify-center text-slate-300 text-xs font-black">…</span>}
+                                            </>
+                                        )}
+
+                                        {/* Page number buttons */}
+                                        {getPageNumbers().map(page => (
+                                            <button
+                                                key={page}
+                                                onClick={() => setFacultyPage(page)}
+                                                className={`w-9 h-9 rounded-xl border text-[10px] font-black transition-all ${
+                                                    page === facultyPage
+                                                        ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                                                        : 'border-slate-200 bg-white text-slate-500 hover:border-indigo-400 hover:text-indigo-600'
+                                                }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+
+                                        {/* Last page + ellipsis */}
+                                        {getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
+                                            <>
+                                                {getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1 && <span className="w-9 h-9 flex items-center justify-center text-slate-300 text-xs font-black">…</span>}
+                                                <button onClick={() => setFacultyPage(totalPages)} className="w-9 h-9 rounded-xl border border-slate-200 bg-white text-[10px] font-black text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-all">{totalPages}</button>
+                                            </>
+                                        )}
+
+                                        {/* Next button */}
+                                        <button
+                                            onClick={() => setFacultyPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={facultyPage === totalPages}
+                                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 bg-white text-[10px] font-black text-slate-500 uppercase tracking-widest hover:border-indigo-400 hover:text-indigo-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            Next
+                                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
 
@@ -747,14 +946,34 @@ const TimetableManager = () => {
                                     <tbody className="divide-y divide-slate-100">
                                         {workloadReport.map(w => (
                                             <tr key={w.faculty_id} className="hover:bg-slate-50/50 transition text-sm">
-                                                <td className="p-8 font-black text-slate-800 uppercase">{w.faculty_name}</td>
-                                                <td className="p-8 font-bold text-slate-400">@{w.faculty_id}</td>
-                                                <td className="p-8 font-black text-indigo-600">{w.total_hours_assigned} Periods</td>
-                                                <td className="p-8 font-bold text-slate-500">{w.max_hours_per_week} hrs/wk</td>
+                                                <td className="p-8">
+                                                    <p className="font-black text-slate-800 uppercase">{w.faculty_name}</p>
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">@{w.faculty_id}</p>
+                                                </td>
+                                                <td className="p-8 text-[10px] font-bold text-slate-400 uppercase tracking-tighter italic text-center">
+                                                    Institutional Profile
+                                                </td>
+                                                <td className="p-8">
+                                                    <div className="flex flex-col space-y-1">
+                                                        <div className="flex justify-between text-[8px] font-black uppercase">
+                                                            <span className="text-slate-400">Registry:</span>
+                                                            <span className="text-indigo-600">{w.timetable_load} Hrs</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-[8px] font-black uppercase">
+                                                            <span className="text-slate-400">Manual:</span>
+                                                            <span className="text-emerald-600">{w.manual_load} Hrs</span>
+                                                        </div>
+                                                        <div className="pt-1 border-t border-slate-100 flex justify-between text-[10px] font-black uppercase tracking-tighter">
+                                                            <span>Total:</span>
+                                                            <span className="text-slate-900">{w.total_hours_assigned} Hrs</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-8 font-bold text-slate-500 text-center">{w.max_hours_per_week} hrs/wk</td>
                                                 <td className="p-8">
                                                     <div className="flex items-center space-x-3">
                                                         <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                            <div className={`h-full rounded-full ${w.utilization_rate > 90 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{width: `${w.utilization_rate}%`}}></div>
+                                                            <div className={`h-full rounded-full transition-all duration-1000 ${w.utilization_rate > 90 ? 'bg-rose-500' : 'bg-indigo-600'}`} style={{width: `${w.utilization_rate}%`}}></div>
                                                         </div>
                                                         <span className="text-[10px] font-black text-slate-700">{w.utilization_rate}%</span>
                                                     </div>
@@ -970,6 +1189,29 @@ const TimetableManager = () => {
                                     <div className="md:col-span-2 flex gap-4 mt-6 pt-6 border-t border-slate-100">
                                         <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-slate-200 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancel</button>
                                         <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">Save</button>
+                                    </div>
+                                </form>
+                            ) : modalType === 'FACULTY_LOAD' ? (
+                                <form onSubmit={handleUpdateFacultyLoad} className="space-y-6">
+                                    <div className="text-center mb-6">
+                                        <p className="text-2xl font-black text-slate-900">{selectedFaculty?.name}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manual Load Configuration</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Assigned Load Hours (Weekly)</label>
+                                        <input
+                                            type="number"
+                                            className="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-2xl font-black text-xl text-center text-indigo-600 outline-none focus:border-indigo-500 transition-all"
+                                            value={selectedFaculty?.assigned_load_hours || 0}
+                                            onChange={e => setSelectedFaculty({...selectedFaculty, assigned_load_hours: parseInt(e.target.value) || 0})}
+                                            min="0"
+                                            max="48"
+                                        />
+                                        <p className="text-[9px] font-bold text-slate-400 text-center italic">This value will be added to the hours generated by the timetable engine.</p>
+                                    </div>
+                                    <div className="pt-8 flex gap-4">
+                                        <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-slate-200 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancel</button>
+                                        <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">Update Load</button>
                                     </div>
                                 </form>
                             ) : (
