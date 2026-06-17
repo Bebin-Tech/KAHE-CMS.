@@ -14,7 +14,6 @@ class UserBase(BaseModel):
     designation: Optional[str] = None
     max_hours_per_day: Optional[int] = 6
     max_hours_per_week: Optional[int] = 24
-    assigned_load_hours: Optional[int] = 0
     availability_status: Optional[str] = "Available"
 
 class UserCreate(UserBase):
@@ -30,7 +29,6 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     max_hours_per_day: Optional[int] = None
     max_hours_per_week: Optional[int] = None
-    assigned_load_hours: Optional[int] = None
     availability_status: Optional[str] = None
 
 class User(UserBase):
