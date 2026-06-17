@@ -264,20 +264,20 @@ const TimetableManager = () => {
                     <h1 className="text-3xl font-black text-slate-900 tracking-tightest leading-none">Timetable Manager</h1>
                     <div className="flex items-center space-x-2 mt-1">
                         <span className="h-1 w-1 bg-indigo-600 rounded-full animate-pulse"></span>
-                        <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[8px]">Automated Academic Engine • KAHE CMS</p>
+                        <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[8px]">Academic Engine • KAHE CMS</p>
                     </div>
                 </div>
 
                 <nav className="flex items-center bg-white p-1 rounded-full shadow-sm border border-slate-100 shrink overflow-hidden">
                     {[
-                        { id: 'DASHBOARD', label: 'OVERVIEW', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
-                        { id: 'SUBJECTS', label: 'CURRICULUM', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-                        { id: 'FACULTY', label: 'ALLOCATION', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-                        { id: 'ROOMS', label: 'SPACES', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
-                        { id: 'GENERATOR', label: 'ENGINE', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-                        { id: 'VIEW', label: 'MATRIX', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-                        { id: 'REPORTS', label: 'REPORTS', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-                        { id: 'SETTINGS', label: 'CONFIG', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+                        { id: 'DASHBOARD', label: 'Overview', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+                        { id: 'SUBJECTS', label: 'Curriculum', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+                        { id: 'FACULTY', label: 'Allocation', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+                        { id: 'ROOMS', label: 'Spaces', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
+                        { id: 'GENERATOR', label: 'Engine', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+                        { id: 'VIEW', label: 'Matrix', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+                        { id: 'REPORTS', label: 'Reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+                        { id: 'SETTINGS', label: 'Config', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
                     ].filter(tab => {
                         const roles = {
                             'DASHBOARD': ['admin', 'dean', 'hod'],
@@ -311,23 +311,23 @@ const TimetableManager = () => {
 
             <main className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {view === 'DASHBOARD' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
                         {[
                             { label: 'DEPARTMENTS', value: stats.total_departments || 0, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5', color: 'text-blue-600', bg: 'bg-blue-50' },
-                            { label: 'CURRICULUM', value: stats.total_subjects || 0, icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', color: 'text-indigo-600', bg: 'bg-indigo-50', large: true },
+                            { label: 'CURRICULUM', value: stats.total_subjects || 0, icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', color: 'text-indigo-600', bg: 'bg-indigo-50' },
                             { label: 'FACULTY COUNT', value: stats.total_faculties || 0, icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', color: 'text-violet-600', bg: 'bg-violet-50' },
                             { label: 'CLASSROOMS', value: stats.total_classrooms || 0, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                            { label: 'ACTIVE SESSIONS', value: stats.active || 0, icon: 'M13 10V3L4 14h7v7l9-11h-7z', color: 'text-amber-500', bg: 'bg-amber-50' },
+                            { label: 'ACTIVE SESSIONS', value: stats.active || 0, icon: 'M13 10V3L4 14h7v7l9-11h-7z', color: 'text-amber-600', bg: 'bg-amber-50' },
                             { label: 'GENERATED SLOTS', value: timetables.length, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2', color: 'text-sky-600', bg: 'bg-sky-50' },
-                            { label: 'ROOM UTILIZATION', value: `${utilizationReport.length > 0 ? Math.round(utilizationReport.reduce((a,b)=>a+b.utilization_rate,0)/utilizationReport.length) : 0}%`, icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10', color: 'text-slate-500', bg: 'bg-slate-50' },
-                            { label: 'SECURITY ALERTS', value: stats.conflict_alerts || 0, icon: 'M12 8v4m0 4h.01', color: 'text-rose-500', bg: 'bg-rose-50' }
+                            { label: 'ROOM UTILIZATION', value: `${utilizationReport.length > 0 ? Math.round(utilizationReport.reduce((a,b)=>a+b.utilization_rate,0)/utilizationReport.length) : 0}%`, icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10', color: 'text-slate-600', bg: 'bg-slate-50' },
+                            { label: 'SECURITY ALERTS', value: stats.conflict_alerts || 0, icon: 'M12 8v4m0 4h.01', color: 'text-rose-600', bg: 'bg-rose-50' }
                         ].map((item, idx) => (
-                            <div key={idx} className={`bg-white p-8 rounded-[2.5rem] border border-slate-100 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-1 ${item.large ? 'shadow-[0_20px_50px_-15px_rgba(0,0,0,0.1)] scale-105 z-10' : 'shadow-sm hover:shadow-xl'}`}>
-                                <div className={`p-4 rounded-2xl mb-4 ${item.bg} ${item.color}`}>
-                                    <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={item.icon} /></svg>
+                            <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col items-center text-center transition-all duration-300 hover:shadow-md hover:border-indigo-200">
+                                <div className={`p-2.5 rounded-xl mb-3 ${item.bg} ${item.color}`}>
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={item.icon} /></svg>
                                 </div>
-                                <p className={`text-4xl font-black ${item.color} tracking-tight`}>{item.value}</p>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-3">{item.label}</p>
+                                <p className={`text-2xl font-black ${item.color} tracking-tight`}>{item.value}</p>
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1.5 leading-none">{item.label}</p>
                             </div>
                         ))}
                     </div>
@@ -418,32 +418,14 @@ const TimetableManager = () => {
 
                 {view === 'FACULTY' && (
                     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white">
-                            <div>
-                                <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">FACULTY RESOURCE MAPPING</h2>
-                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-none">Allocate subjects to professors</p>
-                            </div>
-                            {['admin', 'dean'].includes(role) && (
-                                <button
-                                    onClick={handleClearAssignments}
-                                    className="bg-white border-2 border-rose-600 rounded-xl px-6 py-2.5 shadow-sm transition-all hover:bg-rose-50 active:scale-95 flex items-center space-x-3 group"
-                                >
-                                    <svg className="h-4 w-4 text-rose-600 transition-transform duration-700 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                    <span className="text-rose-600 font-black text-[10px] uppercase tracking-widest">Refresh</span>
-                                </button>
-                            )}
+                        <div className="p-8 border-b border-slate-100">
+                            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Faculty Resource Mapping</h2>
+                            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Allocate subjects to professors</p>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50/50 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                                    <tr>
-                                        <th className="p-8">FACULTY</th>
-                                        <th className="p-8">ID</th>
-                                        <th className="p-8 text-center">ASSIGNED LOAD</th>
-                                        <th className="p-8 text-center">OPERATION</th>
-                                    </tr>
+                                    <tr><th className="p-8">Faculty</th><th className="p-8">ID</th><th className="p-8">Specialization</th><th className="p-8 text-center">Operation</th></tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {faculties.slice((facultyPage - 1) * FACULTY_PER_PAGE, facultyPage * FACULTY_PER_PAGE).map(f => {
@@ -470,19 +452,20 @@ const TimetableManager = () => {
                                                             </button>
                                                         </div>
 
-                                        {myAssignments.length > 0 ? (
-                                            myAssignments.map(a => (
-                                                <div key={a.id} className="group relative">
-                                                    <span className="text-[8px] font-black bg-white text-indigo-600 border border-indigo-100 px-3 py-1.5 rounded-lg uppercase tracking-tight shadow-sm flex items-center gap-2">
-                                                        <span className="h-1 w-1 bg-indigo-400 rounded-full"></span>
-                                                        {a.subject?.name}
-                                                        <span className="opacity-40 font-bold ml-1 italic">(S{a.semester_id})</span>
-                                                    </span>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest italic">No Curriculum Mapped</span>
-                                        )}
+                                                        {/* Subjects Section */}
+                                                        <div className="flex flex-wrap gap-1.5 border-l border-slate-100 pl-6 text-left">
+                                                            {myAssignments.length > 0 ? (
+                                                                myAssignments.map(a => (
+                                                                    <span key={a.id} className="text-[8px] font-black bg-white text-indigo-600 border border-indigo-100 px-3 py-1.5 rounded-lg uppercase tracking-tight shadow-sm flex items-center gap-2">
+                                                                        <span className="h-1 w-1 bg-indigo-400 rounded-full"></span>
+                                                                        {a.subject?.name}
+                                                                        <span className="opacity-40 font-bold ml-1 italic">(S{a.semester_id})</span>
+                                                                    </span>
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest italic">No Curriculum Mapped</span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="p-8 text-center">
@@ -506,50 +489,47 @@ const TimetableManager = () => {
                             if (totalPages <= 1) return null;
                             const getPageNumbers = () => {
                                 const pages = [];
+                                const maxVisible = 5;
                                 let start = Math.max(1, facultyPage - 2);
-                                let end = Math.min(totalPages, start + 4);
-                                if (end === totalPages) start = Math.max(1, end - 4);
-                                if (start < 1) start = 1;
+                                let end = Math.min(totalPages, start + maxVisible - 1);
+                                if (end === totalPages) start = Math.max(1, end - maxVisible + 1);
                                 for (let i = start; i <= end; i++) pages.push(i);
                                 return pages;
                             };
                             return (
-                                <div className="flex items-center justify-between px-8 py-6 border-t border-slate-100 bg-slate-50/20">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <div className="flex items-center justify-between px-8 py-8 border-t border-slate-100 bg-slate-50/10">
+                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
                                         Showing {Math.min((facultyPage - 1) * FACULTY_PER_PAGE + 1, faculties.length)} to {Math.min(facultyPage * FACULTY_PER_PAGE, faculties.length)} of {faculties.length} Records
                                     </p>
-                                    <div className="flex items-center gap-2">
-                                        {/* Back Button */}
+                                    <div className="flex items-center gap-3">
                                         <button
                                             disabled={facultyPage === 1}
                                             onClick={() => setFacultyPage(p => Math.max(1, p - 1))}
-                                            className="flex items-center px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                            className="flex items-center px-6 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-500 text-[11px] font-bold hover:bg-slate-50 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
                                         >
-                                            <svg className="h-3 w-3 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                                            <svg className="h-3 w-3 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                                             Back
                                         </button>
 
-                                        {/* Page Numbers */}
-                                        <div className="flex items-center gap-1.5 mx-2">
+                                        <div className="flex items-center gap-2 mx-1">
                                             {getPageNumbers().map(num => (
                                                 <button
                                                     key={num}
                                                     onClick={() => setFacultyPage(num)}
-                                                    className={`w-9 h-10 flex items-center justify-center rounded-lg text-[11px] font-black transition-all ${facultyPage === num ? 'bg-black text-white shadow-lg shadow-black/20' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                                                    className={`w-10 h-10 flex items-center justify-center rounded-lg text-[12px] font-black transition-all ${facultyPage === num ? 'bg-black text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                                                 >
                                                     {num}
                                                 </button>
                                             ))}
                                         </div>
 
-                                        {/* Next Button */}
                                         <button
                                             disabled={facultyPage === totalPages}
                                             onClick={() => setFacultyPage(p => Math.min(totalPages, p + 1))}
-                                            className="flex items-center px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                            className="flex items-center px-6 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-500 text-[11px] font-bold hover:bg-slate-50 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
                                         >
                                             Next
-                                            <svg className="h-3 w-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                            <svg className="h-3 w-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                                         </button>
                                     </div>
                                 </div>
