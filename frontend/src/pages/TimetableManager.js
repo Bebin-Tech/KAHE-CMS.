@@ -495,42 +495,39 @@ const TimetableManager = () => {
                                 return pages;
                             };
                             return (
-                                <div className="flex items-center justify-between px-8 py-6 border-t border-slate-100 bg-slate-50/30">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <div className="flex items-center justify-between px-8 py-8 border-t border-slate-100 bg-slate-50/10">
+                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
                                         Showing {Math.min((facultyPage - 1) * FACULTY_PER_PAGE + 1, faculties.length)} to {Math.min(facultyPage * FACULTY_PER_PAGE, faculties.length)} of {faculties.length} Records
                                     </p>
-                                    <div className="flex items-center gap-2">
-                                        {/* Back Button */}
+                                    <div className="flex items-center gap-3">
                                         <button
                                             disabled={facultyPage === 1}
                                             onClick={() => setFacultyPage(p => Math.max(1, p - 1))}
-                                            className="flex items-center px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                            className="flex items-center px-6 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-500 text-[11px] font-bold hover:bg-slate-50 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
                                         >
-                                            <svg className="h-3 w-3 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
+                                            <svg className="h-3 w-3 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                                             Back
                                         </button>
 
-                                        {/* Page Numbers */}
-                                        <div className="flex items-center gap-1.5 mx-2">
+                                        <div className="flex items-center gap-2 mx-1">
                                             {getPageNumbers().map(num => (
                                                 <button
                                                     key={num}
                                                     onClick={() => setFacultyPage(num)}
-                                                    className={`w-9 h-10 flex items-center justify-center rounded-lg text-[11px] font-black transition-all ${facultyPage === num ? 'bg-black text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                                                    className={`w-10 h-10 flex items-center justify-center rounded-lg text-[12px] font-black transition-all ${facultyPage === num ? 'bg-black text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                                                 >
                                                     {num}
                                                 </button>
                                             ))}
                                         </div>
 
-                                        {/* Next Button */}
                                         <button
                                             disabled={facultyPage === totalPages}
                                             onClick={() => setFacultyPage(p => Math.min(totalPages, p + 1))}
-                                            className="flex items-center px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                            className="flex items-center px-6 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-500 text-[11px] font-bold hover:bg-slate-50 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
                                         >
                                             Next
-                                            <svg className="h-3 w-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                                            <svg className="h-3 w-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                                         </button>
                                     </div>
                                 </div>
