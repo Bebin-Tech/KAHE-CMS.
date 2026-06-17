@@ -165,8 +165,11 @@ const TimetableManager = () => {
             try {
                 await API.delete('/timetables');
                 await fetchData();
-                alert("Timetable Purged");
-            } catch (err) { alert("Action failed"); }
+                alert("Timetable Purged Successfully");
+            } catch (err) {
+                const detail = err.response?.data?.detail || "Action failed. Check institutional authorization.";
+                alert(detail);
+            }
         }
     };
 

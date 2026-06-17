@@ -283,6 +283,20 @@ def delete_subject(id: int, db: Session = Depends(database.get_db), admin: model
 @api_router.get("/timetables", response_model=List[schemas.Timetable])
 def list_timetables(db: Session = Depends(database.get_db)): return db.query(models.Timetable).all()
 
+@api_router.delete("/timetables")
+def clear_timetables(db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    try:
+        # Clear child dependencies first
+        db.execute(text("DELETE FROM conflicts"))
+        # Clear main timetable registry
+        db.query(models.Timetable).delete()
+        db.commit()
+        return {"ok": True, "detail": "Master schedule purged successfully."}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Purge Error: {e}")
+        raise HTTPException(500, detail=f"Purge operation failed: {str(e)}")
+
 @api_router.post("/generate-timetable")
 def generate_timetable(semester_type: Optional[str] = None, semester_id: Optional[int] = None, db: Session = Depends(database.get_db)):
     """Advanced Institutional Scheduling Engine (V3)"""
@@ -650,4 +664,5 @@ if os.path.exists(frontend_path):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Changed to 8080 to avoid conflict with existing service on 8000
+    uvicorn.run(app, host="0.0.0.0", port=8080)
