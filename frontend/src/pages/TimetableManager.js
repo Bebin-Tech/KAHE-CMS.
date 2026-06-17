@@ -259,16 +259,16 @@ const TimetableManager = () => {
 
     return (
         <div className="p-4 sm:p-6 lg:p-10 bg-[#f8fafc] min-h-screen print:bg-white print:p-0">
-            <header className="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 print:hidden">
-                <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tightest">Timetable Manager</h1>
-                    <div className="flex items-center space-x-2 mt-2">
-                        <span className="h-1.5 w-1.5 bg-indigo-600 rounded-full animate-pulse"></span>
-                        <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[9px]">Automated Academic Engine • KAHE CMS</p>
+            <header className="mb-6 flex flex-col lg:flex-row justify-between items-center gap-4 print:hidden">
+                <div className="shrink-0">
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tightest leading-none">Timetable Manager</h1>
+                    <div className="flex items-center space-x-2 mt-1">
+                        <span className="h-1 w-1 bg-indigo-600 rounded-full animate-pulse"></span>
+                        <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[8px]">Academic Engine • KAHE CMS</p>
                     </div>
                 </div>
 
-                <nav className="flex items-center bg-white p-1 rounded-[1.25rem] shadow-xl shadow-slate-200/40 border border-slate-200 overflow-x-auto no-scrollbar max-w-full">
+                <nav className="flex items-center bg-white p-1 rounded-full shadow-sm border border-slate-100 shrink overflow-hidden">
                     {[
                         { id: 'DASHBOARD', label: 'Overview', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
                         { id: 'SUBJECTS', label: 'Curriculum', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
@@ -276,7 +276,6 @@ const TimetableManager = () => {
                         { id: 'ROOMS', label: 'Spaces', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
                         { id: 'GENERATOR', label: 'Engine', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
                         { id: 'VIEW', label: 'Matrix', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-                        { id: 'PERSONAL', label: 'My Schedule', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
                         { id: 'REPORTS', label: 'Reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
                         { id: 'SETTINGS', label: 'Config', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
                     ].filter(tab => {
@@ -287,7 +286,6 @@ const TimetableManager = () => {
                             'ROOMS': ['admin', 'dean', 'hod'],
                             'GENERATOR': ['admin', 'dean'],
                             'VIEW': ['admin', 'dean', 'hod', 'faculty', 'student'],
-                            'PERSONAL': ['faculty'],
                             'REPORTS': ['admin', 'dean', 'hod'],
                             'SETTINGS': ['admin', 'dean']
                         };
@@ -296,14 +294,14 @@ const TimetableManager = () => {
                         <button
                             key={tab.id}
                             onClick={() => setView(tab.id)}
-                            className={`flex items-center space-x-2 px-4 py-2.5 rounded-[1rem] text-[10px] font-black tracking-widest uppercase transition-all duration-300 relative group ${
+                            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[8.5px] font-black tracking-widest uppercase transition-all duration-300 ${
                                 view === tab.id
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200/50'
-                                : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-50'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50'
                             }`}
                         >
-                            <svg className={`h-4 w-4 ${view === tab.id ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={tab.icon} />
+                            <svg className={`h-3 w-3 ${view === tab.id ? 'text-white' : 'text-slate-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d={tab.icon} />
                             </svg>
                             <span>{tab.label}</span>
                         </button>
@@ -313,10 +311,10 @@ const TimetableManager = () => {
 
             <main className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {view === 'DASHBOARD' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
                         {[
                             { label: 'DEPARTMENTS', value: stats.total_departments || 0, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5', color: 'text-blue-600', bg: 'bg-blue-50' },
-                            { label: 'CURRICULUM', value: stats.total_subjects || 0, icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', color: 'text-indigo-600', bg: 'bg-indigo-50', highlight: true },
+                            { label: 'CURRICULUM', value: stats.total_subjects || 0, icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', color: 'text-indigo-600', bg: 'bg-indigo-50' },
                             { label: 'FACULTY COUNT', value: stats.total_faculties || 0, icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', color: 'text-violet-600', bg: 'bg-violet-50' },
                             { label: 'CLASSROOMS', value: stats.total_classrooms || 0, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5', color: 'text-emerald-600', bg: 'bg-emerald-50' },
                             { label: 'ACTIVE SESSIONS', value: stats.active || 0, icon: 'M13 10V3L4 14h7v7l9-11h-7z', color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -324,12 +322,12 @@ const TimetableManager = () => {
                             { label: 'ROOM UTILIZATION', value: `${utilizationReport.length > 0 ? Math.round(utilizationReport.reduce((a,b)=>a+b.utilization_rate,0)/utilizationReport.length) : 0}%`, icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10', color: 'text-slate-600', bg: 'bg-slate-50' },
                             { label: 'SECURITY ALERTS', value: stats.conflict_alerts || 0, icon: 'M12 8v4m0 4h.01', color: 'text-rose-600', bg: 'bg-rose-50' }
                         ].map((item, idx) => (
-                            <div key={idx} className={`bg-white p-10 rounded-[2.5rem] border border-slate-200 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-1 ${item.highlight ? 'shadow-2xl shadow-indigo-200 scale-105 z-10' : 'shadow-sm hover:shadow-xl'}`}>
-                                <div className={`p-4 rounded-[1.5rem] mb-6 ${item.bg} ${item.color}`}>
-                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={item.icon} /></svg>
+                            <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col items-center text-center transition-all duration-300 hover:shadow-md hover:border-indigo-200">
+                                <div className={`p-2.5 rounded-xl mb-3 ${item.bg} ${item.color}`}>
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={item.icon} /></svg>
                                 </div>
-                                <p className={`text-5xl font-black ${item.color} tracking-tighter`}>{item.value}</p>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-3 leading-none">{item.label}</p>
+                                <p className={`text-2xl font-black ${item.color} tracking-tight`}>{item.value}</p>
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1.5 leading-none">{item.label}</p>
                             </div>
                         ))}
                     </div>
