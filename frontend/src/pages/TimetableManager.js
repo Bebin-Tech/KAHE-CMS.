@@ -19,6 +19,7 @@ const TimetableManager = () => {
     const [timetables, setTimetables] = useState([]);
     const [workingDays, setWorkingDays] = useState([]);
     const [periods, setPeriods] = useState([]);
+    const [facultyAssignments, setFacultyAssignments] = useState([]);
 
     const [showModal, setShowModal] = useState(false);
     const [modalType, setModalType] = useState('');
@@ -39,6 +40,8 @@ const TimetableManager = () => {
 
     const [selectedRoomId, setSelectedRoomId] = useState('');
     const [selectedFacultyId, setSelectedFacultyId] = useState('');
+    const [facultyPage, setFacultyPage] = useState(1);
+    const FACULTY_PER_PAGE = 6;
 
     const fetchData = useCallback(async () => {
         try {
@@ -421,29 +424,116 @@ const TimetableManager = () => {
                                     <tr><th className="p-8">Faculty</th><th className="p-8">ID</th><th className="p-8">Specialization</th><th className="p-8 text-center">Operation</th></tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {faculties.map(f => (
-                                        <tr key={f.id} className="hover:bg-slate-50/50 transition text-sm">
-                                            <td className="p-8">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs">{f.name.charAt(0)}</div>
-                                                    <span className="font-black text-slate-800 uppercase">{f.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-8"><span className="text-[10px] font-bold text-slate-400 tracking-wider">@{f.faculty_id}</span></td>
-                                            <td className="p-8"><span className="text-[8px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-3 py-1.5 rounded-lg">Institutional Faculty</span></td>
-                                            <td className="p-8 text-center">
-                                                <button
-                                                    onClick={() => { setSelectedFaculty(f); setModalType('FACULTY_ASSIGN'); setShowModal(true); }}
-                                                    className="px-6 py-2.5 border-2 border-indigo-600 text-indigo-600 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-indigo-600 hover:text-white transition-all duration-300"
-                                                >
-                                                    Assign Load
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {faculties.slice((facultyPage - 1) * FACULTY_PER_PAGE, facultyPage * FACULTY_PER_PAGE).map(f => {
+                                        const myAssignments = facultyAssignments.filter(a => parseInt(a.faculty_id) === parseInt(f.id));
+                                        return (
+                                            <tr key={f.id} className="hover:bg-slate-50/50 transition text-sm">
+                                                <td className="p-8">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs">{f.name.charAt(0)}</div>
+                                                        <span className="font-black text-slate-800 uppercase">{f.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-8"><span className="text-[10px] font-bold text-slate-400 tracking-wider">@{f.faculty_id}</span></td>
+                                                <td className="p-8">
+                                                    <div className="flex items-center space-x-6">
+                                                        {/* Load Section */}
+                                                        <div className="inline-flex items-center space-x-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 min-w-[110px]">
+                                                            <span className="text-xs font-black text-slate-700">{f.assigned_load_hours || 0} Hrs</span>
+                                                            <button
+                                                                onClick={() => { setSelectedFaculty(f); setModalType('FACULTY_LOAD'); setShowModal(true); }}
+                                                                className="p-1.5 bg-white border border-slate-200 rounded-lg text-indigo-600 hover:border-indigo-500 transition-all shadow-sm"
+                                                            >
+                                                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Subjects Section */}
+                                                        <div className="flex flex-wrap gap-1.5 border-l border-slate-100 pl-6 text-left">
+                                                            {myAssignments.length > 0 ? (
+                                                                myAssignments.map(a => (
+                                                                    <span key={a.id} className="text-[8px] font-black bg-white text-indigo-600 border border-indigo-100 px-3 py-1.5 rounded-lg uppercase tracking-tight shadow-sm flex items-center gap-2">
+                                                                        <span className="h-1 w-1 bg-indigo-400 rounded-full"></span>
+                                                                        {a.subject?.name}
+                                                                        <span className="opacity-40 font-bold ml-1 italic">(S{a.semester_id})</span>
+                                                                    </span>
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest italic">No Curriculum Mapped</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-8 text-center">
+                                                    <button
+                                                        onClick={() => { setSelectedFaculty(f); setModalType('FACULTY_ASSIGN'); setShowModal(true); }}
+                                                        className="px-6 py-2.5 border-2 border-indigo-600 text-indigo-600 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-indigo-600 hover:text-white transition-all duration-300"
+                                                    >
+                                                        Map Subject
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Bar */}
+                        {(() => {
+                            const totalPages = Math.ceil(faculties.length / FACULTY_PER_PAGE);
+                            if (totalPages <= 1) return null;
+                            const getPageNumbers = () => {
+                                const pages = [];
+                                const maxVisible = 5;
+                                let start = Math.max(1, facultyPage - 2);
+                                let end = Math.min(totalPages, start + maxVisible - 1);
+                                if (end === totalPages) start = Math.max(1, end - maxVisible + 1);
+                                for (let i = start; i <= end; i++) pages.push(i);
+                                return pages;
+                            };
+                            return (
+                                <div className="flex items-center justify-between px-8 py-6 border-t border-slate-100 bg-slate-50/30">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Showing {Math.min((facultyPage - 1) * FACULTY_PER_PAGE + 1, faculties.length)} to {Math.min(facultyPage * FACULTY_PER_PAGE, faculties.length)} of {faculties.length} Records
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        {/* Back Button */}
+                                        <button
+                                            disabled={facultyPage === 1}
+                                            onClick={() => setFacultyPage(p => Math.max(1, p - 1))}
+                                            className="flex items-center px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            <svg className="h-3 w-3 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
+                                            Back
+                                        </button>
+
+                                        {/* Page Numbers */}
+                                        <div className="flex items-center gap-1.5 mx-2">
+                                            {getPageNumbers().map(num => (
+                                                <button
+                                                    key={num}
+                                                    onClick={() => setFacultyPage(num)}
+                                                    className={`w-9 h-10 flex items-center justify-center rounded-lg text-[11px] font-black transition-all ${facultyPage === num ? 'bg-black text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                                                >
+                                                    {num}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Next Button */}
+                                        <button
+                                            disabled={facultyPage === totalPages}
+                                            onClick={() => setFacultyPage(p => Math.min(totalPages, p + 1))}
+                                            className="flex items-center px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            Next
+                                            <svg className="h-3 w-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
 
