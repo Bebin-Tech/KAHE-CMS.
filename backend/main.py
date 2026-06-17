@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text, and_
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from contextlib import asynccontextmanager
@@ -52,7 +52,8 @@ def migrate_db(db: Session):
         # 2. Users alignment
         user_updates = {
             "faculty_id": "VARCHAR", "department_id": "INTEGER", "designation": "VARCHAR",
-            "max_hours_per_day": "INTEGER", "max_hours_per_week": "INTEGER", "availability_status": "VARCHAR"
+            "max_hours_per_day": "INTEGER", "max_hours_per_week": "INTEGER", 
+            "availability_status": "VARCHAR", "assigned_load_hours": "INTEGER"
         }
         for col, col_type in user_updates.items(): add_col("users", col, col_type)
 
@@ -231,21 +232,29 @@ def get_active_session(room_id: int, db: Session = Depends(database.get_db)):
     return session
 
 @api_router.post("/start-class", response_model=schemas.ClassSession)
-def start_class(data: schemas.ClassSessionCreate, db: Session = Depends(database.get_db)):
+def start_class(data: schemas.ClassSessionCreate, db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_user)):
     # Check if room is already in use
     existing = db.query(models.ClassSession).filter(models.ClassSession.room_id == data.room_id, models.ClassSession.status == "ACTIVE").first()
     if existing: raise HTTPException(400, "Room already in use")
     
-    db_session = models.ClassSession(**data.dict(), faculty_user_id=1, status="ACTIVE") # Default user_id for now
+    db_session = models.ClassSession(**data.model_dump(), faculty_user_id=user.id, status="ACTIVE")
     db.query(models.Room).filter(models.Room.id == data.room_id).update({"status": "IN_USE"})
     db.add(db_session); db.commit(); db.refresh(db_session); return db_session
 
 @api_router.post("/end-class/{session_id}")
-def end_class(session_id: int, db: Session = Depends(database.get_db)):
+def end_class(session_id: int, db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_user)):
     session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
-    if not session: raise HTTPException(404)
+       if not session: raise HTTPException(404, detail="Session not found")
+    
+    # Ownership Check: Only the person who started the class (or an admin) can end it
+    if session.faculty_user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Access denied. Only the faculty member who started this session can conclude it."
+        )
+
     session.status = "COMPLETED"
-    session.end_time = datetime.utcnow()
+    session.end_time = datetime.now(timezone.utc)
     db.query(models.Room).filter(models.Room.id == session.room_id).update({"status": "AVAILABLE"})
     db.commit(); return {"ok": True}
 
@@ -284,7 +293,7 @@ def delete_subject(id: int, db: Session = Depends(database.get_db), admin: model
 def list_timetables(db: Session = Depends(database.get_db)): return db.query(models.Timetable).all()
 
 @api_router.post("/generate-timetable")
-def generate_timetable(semester_type: Optional[str] = None, semester_id: Optional[int] = None, db: Session = Depends(database.get_db)):
+def generate_timetable(semester_type: Optional[str] = None, semester_id: Optional[int] = None, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
     """Advanced Institutional Scheduling Engine (V3)"""
     # 1. HARD SYNC: If DB is empty, fix it IMMEDIATELY in this session
     if db.query(models.Semester).count() == 0 or db.query(models.Room).count() == 0:
@@ -383,14 +392,18 @@ def get_faculty_workload(db: Session = Depends(database.get_db)):
     workload = []
     for f in faculties:
         assigned_periods = db.query(models.Timetable).filter(models.Timetable.faculty_id == f.id).count()
-        remaining = max(0, (f.max_hours_per_week or 24) - assigned_periods)
+        total_assigned = assigned_periods + (f.assigned_load_hours or 0)
+        remaining = max(0, (f.max_hours_per_week or 24) - total_assigned)
+        
         workload.append({
             "faculty_name": f.name,
             "faculty_id": f.faculty_id,
-            "total_hours_assigned": assigned_periods,
+            "manual_load": f.assigned_load_hours or 0,
+            "timetable_load": assigned_periods,
+            "total_hours_assigned": total_assigned,
             "max_hours_per_week": f.max_hours_per_week or 24,
             "remaining_hours": remaining,
-            "utilization_rate": round((assigned_periods / (f.max_hours_per_week or 24)) * 100, 1) if f.max_hours_per_week else 0
+            "utilization_rate": round((total_assigned / (f.max_hours_per_week or 24)) * 100, 1) if f.max_hours_per_week else 0
         })
     return workload
 
@@ -415,6 +428,7 @@ def get_room_utilization(db: Session = Depends(database.get_db)):
 @api_router.get("/dashboard-stats")
 def get_stats(db: Session = Depends(database.get_db)):
     try:
+        tt_count = db.query(models.Timetable).count()
         return {
             "rooms": db.query(models.Room).count(),
             "active": db.query(models.ClassSession).filter(models.ClassSession.status == "ACTIVE").count(),
@@ -425,7 +439,7 @@ def get_stats(db: Session = Depends(database.get_db)):
             "total_faculties": db.query(models.User).filter(models.User.role == "faculty").count(),
             "total_classrooms": db.query(models.Room).filter(models.Room.type == "Classroom").count(),
             "total_labs": db.query(models.Room).filter(models.Room.type == "Lab").count(),
-            "generated_timetables": db.query(models.Timetable).count() // 36 if db.query(models.Timetable).count() > 0 else 0,
+            "generated_timetables": tt_count // 36 if tt_count > 0 else 0,
             "bookings": db.query(models.Booking).count(),
             "pending_approvals": db.query(models.Timetable).filter(models.Timetable.status == "PENDING").count(),
             "approved_timetables": db.query(models.Timetable).filter(models.Timetable.status == "APPROVED").count(),

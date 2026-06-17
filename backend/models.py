@@ -42,6 +42,7 @@ class User(Base):
     # Faculty specific
     max_hours_per_day = Column(Integer, default=6)
     max_hours_per_week = Column(Integer, default=24)
+    assigned_load_hours = Column(Integer, default=0)
     availability_status = Column(String, default="Available") # Available, On Leave
     
     department = relationship("Department", back_populates="users")

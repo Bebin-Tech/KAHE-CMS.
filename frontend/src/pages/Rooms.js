@@ -138,7 +138,8 @@ const Rooms = () => {
                 fetchRooms();
             }
         } catch (err) {
-            alert('Failed to end class');
+            const detail = err.response?.data?.detail;
+            alert(typeof detail === 'string' ? detail : 'Failed to end class');
         }
     };
 
@@ -324,15 +325,14 @@ const Rooms = () => {
                                             Start Class
                                         </button>
                                     ) : (
-                                        // ALLOW OVERRIDE: Admin, Dean, Principal, HOD, the Original Faculty, OR ANYONE if session is STALE
-                                        (['admin', 'dean', 'principal', 'hod'].includes(role?.toLowerCase()) ||
-                                         activeSessions[room.id]?.faculty_user_id === currentUserId ||
-                                         isStale(activeSessions[room.id]?.start_time)) ? (
+                                        // ONLY the faculty who started the session (currentUserId) or an ADMIN can see the End Session button
+                                        (role?.toLowerCase() === 'admin' ||
+                                         activeSessions[room.id]?.faculty_user_id === currentUserId) ? (
                                             <button
                                                 onClick={() => handleEndClass(room.id)}
                                                 className="w-full bg-rose-600 text-white py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-rose-700 transition-all shadow-lg shadow-rose-900/20 active:scale-95"
                                             >
-                                                {isStale(activeSessions[room.id]?.start_time) ? 'Force End (Stale)' : 'End Session'}
+                                                End Session
                                             </button>
                                         ) : (
                                             <div className="w-full bg-slate-800 text-slate-500 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] text-center opacity-50">
