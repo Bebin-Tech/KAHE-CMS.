@@ -1,31 +1,26 @@
 import logging
 import os
 import random
-import io
-from contextlib import asynccontextmanager
-from typing import List, Optional
-from datetime import datetime, timezone
-
-from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, status, APIRouter, Body, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, text, and_
+from typing import List, Optional
+from datetime import datetime
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, text
-
+from contextlib import asynccontextmanager
+import io
 try:
     from fpdf import FPDF
 except ImportError:
     FPDF = None
 
 try:
-    import models
-    import schemas
-    import auth
-    import database
-except ImportError:
     from . import models, schemas, auth, database
+except ImportError:
+    import models, schemas, auth, database
 
 # Configure institutional logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -57,8 +52,7 @@ def migrate_db(db: Session):
         # 2. Users alignment
         user_updates = {
             "faculty_id": "VARCHAR", "department_id": "INTEGER", "designation": "VARCHAR",
-            "max_hours_per_day": "INTEGER", "max_hours_per_week": "INTEGER", 
-            "availability_status": "VARCHAR", "assigned_load_hours": "INTEGER"
+            "max_hours_per_day": "INTEGER", "max_hours_per_week": "INTEGER", "availability_status": "VARCHAR"
         }
         for col, col_type in user_updates.items(): add_col("users", col, col_type)
 
@@ -131,34 +125,16 @@ def sync_registry():
         if db.query(models.User).filter(models.User.email == "admin@kahe.edu").count() == 0:
             db.add(models.User(name="System Admin", email="admin@kahe.edu", password=auth.get_password_hash("admin123"), role="admin", faculty_id="admin_01"))
         if db.query(models.User).filter(models.User.role == "faculty").count() == 0:
-            facs = [
-                ("Dr. Arul", "arul@kahe.edu", "FAC01"), 
-                ("Mrs. Priya", "priya@kahe.edu", "FAC02")
-            ]
+            facs = [("Dr. Arul", "arul@kahe.edu", "FAC01"), ("Mrs. Priya", "priya@kahe.edu", "FAC02")]
             for n, e, fid in facs:
-                db.add(models.User(
-                    name=n, 
-                    email=e, 
-                    faculty_id=fid, 
-                    password=auth.get_password_hash("faculty123"), 
-                    role="faculty", 
-                    department_id=dept.id, 
-                    max_hours_per_week=24
-                ))
+                db.add(models.User(name=n, email=e, faculty_id=fid, password=auth.get_password_hash("faculty123"), role="faculty", department_id=dept.id, max_hours_per_week=24))
         
         # 4. Curriculum
         sem3 = db.query(models.Semester).filter(models.Semester.number == 3).first()
         if sem3 and db.query(models.Subject).filter(models.Subject.semester_id == sem3.id).count() == 0:
             subs = [("Operating Systems", 4), ("Computer Networks", 4), ("Python Lab", 3)]
             for sn, hrs in subs:
-                s_type = "Theory" if "Lab" not in sn else "Practical"
-                db.add(models.Subject(
-                    name=sn, 
-                    department_name="Computer Science", 
-                    weekly_hours=hrs, 
-                    semester_id=sem3.id, 
-                    type=s_type
-                ))
+                db.add(models.Subject(name=sn, department_name="Computer Science", weekly_hours=hrs, semester_id=sem3.id, type="Theory" if "Lab" not in sn else "Practical"))
         
         # 5. Rooms
         if db.query(models.Room).count() == 0:
@@ -172,7 +148,7 @@ def sync_registry():
         db.close()
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(app: FastAPI):
     sync_registry()
     logger.info("KAHE CMS Initialization Complete.")
     yield
@@ -200,83 +176,44 @@ def login_compat(form_data: OAuth2PasswordRequestForm = Depends(), db: Session =
 def list_users(db: Session = Depends(database.get_db)): return db.query(models.User).all()
 
 @api_router.post("/users", response_model=schemas.User)
-def create_user(
-    u: schemas.UserCreate, 
-    db: Session = Depends(database.get_db), 
-    _admin: models.User = Depends(auth.check_admin)
-):
-    db_u = models.User(**u.model_dump(exclude={"password"}), password=auth.get_password_hash(u.password))
-    db.add(db_u)
-    db.commit()
-    db.refresh(db_u)
-    return db_u
+def create_user(u: schemas.UserCreate, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_u = models.User(**u.dict(exclude={"password"}), password=auth.get_password_hash(u.password))
+    db.add(db_u); db.commit(); db.refresh(db_u); return db_u
 
-@api_router.put("/users/{user_id}", response_model=schemas.User)
-def update_user(
-    user_id: int, 
-    u: schemas.UserUpdate, 
-    db: Session = Depends(database.get_db), 
-    _admin: models.User = Depends(auth.check_admin)
-):
-    db_u = db.query(models.User).filter(models.User.id == user_id).first()
-    if not db_u: 
-        raise HTTPException(404, detail="Identity not found")
-    update_data = u.model_dump(exclude_unset=True)
-    if "password" in update_data and update_data["password"]: 
-        update_data["password"] = auth.get_password_hash(update_data["password"])
-    for k, v in update_data.items(): 
-        setattr(db_u, k, v)
-    db.commit()
-    db.refresh(db_u)
-    return db_u
+@api_router.put("/users/{id}", response_model=schemas.User)
+def update_user(id: int, u: schemas.UserUpdate, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_u = db.query(models.User).filter(models.User.id == id).first()
+    if not db_u: raise HTTPException(404, detail="Identity not found")
+    update_data = u.dict(exclude_unset=True)
+    if "password" in update_data and update_data["password"]: update_data["password"] = auth.get_password_hash(update_data["password"])
+    for k, v in update_data.items(): setattr(db_u, k, v)
+    db.commit(); db.refresh(db_u); return db_u
 
-@api_router.delete("/users/{user_id}")
-def purge_user(user_id: int, db: Session = Depends(database.get_db), _admin: models.User = Depends(auth.check_admin)):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user: 
-        raise HTTPException(404)
+@api_router.delete("/users/{id}")
+def purge_user(id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    user = db.query(models.User).filter(models.User.id == id).first()
+    if not user: raise HTTPException(404)
     try:
-        db.delete(user)
-        db.commit()
-        return {"ok": True}
-    except Exception as e:
-        logger.error(f"Purge error: {e}")
-        db.rollback()
-        raise HTTPException(400, detail="Purge failed. Active institutional dependencies detected.")
+        db.delete(user); db.commit(); return {"ok": True}
+    except:
+        db.rollback(); raise HTTPException(400, detail="Purge failed. Active institutional dependencies detected.")
 
 # --- FACULTY DETAILS ---
 @api_router.get("/faculty-assignments", response_model=List[schemas.FacultyAssignment])
-def list_assignments(db: Session = Depends(database.get_db)):
-    return db.query(models.FacultyAssignment).options(joinedload(models.FacultyAssignment.subject)).all()
+def list_assignments(db: Session = Depends(database.get_db)): return db.query(models.FacultyAssignment).all()
 
 @api_router.post("/faculty-assignments")
 def assign_faculty(data: schemas.FacultyAssignmentBase, db: Session = Depends(database.get_db)):
-    db_assignment = models.FacultyAssignment(**data.model_dump())
-    db.add(db_assignment)
-    db.commit()
-    return {"ok": True}
-
-@api_router.delete("/faculty-assignments")
-def clear_assignments(db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
-    db.query(models.FacultyAssignment).delete()
-    db.commit()
-    return {"ok": True}
+    db_assignment = models.FacultyAssignment(**data.dict())
+    db.add(db_assignment); db.commit(); return {"ok": True}
 
 # --- ROOMS ---
 @api_router.get("/rooms", response_model=List[schemas.Room])
 def list_rooms(db: Session = Depends(database.get_db)): return db.query(models.Room).all()
 
 @api_router.post("/rooms", response_model=schemas.Room)
-def create_room(
-    r: schemas.RoomCreate, 
-    db: Session = Depends(database.get_db), 
-    _admin: models.User = Depends(auth.check_admin)
-):
-    db_r = models.Room(**r.model_dump())
-    db.add(db_r)
-    db.commit()
-    db.refresh(db_r)
-    return db_r
+def create_room(r: schemas.RoomCreate, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_r = models.Room(**r.dict()); db.add(db_r); db.commit(); db.refresh(db_r); return db_r
 
 @api_router.delete("/rooms/{id}")
 def delete_room(id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
@@ -294,40 +231,21 @@ def get_active_session(room_id: int, db: Session = Depends(database.get_db)):
     return session
 
 @api_router.post("/start-class", response_model=schemas.ClassSession)
-def start_class(
-    data: schemas.ClassSessionCreate, 
-    db: Session = Depends(database.get_db), 
-    user: models.User = Depends(auth.get_current_user)
-):
+def start_class(data: schemas.ClassSessionCreate, db: Session = Depends(database.get_db)):
     # Check if room is already in use
-    existing = db.query(models.ClassSession).filter(
-        models.ClassSession.room_id == data.room_id, 
-        models.ClassSession.status == "ACTIVE"
-    ).first()
-    if existing: 
-        raise HTTPException(400, "Room already in use")
+    existing = db.query(models.ClassSession).filter(models.ClassSession.room_id == data.room_id, models.ClassSession.status == "ACTIVE").first()
+    if existing: raise HTTPException(400, "Room already in use")
     
-    db_session = models.ClassSession(**data.model_dump(), faculty_user_id=user.id, status="ACTIVE")
+    db_session = models.ClassSession(**data.dict(), faculty_user_id=1, status="ACTIVE") # Default user_id for now
     db.query(models.Room).filter(models.Room.id == data.room_id).update({"status": "IN_USE"})
-    db.add(db_session)
-    db.commit()
-    db.refresh(db_session)
-    return db_session
+    db.add(db_session); db.commit(); db.refresh(db_session); return db_session
 
 @api_router.post("/end-class/{session_id}")
-def end_class(session_id: int, db: Session = Depends(database.get_db), user: models.User = Depends(auth.get_current_user)):
+def end_class(session_id: int, db: Session = Depends(database.get_db)):
     session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
-    if not session: raise HTTPException(404, detail="Session not found")
-    
-    # Ownership Check: Only the person who started the class (or an admin) can end it
-    if session.faculty_user_id != user.id and user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Access denied. Only the faculty member who started this session can conclude it."
-        )
-
+    if not session: raise HTTPException(404)
     session.status = "COMPLETED"
-    session.end_time = datetime.now(timezone.utc)
+    session.end_time = datetime.utcnow()
     db.query(models.Room).filter(models.Room.id == session.room_id).update({"status": "AVAILABLE"})
     db.commit(); return {"ok": True}
 
@@ -344,31 +262,15 @@ def clear_class_history(db: Session = Depends(database.get_db)):
 def list_subjects(db: Session = Depends(database.get_db)): return db.query(models.Subject).all()
 
 @api_router.post("/subjects", response_model=schemas.Subject)
-def add_subject(
-    sub: schemas.SubjectCreate, 
-    db: Session = Depends(database.get_db), 
-    _admin: models.User = Depends(auth.check_admin)
-):
-    db_sub = models.Subject(**sub.model_dump())
-    db.add(db_sub)
-    db.commit()
-    db.refresh(db_sub)
-    return db_sub
+def add_subject(sub: schemas.SubjectCreate, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_sub = models.Subject(**sub.dict()); db.add(db_sub); db.commit(); db.refresh(db_sub); return db_sub
 
-@api_router.put("/subjects/{sub_id}", response_model=schemas.Subject)
-def update_subject(
-    sub_id: int, 
-    sub: schemas.SubjectUpdate, 
-    db: Session = Depends(database.get_db), 
-    _admin: models.User = Depends(auth.check_admin)
-):
-    db_sub = db.query(models.Subject).filter(models.Subject.id == sub_id).first()
-    update_data = sub.model_dump(exclude_unset=True)
-    for k, v in update_data.items(): 
-        setattr(db_sub, k, v)
-    db.commit()
-    db.refresh(db_sub)
-    return db_sub
+@api_router.put("/subjects/{id}", response_model=schemas.Subject)
+def update_subject(id: int, sub: schemas.SubjectUpdate, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
+    db_sub = db.query(models.Subject).filter(models.Subject.id == id).first()
+    update_data = sub.dict(exclude_unset=True)
+    for k, v in update_data.items(): setattr(db_sub, k, v)
+    db.commit(); db.refresh(db_sub); return db_sub
 
 @api_router.delete("/subjects/{id}")
 def delete_subject(id: int, db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
@@ -378,178 +280,98 @@ def delete_subject(id: int, db: Session = Depends(database.get_db), admin: model
     db.delete(sub); db.commit(); return {"ok": True}
 
 # --- TIMETABLE & ENGINE ---
+@api_router.get("/timetables", response_model=List[schemas.Timetable])
+def list_timetables(db: Session = Depends(database.get_db)): return db.query(models.Timetable).all()
+
 @api_router.post("/generate-timetable")
-def generate_timetable(
-    semester_type: Optional[str] = None, 
-    semester_id: Optional[int] = None, 
-    db: Session = Depends(database.get_db), 
-    _admin: models.User = Depends(auth.check_admin)
-):
-    """Advanced Institutional Scheduling Engine (V3) with Clash Prevention"""
-    # 1. Registry Self-Repair
+def generate_timetable(semester_type: Optional[str] = None, semester_id: Optional[int] = None, db: Session = Depends(database.get_db)):
+    """Advanced Institutional Scheduling Engine (V3)"""
+    # 1. HARD SYNC: If DB is empty, fix it IMMEDIATELY in this session
     if db.query(models.Semester).count() == 0 or db.query(models.Room).count() == 0:
-        sync_registry()
+        logger.info("Registry empty or incomplete. Performing TOTAL structural repair...")
+        models.Base.metadata.create_all(bind=database.engine)
+        
+        # 1. Periods Setup
+        if db.query(models.PeriodTiming).count() == 0:
+            ps = [
+                (1, 1, "09:00", "09:50", "CLASS"), (2, 2, "09:50", "10:55", "CLASS"),
+                (3, 4, "11:15", "12:00", "CLASS"), (4, 5, "12:00", "12:40", "CLASS")
+            ]
+            for pid, pnum, st, et, pt in ps:
+                db.add(models.PeriodTiming(id=pid, period_number=pnum, start_time=st, end_time=et, type=pt))
+        
+        # 2. Dept & Program
+        dept = db.query(models.Department).filter(models.Department.name == "Computer Science").first()
+        if not dept:
+            dept = models.Department(name="Computer Science", code="CS")
+            db.add(dept); db.flush()
+        prog = db.query(models.Program).filter(models.Program.name == "B.Sc CS").first()
+        if not prog:
+            prog = models.Program(name="B.Sc CS", type="UG", department_id=dept.id)
+            db.add(prog); db.flush()
+        
+        # 3. Sems & Subjects
+        for i in range(1, 7):
+            if not db.query(models.Semester).filter(models.Semester.program_id == prog.id, models.Semester.number == i).first():
+                db.add(models.Semester(number=i, program_id=prog.id, is_active=True))
+        db.flush()
+        
+        # Seed Subjects for both Sem 1 and Sem 3 to ensure data visibility
+        s1 = db.query(models.Semester).filter(models.Semester.program_id == prog.id, models.Semester.number == 1).first()
+        s3 = db.query(models.Semester).filter(models.Semester.program_id == prog.id, models.Semester.number == 3).first()
+        
+        if s1 and db.query(models.Subject).filter(models.Subject.semester_id == s1.id).count() == 0:
+            for sn, hrs in [("Mathematics", 4), ("Technical English", 3), ("Python Programming", 4)]:
+                db.add(models.Subject(name=sn, department_name="Computer Science", weekly_hours=hrs, semester_id=s1.id, type="Theory"))
+        
+        if s3 and db.query(models.Subject).filter(models.Subject.semester_id == s3.id).count() == 0:
+            for sn, hrs in [("Operating Systems", 4), ("Computer Networks", 4)]:
+                db.add(models.Subject(name=sn, department_name="Computer Science", weekly_hours=hrs, semester_id=s3.id, type="Theory"))
+        
+        # 4. Rooms & Faculty
+        if db.query(models.Room).count() == 0:
+            db.add(models.Room(room_number="A-101", type="Classroom", capacity=60, department="Computer Science", status="AVAILABLE"))
+        if db.query(models.User).filter(models.User.role == "faculty").count() == 0:
+            db.add(models.User(name="Dr. Arul", email="arul@kahe.edu", password=auth.get_password_hash("faculty123"), role="faculty", department_id=dept.id))
+        
+        db.commit()
+        logger.info("Total repair complete.")
 
     sem_query = db.query(models.Semester)
-    if semester_id: 
-        sem_query = sem_query.filter(models.Semester.id == semester_id)
+    if semester_id: sem_query = sem_query.filter(models.Semester.id == semester_id)
     elif semester_type:
-        if semester_type.upper() == "ODD": 
-            sem_query = sem_query.filter(models.Semester.number % 2 != 0)
-        elif semester_type.upper() == "EVEN": 
-            sem_query = sem_query.filter(models.Semester.number % 2 == 0)
+        if semester_type.upper() == "ODD": sem_query = sem_query.filter(models.Semester.number % 2 != 0)
+        elif semester_type.upper() == "EVEN": sem_query = sem_query.filter(models.Semester.number % 2 == 0)
     
     target_sems = sem_query.all()
-    if not target_sems: 
-        raise HTTPException(400, "No target semesters found in registry.")
+    if not target_sems: raise HTTPException(400, "No target semesters found.")
 
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    periods = db.query(models.PeriodTiming).filter(
-        models.PeriodTiming.type == "CLASS"
-    ).order_by(models.PeriodTiming.period_number.asc()).all()
+    periods = db.query(models.PeriodTiming).filter(models.PeriodTiming.type == "CLASS").all()
     rooms = db.query(models.Room).all()
     facs = db.query(models.User).filter(models.User.role == "faculty").all()
     
-    if not periods or not rooms or not facs: 
-        raise HTTPException(400, "Institutional Registry missing critical resources (Periods/Rooms/Faculty).")
+    if not periods or not rooms or not facs: raise HTTPException(400, "Registry missing critical resources.")
 
     for sem in target_sems:
-        # Clear existing for this semester
         db.query(models.Timetable).filter(models.Timetable.semester_id == sem.id).delete()
         subjects = db.query(models.Subject).filter(models.Subject.semester_id == sem.id).all()
-        if not subjects: 
-            continue
+        if not subjects: continue
         
         load_map = {s.id: (s.weekly_hours or 3) for s in subjects}
-        
         for day in days:
-            consecutive_theory = 0
             for p in periods:
-                assigned = False
-                # Try to find a subject for this slot
-                random.shuffle(subjects) # Randomize per slot to balance distribution
-                for sub in subjects:
-                    if load_map[sub.id] <= 0: 
-                        continue
-                    
-                    # Rule: Max 2 consecutive theory hours
-                    if sub.type == "Theory" and consecutive_theory >= 2: 
-                        continue
-                        
-                    # Resolve Faculty for this subject
-                    assign = db.query(models.FacultyAssignment).filter(
-                        models.FacultyAssignment.subject_id == sub.id
-                    ).first()
-                    f = (db.query(models.User).filter(models.User.id == assign.faculty_id).first() 
-                         if assign else random.choice(facs))
-                    
-                    # CLASH CHECK: Faculty Availability
-                    f_clash = db.query(models.Timetable).filter(
-                        models.Timetable.day_of_week == day,
-                        models.Timetable.period_id == p.id,
-                        models.Timetable.faculty_id == f.id
-                    ).first()
-                    if f_clash: 
-                        continue
-                        
-                    # CLASH CHECK: Room Availability
-                    target_room = None
-                    # Labs go to Lab rooms, Theory goes to Classrooms
-                    room_candidates = [r for r in rooms if r.type == ("Lab" if "Lab" in sub.name or sub.type == "Practical" else "Classroom")]
-                    if not room_candidates: room_candidates = rooms
-                    
-                    for r_cand in room_candidates:
-                        r_clash = db.query(models.Timetable).filter(
-                            models.Timetable.day_of_week == day,
-                            models.Timetable.period_id == p.id,
-                            models.Timetable.room_id == r_cand.id
-                        ).first()
-                        if not r_clash:
-                            target_room = r_cand
-                            break
-                    
-                    if not target_room: 
-                        continue
-                    
-                    # ALL CLEAR - COMMIT SLOT
-                    db.add(models.Timetable(
-                        day_of_week=day,
-                        period_id=p.id,
-                        time_slot=f"{p.start_time}-{p.end_time}",
-                        subject_id=sub.id,
-                        subject_name=sub.name,
-                        subject_type=sub.type,
-                        faculty_id=f.id,
-                        faculty_name=f.name,
-                        room_id=target_room.id,
-                        room_number=target_room.room_number,
-                        semester_id=sem.id,
-                        semester_number=sem.number,
-                        section="A",
-                        status="PUBLISHED"
-                    ))
+                sub = next((s for s in subjects if load_map[s.id] > 0), None)
+                if sub:
+                    # Resolve faculty
+                    assign = db.query(models.FacultyAssignment).filter(models.FacultyAssignment.subject_id == sub.id).first()
+                    f = db.query(models.User).filter(models.User.id == assign.faculty_id).first() if assign else random.choice(facs)
+                    r = random.choice(rooms)
+                    db.add(models.Timetable(day_of_week=day, period_id=p.id, time_slot=f"{p.start_time}-{p.end_time}", subject_id=sub.id, subject_name=sub.name, faculty_id=f.id, faculty_name=f.name, room_id=r.id, room_number=r.room_number, semester_id=sem.id, section="A", status="PUBLISHED"))
                     load_map[sub.id] -= 1
-                    if sub.type == "Theory": 
-                        consecutive_theory += 1
-                    else: 
-                        consecutive_theory = 0
-                    assigned = True
-                    break
-                
-                if not assigned:
-                    # If no subjects left or all clashed, mark as special/free
-                    db.add(models.Timetable(
-                        day_of_week=day,
-                        period_id=p.id,
-                        time_slot=f"{p.start_time}-{p.end_time}",
-                        subject_name="Library / Special Activity",
-                        room_id=random.choice(rooms).id,
-                        room_number=random.choice(rooms).room_number,
-                        semester_id=sem.id,
-                        semester_number=sem.number,
-                        section="A",
-                        status="PUBLISHED"
-                    ))
-                    consecutive_theory = 0
-    db.commit()
-    return {"status": "success"}
-
-@api_router.get("/timetables", response_model=List[schemas.Timetable])
-def list_timetables(semester_id: Optional[int] = None, db: Session = Depends(database.get_db)):
-    query = db.query(models.Timetable)
-    if semester_id:
-        query = query.filter(models.Timetable.semester_id == semester_id)
-    return query.all()
-
-@api_router.delete("/timetables")
-def purge_timetables(db: Session = Depends(database.get_db), admin: models.User = Depends(auth.check_admin)):
-    try:
-        db.query(models.Conflict).delete()
-        db.query(models.Timetable).delete()
-        db.commit()
-        return {"ok": True}
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error purging timetables: {e}")
-        raise HTTPException(500, detail=f"Purge failed: {str(e)}")
-
-@api_router.post("/swap-slots")
-def swap_slots(
-    tt1_id: int, 
-    tt2_id: int, 
-    db: Session = Depends(database.get_db), 
-    user: models.User = Depends(auth.get_current_user)
-):
-    tt1 = db.query(models.Timetable).filter(models.Timetable.id == tt1_id).first()
-    tt2 = db.query(models.Timetable).filter(models.Timetable.id == tt2_id).first()
-    if not tt1 or not tt2:
-        raise HTTPException(404, detail="One or both timetable slots not found.")
-    
-    # Swap day_of_week, period_id, time_slot
-    tt1.day_of_week, tt2.day_of_week = tt2.day_of_week, tt1.day_of_week
-    tt1.period_id, tt2.period_id = tt2.period_id, tt1.period_id
-    tt1.time_slot, tt2.time_slot = tt2.time_slot, tt1.time_slot
-    
+                else:
+                    r = random.choice(rooms)
+                    db.add(models.Timetable(day_of_week=day, period_id=p.id, time_slot=f"{p.start_time}-{p.end_time}", subject_name="Special Activity", room_id=r.id, room_number=r.room_number, semester_id=sem.id, section="A", status="PUBLISHED"))
     db.commit()
     return {"status": "success"}
 
@@ -561,17 +383,14 @@ def get_faculty_workload(db: Session = Depends(database.get_db)):
     workload = []
     for f in faculties:
         assigned_periods = db.query(models.Timetable).filter(models.Timetable.faculty_id == f.id).count()
-        total_load = assigned_periods + (f.assigned_load_hours or 0)
-        remaining = max(0, (f.max_hours_per_week or 24) - total_load)
+        remaining = max(0, (f.max_hours_per_week or 24) - assigned_periods)
         workload.append({
             "faculty_name": f.name,
             "faculty_id": f.faculty_id,
-            "total_hours_assigned": total_load,
-            "timetable_hours": assigned_periods,
-            "manual_load": f.assigned_load_hours or 0,
+            "total_hours_assigned": assigned_periods,
             "max_hours_per_week": f.max_hours_per_week or 24,
             "remaining_hours": remaining,
-            "utilization_rate": round((total_load / (f.max_hours_per_week or 24)) * 100, 1) if f.max_hours_per_week else 0
+            "utilization_rate": round((assigned_periods / (f.max_hours_per_week or 24)) * 100, 1) if f.max_hours_per_week else 0
         })
     return workload
 
@@ -666,13 +485,14 @@ def export_semester_pdf(sem_id: int, db: Session = Depends(database.get_db)):
     pdf.set_font("Helvetica", "", 7)
     row_height = 15
     for day in days:
+        curr_y = pdf.get_y()
         pdf.cell(25, row_height, day, border=1, align='C')
         for p in periods:
             entry = next((t for t in tt_entries if t.day_of_week == day and t.period_id == p.id), None)
             x, y = pdf.get_x(), pdf.get_y()
             if entry:
-                cell_text = f"{entry.subject_name}\n({entry.faculty_name})\nRm: {entry.room_number}"
-                pdf.multi_cell(col_width, 4.5, cell_text, border=1, align='C')
+                text = f"{entry.subject_name}\n({entry.faculty_name})\nRm: {entry.room_number}"
+                pdf.multi_cell(col_width, 4.5, text, border=1, align='C')
                 pdf.set_xy(x + col_width, y)
             else:
                 pdf.cell(col_width, row_height, "-", border=1, align='C')
@@ -716,11 +536,11 @@ def export_faculty_pdf(faculty_id: int, db: Session = Depends(database.get_db)):
         pdf.cell(25, 15, day, border=1, align='C')
         for p in periods:
             entry = next((t for t in tt_entries if t.day_of_week == day and t.period_id == p.id), None)
-            x, y = pdf.get_x(), pdf.get_y()
             if entry:
-                cell_text = f"{entry.subject_name}\nSem: {entry.semester_number} Sec: {entry.section}\nRm: {entry.room_number}"
-                pdf.multi_cell(col_width, 5, cell_text, border=1, align='C')
-                pdf.set_xy(x + col_width, y)
+                text = f"{entry.subject_name}\nSem: {entry.semester_number} Sec: {entry.section}\nRm: {entry.room_number}"
+                curr_x, curr_y = pdf.get_x(), pdf.get_y()
+                pdf.multi_cell(col_width, 5, text, border=1, align='C')
+                pdf.set_xy(curr_x + col_width, curr_y)
             else:
                 pdf.cell(col_width, 15, "-", border=1, align='C')
         pdf.ln()
@@ -761,11 +581,11 @@ def export_room_pdf(room_id: int, db: Session = Depends(database.get_db)):
         pdf.cell(25, 15, day, border=1, align='C')
         for p in periods:
             entry = next((t for t in tt_entries if t.day_of_week == day and t.period_id == p.id), None)
-            x, y = pdf.get_x(), pdf.get_y()
             if entry:
-                cell_text = f"{entry.subject_name}\n({entry.faculty_name})\nSem: {entry.semester_number} Sec: {entry.section}"
-                pdf.multi_cell(col_width, 5, cell_text, border=1, align='C')
-                pdf.set_xy(x + col_width, y)
+                text = f"{entry.subject_name}\n({entry.faculty_name})\nSem: {entry.semester_number} Sec: {entry.section}"
+                curr_x, curr_y = pdf.get_x(), pdf.get_y()
+                pdf.multi_cell(col_width, 5, text, border=1, align='C')
+                pdf.set_xy(curr_x + col_width, curr_y)
             else:
                 pdf.cell(col_width, 15, "-", border=1, align='C')
         pdf.ln()
@@ -774,99 +594,51 @@ def export_room_pdf(room_id: int, db: Session = Depends(database.get_db)):
 
 @api_router.get("/reports/pdf/workload")
 def export_workload_pdf(db: Session = Depends(database.get_db)):
-    if not FPDF:
-        raise HTTPException(500, "PDF Engine not ready")
+    if not FPDF: raise HTTPException(500, "PDF Engine not ready")
     data = get_faculty_workload(db)
     
     pdf = FPDF(unit='mm', format='A4')
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 15, "KAHE CMS - FACULTY WORKLOAD AUDIT", ln=True, align='C')
-    pdf.set_font("Helvetica", "I", 10)
-    pdf.cell(0, 10, f"Generated on: {datetime.now().strftime('%d-%m-%Y %H:%M')}", ln=True, align='C')
-    pdf.ln(5)
-
-    # Table Header
-    pdf.set_fill_color(240, 240, 240)
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(60, 10, "Faculty Name", border=1, fill=True)
-    pdf.cell(30, 10, "Registry Hrs", border=1, align='C', fill=True)
-    pdf.cell(30, 10, "Manual Load", border=1, align='C', fill=True)
-    pdf.cell(30, 10, "Total Assigned", border=1, align='C', fill=True)
-    pdf.cell(40, 10, "Utilization (%)", border=1, align='C', fill=True)
+    pdf.cell(0, 15, "FACULTY WORKLOAD REPORT", ln=True, align='C')
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(60, 10, "Faculty Name", border=1)
+    pdf.cell(40, 10, "Assigned Hours", border=1)
+    pdf.cell(40, 10, "Capacity", border=1)
+    pdf.cell(40, 10, "Utilization", border=1)
     pdf.ln()
-
-    # Table Body
     pdf.set_font("Helvetica", "", 9)
     for f in data:
         pdf.cell(60, 10, f['faculty_name'], border=1)
-        pdf.cell(30, 10, f"{f['timetable_hours']} hrs", border=1, align='C')
-        pdf.cell(30, 10, f"{f['manual_load']} hrs", border=1, align='C')
-        pdf.cell(30, 10, f"{f['total_hours_assigned']} / {f['max_hours_per_week']}", border=1, align='C')
-        
-        # Color utilization cell if it exceeds 90%
-        if f['utilization_rate'] > 90:
-            pdf.set_text_color(200, 0, 0)
-        else:
-            pdf.set_text_color(0, 100, 0)
-            
-        pdf.cell(40, 10, f"{f['utilization_rate']}%", border=1, align='C')
-        pdf.set_text_color(0, 0, 0) # Reset color
+        pdf.cell(40, 10, f"{f['total_hours_assigned']} hrs", border=1)
+        pdf.cell(40, 10, f"{f['max_hours_per_week']} hrs", border=1)
+        pdf.cell(40, 10, f"{f['utilization_rate']}%", border=1)
         pdf.ln()
-    
-    return StreamingResponse(
-        io.BytesIO(pdf.output()), 
-        media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=Faculty_Workload_Audit.pdf"}
-    )
+    return StreamingResponse(io.BytesIO(pdf.output()), media_type="application/pdf")
 
 @api_router.get("/reports/pdf/room-utilization")
 def export_rooms_pdf(db: Session = Depends(database.get_db)):
-    if not FPDF:
-        raise HTTPException(500, "PDF Engine not ready")
+    if not FPDF: raise HTTPException(500, "PDF Engine not ready")
     data = get_room_utilization(db)
     
     pdf = FPDF(unit='mm', format='A4')
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 15, "KAHE CMS - ROOM UTILIZATION AUDIT", ln=True, align='C')
-    pdf.set_font("Helvetica", "I", 10)
-    pdf.cell(0, 10, f"Generated on: {datetime.now().strftime('%d-%m-%Y %H:%M')}", ln=True, align='C')
-    pdf.ln(5)
-
-    # Table Header
-    pdf.set_fill_color(240, 240, 240)
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(50, 10, "Room Number", border=1, fill=True)
-    pdf.cell(50, 10, "Facility Type", border=1, fill=True)
-    pdf.cell(45, 10, "Occupied Slots", border=1, align='C', fill=True)
-    pdf.cell(45, 10, "Utilization (%)", border=1, align='C', fill=True)
+    pdf.cell(0, 15, "ROOM UTILIZATION REPORT", ln=True, align='C')
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(50, 10, "Room Number", border=1)
+    pdf.cell(50, 10, "Type", border=1)
+    pdf.cell(40, 10, "Occupied Slots", border=1)
+    pdf.cell(40, 10, "Utilization Rate", border=1)
     pdf.ln()
-
-    # Table Body
     pdf.set_font("Helvetica", "", 9)
     for r in data:
         pdf.cell(50, 10, r['room_number'], border=1)
         pdf.cell(50, 10, r['type'], border=1)
-        pdf.cell(45, 10, f"{r['occupied_slots']} / {r['total_slots']}", border=1, align='C')
-        
-        # Color utilization based on occupancy
-        if r['utilization_rate'] > 80:
-            pdf.set_text_color(200, 0, 0) # High occupancy alert
-        elif r['utilization_rate'] < 20:
-            pdf.set_text_color(0, 0, 200) # Low utilization
-        else:
-            pdf.set_text_color(0, 100, 0) # Optimal
-            
-        pdf.cell(45, 10, f"{r['utilization_rate']}%", border=1, align='C')
-        pdf.set_text_color(0, 0, 0)
+        pdf.cell(40, 10, f"{r['occupied_slots']} / 36", border=1)
+        pdf.cell(40, 10, f"{r['utilization_rate']}%", border=1)
         pdf.ln()
-
-    return StreamingResponse(
-        io.BytesIO(pdf.output()), 
-        media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=Room_Utilization_Audit.pdf"}
-    )
+    return StreamingResponse(io.BytesIO(pdf.output()), media_type="application/pdf")
 
 app.include_router(api_router)
 
@@ -874,8 +646,7 @@ frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
     @app.exception_handler(404)
-    async def catch_all(_request, _exc): 
-        return FileResponse(os.path.join(frontend_path, "index.html"))
+    async def catch_all(request, exc): return FileResponse(os.path.join(frontend_path, "index.html"))
 
 if __name__ == "__main__":
     import uvicorn
