@@ -55,7 +55,7 @@ const TimetableManager = () => {
                 }
             };
 
-            const [sData, subData, userData, rData, dData, pData, semData, tData, wdData, ptData, wReport, uReport] = await Promise.all([
+            const [sData, subData, userData, rData, dData, pData, semData, tData, wdData, ptData, wReport, uReport, faData] = await Promise.all([
                 safeFetch('/dashboard-stats'),
                 safeFetch('/subjects'),
                 safeFetch('/users_list'),
@@ -67,7 +67,8 @@ const TimetableManager = () => {
                 safeFetch('/working-days'),
                 safeFetch('/period-timings'),
                 safeFetch('/faculty-workload'),
-                safeFetch('/room-utilization')
+                safeFetch('/room-utilization'),
+                safeFetch('/faculty-assignments')
             ]);
 
             setStats(sData || {});
@@ -81,6 +82,7 @@ const TimetableManager = () => {
             setWorkingDays(wdData || []);
             setWorkloadReport(wReport || []);
             setRoomUtilization(uReport || []);
+            setFacultyAssignments(faData || []);
 
             const sortedPt = (ptData || []).sort((a, b) => {
                 const toMin = (t) => {
