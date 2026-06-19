@@ -12,11 +12,9 @@ class UserBase(BaseModel):
     faculty_id: Optional[str] = None
     department_id: Optional[int] = None
     designation: Optional[str] = None
-    phone: Optional[str] = None
     max_hours_per_day: Optional[int] = 6
     max_hours_per_week: Optional[int] = 24
     availability_status: Optional[str] = "Available"
-    is_deleted: Optional[bool] = False
 
 class UserCreate(UserBase):
     password: str
@@ -59,7 +57,6 @@ class RoomBase(BaseModel):
     department_id: Optional[int] = None
     department: Optional[str] = None
     status: str = "AVAILABLE"
-    is_deleted: Optional[bool] = False
 
 class RoomCreate(RoomBase):
     pass
@@ -72,8 +69,6 @@ class Room(RoomBase):
 class DepartmentBase(BaseModel):
     code: Optional[str] = None
     name: str
-    hod_id: Optional[int] = None
-    status: Optional[str] = "Active"
 
 class Department(DepartmentBase):
     id: int
@@ -82,10 +77,7 @@ class Department(DepartmentBase):
 
 class ProgramBase(BaseModel):
     name: str
-    code: Optional[str] = None
     type: str # UG, PG
-    regulation: Optional[str] = "2023"
-    duration: Optional[int] = 3
     department_id: int
 
 class Program(ProgramBase):
@@ -113,7 +105,6 @@ class SubjectBase(BaseModel):
     department_id: Optional[int] = None
     department_name: Optional[str] = None
     status: Optional[str] = "Active"
-    is_deleted: Optional[bool] = False
 
 class SubjectCreate(SubjectBase):
     pass
@@ -129,37 +120,8 @@ class SubjectUpdate(BaseModel):
     department_name: Optional[str] = None
     status: Optional[str] = None
 
-class SectionBase(BaseModel):
-    name: str
-    semester_id: int
-    student_strength: Optional[int] = 60
-    assigned_room_id: Optional[int] = None
-
-class SectionCreate(SectionBase):
-    pass
-
-class Section(SectionBase):
-    id: int
-    is_deleted: bool
-    class Config:
-        from_attributes = True
-
-class FacultyWorkloadBase(BaseModel):
-    faculty_id: int
-    academic_year: Optional[str] = None
-    semester_type: Optional[str] = None
-    total_hours_weekly: int = 0
-    total_hours_monthly: int = 0
-    utilization_percentage: float = 0.0
-
-class FacultyWorkload(FacultyWorkloadBase):
-    id: int
-    class Config:
-        from_attributes = True
-
 class Subject(SubjectBase):
     id: int
-    preferred_faculty_id: Optional[int] = None
     class Config:
         from_attributes = True
 
@@ -220,14 +182,6 @@ class TimetableBase(BaseModel):
     section: Optional[str] = None
     academic_year: Optional[str] = None
     semester_number: Optional[int] = None
-    is_deleted: Optional[bool] = False
-
-class TimetableUpdate(BaseModel):
-    day_of_week: Optional[str] = None
-    period_id: Optional[int] = None
-    room_id: Optional[int] = None
-    faculty_id: Optional[int] = None
-    status: Optional[str] = None
 
 class Timetable(TimetableBase):
     id: int
@@ -264,7 +218,6 @@ class Booking(BookingBase):
     id: int
     user_id: int
     status: str
-    is_deleted: Optional[bool] = False
     class Config:
         from_attributes = True
 
@@ -288,7 +241,6 @@ class ClassSession(ClassSessionBase):
     start_time: datetime
     end_time: Optional[datetime] = None
     status: str
-    is_deleted: Optional[bool] = False
     class Config:
         from_attributes = True
 
@@ -297,44 +249,6 @@ class FacultyAssignmentBase(BaseModel):
     subject_id: int
     semester_id: Optional[int] = None
     section: Optional[str] = None
-
-class AuditLogBase(BaseModel):
-    action: str
-    resource: str
-    resource_id: Optional[int] = None
-    details: str
-
-class AuditLog(AuditLogBase):
-    id: int
-    user_id: int
-    timestamp: datetime
-    class Config:
-        from_attributes = True
-
-class FacultyLeaveBase(BaseModel):
-    faculty_id: int
-    start_date: datetime
-    end_date: datetime
-    reason: str
-
-class FacultyLeave(FacultyLeaveBase):
-    id: int
-    status: str
-    applied_at: datetime
-    class Config:
-        from_attributes = True
-
-class SubstitutionBase(BaseModel):
-    original_faculty_id: int
-    substitute_faculty_id: int
-    timetable_id: int
-    date: datetime
-
-class Substitution(SubstitutionBase):
-    id: int
-    status: str
-    class Config:
-        from_attributes = True
 
 class FacultyAssignment(FacultyAssignmentBase):
     id: int

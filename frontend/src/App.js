@@ -20,7 +20,6 @@ function App() {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isCollapsed, setIsCollapsed] = useState(false);
 
     return (
         <Router>
@@ -29,12 +28,10 @@ function App() {
                     <Sidebar
                         isOpen={isSidebarOpen}
                         setIsOpen={setIsSidebarOpen}
-                        isCollapsed={isCollapsed}
-                        setIsCollapsed={setIsCollapsed}
                     />
                 )}
 
-                <div className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300">
+                <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                     {token && (
                         <header className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center space-x-3 z-30">
                             <button
@@ -65,7 +62,7 @@ function App() {
                                     {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
                                 </PrivateRoute>
                             } />
-                            <Route path="/timetable/*" element={
+                            <Route path="/timetable-manager" element={
                                 <PrivateRoute>
                                     {(role === 'admin' || role === 'hod' || role === 'dean' || role === 'principal') ? <TimetableManager /> : <Navigate to="/" />}
                                 </PrivateRoute>

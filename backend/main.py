@@ -1,9 +1,13 @@
 import logging
 import os
 import io
+import sys
 from datetime import datetime, timezone
 from typing import List, Optional
 from contextlib import asynccontextmanager
+
+# Add current directory to path to fix Render imports
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
@@ -19,7 +23,7 @@ except ImportError:
 
 try:
     from . import models, schemas, auth, database, scheduler
-except ImportError:
+except (ImportError, ValueError):
     import models
     import schemas
     import auth

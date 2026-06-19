@@ -49,16 +49,16 @@ const Login = () => {
             <div className="max-w-[440px] w-full bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] p-8 md:p-14 flex flex-col items-center">
 
                 {/* Institutional Logo */}
-                <div className="mb-8 flex justify-center scale-110">
+                <div className="mb-6 flex justify-center">
                     <img
                         src="/logo.svg"
                         alt="KAHE Logo"
-                        className="w-[140px] h-[140px] object-contain drop-shadow-sm"
+                        className="w-[120px] h-[120px] object-contain"
                     />
                 </div>
 
                 {/* Title Section */}
-                <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-1">
+                <h2 className="text-3xl font-black text-[#0072bc] tracking-tight mb-1">
                     KAHE CMS
                 </h2>
                 <p className="text-slate-400 font-medium text-sm mb-10">

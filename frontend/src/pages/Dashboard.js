@@ -90,18 +90,17 @@ const Dashboard = () => {
     }
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 bg-transparent min-h-screen">
+        <div className="p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen">
             <header className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tightest uppercase italic">
-                        Enterprise <span className="text-indigo-600">Dashboard</span>
+                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+                        Welcome back, <span className="text-green-600">{userName || 'Admin'}</span>.
                     </h1>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Institutional Intelligence Hub</p>
                 </div>
             </header>
 
-            {/* Admin Stats Grid - Fluid Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {/* Admin Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                 {[
                     { label: 'Total Rooms', value: stats.rooms, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
                     { label: 'Timetables', value: stats.generated_timetables, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', color: 'text-indigo-600' },

@@ -31,12 +31,11 @@ class TimetableStatus(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    faculty_id = Column(String, unique=True, index=True, nullable=True) # Employee ID
+    faculty_id = Column(String, unique=True, index=True, nullable=True)
     name = Column(String)
     email = Column(String, unique=True, index=True)
     password = Column(String)
-    phone = Column(String, nullable=True)
-    role = Column(String) # admin, principal, hod, faculty, student
+    role = Column(String) # admin, dean, hod, faculty, student
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     designation = Column(String, nullable=True)
     
@@ -45,34 +44,22 @@ class User(Base):
     max_hours_per_week = Column(Integer, default=24)
     availability_status = Column(String, default="Available") # Available, On Leave
     
-    is_deleted = Column(Boolean, default=False)
-    
-    department = relationship("Department", foreign_keys=[department_id], back_populates="users")
+    department = relationship("Department", back_populates="users")
 
 class Department(Base):
     __tablename__ = "departments"
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String, unique=True, index=True, nullable=True)
     name = Column(String, unique=True, index=True)
-    hod_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    status = Column(String, default="Active") # Active, Inactive
-    is_deleted = Column(Boolean, default=False)
-    
-    hod = relationship("User", foreign_keys=[hod_id])
     programs = relationship("Program", back_populates="department")
-    users = relationship("User", foreign_keys="User.department_id", back_populates="department")
+    users = relationship("User", back_populates="department")
 
 class Program(Base):
     __tablename__ = "programs"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    code = Column(String, unique=True, index=True, nullable=True)
     type = Column(String) # UG, PG
-    regulation = Column(String, nullable=True) # e.g., 2021, 2023
-    duration = Column(Integer, default=3) # in years
     department_id = Column(Integer, ForeignKey("departments.id"))
-    is_deleted = Column(Boolean, default=False)
-    
     department = relationship("Department", back_populates="programs")
     semesters = relationship("Semester", back_populates="program")
 
@@ -81,22 +68,9 @@ class Semester(Base):
     id = Column(Integer, primary_key=True, index=True)
     number = Column(Integer)
     program_id = Column(Integer, ForeignKey("programs.id"))
-    is_deleted = Column(Boolean, default=False)
     program = relationship("Program", back_populates="semesters")
     is_active = Column(Boolean, default=True)
     subjects = relationship("Subject", back_populates="semester")
-
-class Section(Base):
-    __tablename__ = "sections"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String) # A, B, C
-    semester_id = Column(Integer, ForeignKey("semesters.id"))
-    student_strength = Column(Integer, default=60)
-    assigned_room_id = Column(Integer, ForeignKey("rooms.id"), nullable=True)
-    is_deleted = Column(Boolean, default=False)
-    
-    semester = relationship("Semester")
-    assigned_room = relationship("Room")
 
 class Subject(Base):
     __tablename__ = "subjects"
@@ -104,31 +78,14 @@ class Subject(Base):
     name = Column(String, index=True)
     code = Column(String, unique=True, index=True)
     type = Column(String) # Theory, Lab
-    category = Column(String, default="Core") # Core, Elective, Allied, Value Added, Skill Based
     credits = Column(Integer)
     weekly_hours = Column(Integer, default=3)
     semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     department_name = Column(String, nullable=True)
-    preferred_faculty_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     status = Column(String, default="Active")
-    is_deleted = Column(Boolean, default=False)
     
     semester = relationship("Semester", back_populates="subjects")
-    preferred_faculty = relationship("User", foreign_keys=[preferred_faculty_id])
-
-class FacultyWorkload(Base):
-    __tablename__ = "faculty_workload"
-    id = Column(Integer, primary_key=True)
-    faculty_id = Column(Integer, ForeignKey("users.id"))
-    academic_year = Column(String)
-    semester_type = Column(String)
-    total_hours_weekly = Column(Integer, default=0)
-    total_hours_monthly = Column(Integer, default=0)
-    utilization_percentage = Column(Float, default=0.0)
-    is_deleted = Column(Boolean, default=False)
-
-    faculty = relationship("User")
 
 class FacultyAssignment(Base):
     __tablename__ = "faculty_assignments"
@@ -137,7 +94,6 @@ class FacultyAssignment(Base):
     subject_id = Column(Integer, ForeignKey("subjects.id"))
     semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True)
     section = Column(String, nullable=True)
-    is_deleted = Column(Boolean, default=False)
     
     faculty = relationship("User")
     subject = relationship("Subject")
@@ -146,15 +102,14 @@ class Room(Base):
     __tablename__ = "rooms"
     id = Column(Integer, primary_key=True, index=True)
     room_number = Column(String, unique=True, index=True)
-    room_name = Column(String, nullable=True)
-    floor = Column(String, nullable=True)
-    building = Column(String, nullable=True)
+    room_name = Column(String)
+    floor = Column(String)
+    building = Column(String)
     type = Column(String) # Classroom, Lab, Seminar Hall
     capacity = Column(Integer)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     department = Column(String, nullable=True)
     status = Column(String, default="AVAILABLE")
-    is_deleted = Column(Boolean, default=False)
 
 class AcademicSetting(Base):
     __tablename__ = "academic_settings"
@@ -205,7 +160,6 @@ class Timetable(Base):
     semester_number = Column(Integer, nullable=True)
     status = Column(String, default="DRAFT") # DRAFT, PENDING, APPROVED, PUBLISHED
     approval_comments = Column(Text, nullable=True)
-    is_deleted = Column(Boolean, default=False)
     
     subject = relationship("Subject")
     faculty = relationship("User")
@@ -236,7 +190,6 @@ class ClassSession(Base):
     end_time = Column(DateTime, nullable=True)
     remarks = Column(String)
     status = Column(String, default="ACTIVE")
-    is_deleted = Column(Boolean, default=False)
 
     room = relationship("Room")
     faculty = relationship("User")
@@ -251,7 +204,6 @@ class Booking(Base):
     start_time = Column(DateTime)
     end_time = Column(DateTime)
     status = Column(String, default="BOOKED")
-    is_deleted = Column(Boolean, default=False)
 
     user = relationship("User")
     room = relationship("Room")
@@ -266,54 +218,14 @@ class Notification(Base):
 
     user = relationship("User")
 
-class AuditLog(Base):
-    __tablename__ = "audit_logs"
+class Schedule(Base):
+    __tablename__ = "schedules"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    action = Column(String) # CREATE, UPDATE, DELETE, LOGIN, MOVE_PERIOD
-    resource = Column(String) # Timetable, Subject, User
-    resource_id = Column(Integer, nullable=True)
-    details = Column(Text)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    ip_address = Column(String, nullable=True)
-
-    user = relationship("User")
-
-class FacultyLeave(Base):
-    __tablename__ = "faculty_leaves"
-    id = Column(Integer, primary_key=True, index=True)
-    faculty_id = Column(Integer, ForeignKey("users.id"))
-    start_date = Column(DateTime)
-    end_date = Column(DateTime)
-    reason = Column(String)
-    status = Column(String, default="PENDING") # PENDING, APPROVED, REJECTED
-    applied_at = Column(DateTime, default=datetime.utcnow)
+    faculty_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    room_id = Column(Integer, ForeignKey("rooms.id"), nullable=True)
+    subject = Column(String)
+    time_slot = Column(String)
+    day_of_week = Column(String)
 
     faculty = relationship("User")
-
-class Substitution(Base):
-    __tablename__ = "substitutions"
-    id = Column(Integer, primary_key=True, index=True)
-    original_faculty_id = Column(Integer, ForeignKey("users.id"))
-    substitute_faculty_id = Column(Integer, ForeignKey("users.id"))
-    timetable_id = Column(Integer, ForeignKey("timetables.id"))
-    date = Column(DateTime)
-    status = Column(String, default="ACTIVE") # ACTIVE, COMPLETED
-
-    original_faculty = relationship("User", foreign_keys=[original_faculty_id])
-    substitute_faculty = relationship("User", foreign_keys=[substitute_faculty_id])
-    timetable = relationship("Timetable")
-
-class ApprovalWorkflow(Base):
-    __tablename__ = "approval_workflows"
-    id = Column(Integer, primary_key=True, index=True)
-    resource_type = Column(String) # Timetable, Leave
-    resource_id = Column(Integer)
-    requested_by = Column(Integer, ForeignKey("users.id"))
-    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    status = Column(String, default="PENDING")
-    comments = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    requester = relationship("User", foreign_keys=[requested_by])
-    approver = relationship("User", foreign_keys=[approved_by])
+    room = relationship("Room")

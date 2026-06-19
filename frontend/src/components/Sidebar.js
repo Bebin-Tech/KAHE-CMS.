@@ -1,44 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import {
-    Home,
-    LayoutDashboard,
-    BookOpen,
-    Users,
-    School,
-    Calendar,
-    BarChart3,
-    Settings,
-    ClipboardList,
-    ChevronDown,
-    ChevronRight,
-    Search,
-    Bell,
-    LogOut,
-    User as UserIcon,
-    Menu,
-    X,
-    FolderOpen,
-    GraduationCap,
-    Clock,
-    FileText
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 
-function cn(...inputs) {
-    return twMerge(clsx(inputs));
-}
-
-const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
+const Sidebar = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const role = localStorage.getItem('role')?.toLowerCase();
-    const userName = localStorage.getItem('name') || 'Administrator';
-
-    const [expandedGroups, setExpandedGroups] = useState(['Academic Management']);
-    const [searchTerm, setSearchTerm] = useState('');
 
     const handleLogout = () => {
         localStorage.clear();
@@ -46,309 +12,79 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
         window.location.reload();
     };
 
-    const toggleGroup = (groupName) => {
-        if (isCollapsed) {
-            setIsCollapsed(false);
-            setExpandedGroups([groupName]);
-            return;
-        }
-        setExpandedGroups(prev =>
-            prev.includes(groupName) ? prev.filter(g => g !== groupName) : [...prev, groupName]
-        );
-    };
+    const menuItems = [];
 
-    // ERPNext Style Navigation Data
-    const navigationData = [
-        {
-            title: 'Home',
-            icon: Home,
-            items: [
-                { name: 'Dashboard', path: '/', icon: LayoutDashboard }
-            ]
-        },
-        {
-            title: 'Academic Management',
-            icon: BookOpen,
-            roles: ['admin', 'hod', 'dean', 'principal'],
-            items: [
-                { name: 'Departments', path: '/timetable/academic/departments' },
-                { name: 'Programs', path: '/timetable/academic/programs' },
-                { name: 'Semesters', path: '/timetable/academic/semesters' },
-                { name: 'Sections', path: '/timetable/academic/sections' },
-                { name: 'Subjects', path: '/timetable/academic/subjects' }
-            ]
-        },
-        {
-            title: 'Faculty Management',
-            icon: Users,
-            roles: ['admin', 'hod', 'dean', 'principal'],
-            items: [
-                { name: 'Faculty Directory', path: '/timetable/faculty/directory' },
-                { name: 'Faculty Mapping', path: '/timetable/faculty/mapping' },
-                { name: 'Workload Analytics', path: '/timetable/faculty/workload' },
-                { name: 'Faculty Availability', path: '/timetable/faculty/availability' }
-            ]
-        },
-        {
-            title: 'Classroom Management',
-            icon: School,
-            items: [
-                { name: 'Classrooms', path: '/timetable/spatial/infrastructure' },
-                { name: 'Laboratories', path: '/timetable/spatial/infrastructure' },
-                { name: 'Room Allocation', path: '/timetable/spatial/occupancy' },
-                { name: 'Resource Booking', path: '/bookings' }
-            ]
-        },
-        {
-            title: 'Timetable Management',
-            icon: Calendar,
-            roles: ['admin', 'hod', 'dean', 'principal', 'faculty'],
-            items: [
-                { name: 'Timetable Dashboard', path: '/timetable/dashboard' },
-                { name: 'Timetable Matrix', path: '/timetable/matrix' },
-                { name: 'Auto Scheduler', path: '/timetable/dashboard' },
-                { name: 'Conflict Resolution', path: '/timetable/dashboard' },
-                { name: 'Published Timetables', path: '/timetable/dashboard' }
-            ]
-        },
-        {
-            title: 'Reports & Analytics',
-            icon: BarChart3,
-            roles: ['admin', 'hod', 'dean', 'principal'],
-            items: [
-                { name: 'Faculty Reports', path: '/timetable/reports/faculty' },
-                { name: 'Department Reports', path: '/timetable/reports/department' },
-                { name: 'Classroom Reports', path: '/timetable/reports/classroom' },
-                { name: 'Utilization Analytics', path: '/timetable/reports/utilization' }
-            ]
-        },
-        {
-            title: 'Administration',
-            icon: Settings,
-            roles: ['admin'],
-            items: [
-                { name: 'Academic Year', path: '/timetable/settings' },
-                { name: 'Semester Configuration', path: '/timetable/settings' },
-                { name: 'Working Days', path: '/timetable/settings' },
-                { name: 'Period Timings', path: '/timetable/settings' },
-                { name: 'System Settings', path: '/timetable/settings' }
-            ]
-        },
-        {
-            title: 'Audit & Logs',
-            icon: ClipboardList,
-            roles: ['admin'],
-            items: [
-                { name: 'Activity Logs', path: '/timetable/audit/logs' },
-                { name: 'Audit History', path: '/timetable/audit/history' },
-                { name: 'Timetable Change History', path: '/timetable/audit/history' }
-            ]
-        }
-    ];
+    // 1. Dashboard
+    menuItems.push({ name: 'Dashboard', path: '/', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' });
 
-    const filteredNav = navigationData.filter(group => {
-        if (group.roles && !group.roles.includes(role)) return false;
+    // 2. Classroom Module (Explicitly placed and named)
+    menuItems.push({ name: 'Classroom Module', path: '/rooms', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' });
 
-        if (searchTerm) {
-            const matchesGroup = group.title.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesItems = group.items.some(item =>
-                item.name.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-            return matchesGroup || matchesItems;
-        }
-        return true;
-    }).map(group => {
-        if (searchTerm && !group.title.toLowerCase().includes(searchTerm.toLowerCase())) {
-            return {
-                ...group,
-                items: group.items.filter(item =>
-                    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-                )
-            };
-        }
-        return group;
-    });
+    // 3. CR Booking
+    if (['faculty', 'admin', 'hod', 'dean', 'principal'].includes(role)) {
+        menuItems.push({ name: 'CR Booking', path: '/bookings', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' });
+    }
 
-    useEffect(() => {
-        if (searchTerm) {
-            setExpandedGroups(filteredNav.map(g => g.title));
-        }
-    }, [searchTerm]);
+    // 4. Schedule
+    menuItems.push({ name: 'Personal Schedule', path: '/schedule', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' });
+
+    // 5. Timetable Manager (CMS Core)
+    if (['admin', 'dean', 'hod', 'principal'].includes(role)) {
+        menuItems.push({ name: 'Timetable Manager', path: '/timetable-manager', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' });
+    }
+
+    // 6. User Directory
+    if (role === 'admin') {
+        menuItems.push({ name: 'User Directory', path: '/user-directory', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' });
+    }
 
     return (
-        <>
-            {/* Mobile Sidebar Overlay */}
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
-                        onClick={() => setIsOpen(false)}
-                    />
-                )}
-            </AnimatePresence>
-
-            <motion.aside
-                initial={false}
-                animate={{
-                    width: isCollapsed ? 72 : 260,
-                    x: isOpen ? 0 : (window.innerWidth < 1024 ? -260 : 0)
-                }}
-                className={cn(
-                    "fixed lg:relative inset-y-0 left-0 z-50 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 ease-in-out shadow-xl lg:shadow-none h-screen",
-                    !isOpen && "hidden lg:flex"
-                )}
-            >
-                {/* Header: Logo & Branding */}
-                <div className="h-24 flex items-center px-5 border-b border-slate-100 bg-white sticky top-0 z-10 shrink-0">
-                    <div className="flex items-center gap-4 overflow-hidden">
-                        <img
-                            src="/logo.svg"
-                            alt="KAHE Logo"
-                            className="w-14 h-14 object-contain shrink-0 transition-all duration-300"
-                        />
-                        {!isCollapsed && (
-                            <motion.h1
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="text-xl font-black text-slate-900 truncate tracking-tighter"
-                            >
-                                KAHE CMS
-                            </motion.h1>
-                        )}
-                    </div>
-                    <button
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="ml-auto p-1.5 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all hidden lg:block"
-                    >
-                        {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4 rotate-90" />}
-                    </button>
-                    <button
-                        onClick={() => setIsOpen(false)}
-                        className="lg:hidden ml-auto p-2 text-slate-400"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Search Bar */}
-                <div className="px-4 py-4 shrink-0">
-                    <div className={cn(
-                        "relative group transition-all duration-300",
-                        isCollapsed ? "w-10 mx-auto" : "w-full"
-                    )}>
-                        <Search className={cn(
-                            "absolute top-1/2 -translate-y-1/2 w-4 h-4 transition-all duration-300",
-                            isCollapsed ? "left-1/2 -translate-x-1/2 text-slate-400 group-hover:text-indigo-500" : "left-3 text-slate-400 group-focus-within:text-indigo-500"
-                        )} />
-                        {!isCollapsed ? (
-                            <input
-                                type="text"
-                                placeholder="Search modules..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-slate-400"
-                            />
-                        ) : (
-                            <div className="w-full h-9 cursor-pointer" onClick={() => setIsCollapsed(false)} />
-                        )}
+        <React.Fragment>
+            {isOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsOpen(false)}></div>}
+            <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition duration-300 ease-in-out w-72 bg-white border-r border-gray-200 flex flex-col h-screen shadow-xl lg:shadow-sm z-50 overflow-hidden`}>
+                <div className="p-8 flex flex-col items-center space-y-4 border-b border-gray-50 bg-white z-10">
+                    <img src="/logo.svg" alt="KAHE Logo" className="w-24 h-24 object-contain mb-2" />
+                    <div className="text-center">
+                        <span className="text-2xl font-black text-gray-800 tracking-tight leading-tight">KAHE CMS</span>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Campus Management</p>
                     </div>
                 </div>
-
-                {/* Main Navigation */}
-                <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1 custom-scrollbar">
-                    {filteredNav.map((group, idx) => (
-                        <div key={idx} className="space-y-0.5">
-                            <button
-                                onClick={() => toggleGroup(group.title)}
-                                className={cn(
-                                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group",
-                                    expandedGroups.includes(group.title) ? "bg-slate-50 text-indigo-600 shadow-sm" : "text-slate-500 hover:bg-slate-50/80 hover:text-slate-900"
-                                )}
-                            >
-                                <group.icon className={cn(
-                                    "w-5 h-5 shrink-0 transition-colors duration-300",
-                                    expandedGroups.includes(group.title) ? "text-indigo-600 scale-110" : "text-slate-400 group-hover:text-slate-600"
-                                )} />
-                                {!isCollapsed && (
-                                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[13px] font-semibold flex-1 text-left tracking-tight">
-                                        {group.title}
-                                    </motion.span>
-                                )}
-                                {!isCollapsed && group.items.length > 1 && (
-                                    <ChevronRight className={cn(
-                                        "w-3.5 h-3.5 transition-transform duration-300 text-slate-300 group-hover:text-slate-400",
-                                        expandedGroups.includes(group.title) ? "rotate-90 text-indigo-400" : ""
-                                    )} />
-                                )}
-                            </button>
-
-                            <AnimatePresence>
-                                {!isCollapsed && expandedGroups.includes(group.title) && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="overflow-hidden"
-                                    >
-                                        <div className="ml-5 border-l border-slate-100 pl-4 py-1 space-y-0.5">
-                                            {group.items.map((item, iIdx) => (
-                                                <Link
-                                                    key={iIdx}
-                                                    to={item.path}
-                                                    className={cn(
-                                                        "block py-2 text-[12px] font-medium transition-all hover:text-indigo-600 hover:translate-x-1",
-                                                        location.pathname === item.path
-                                                            ? "text-indigo-600 font-bold"
-                                                            : "text-slate-500"
-                                                    )}
-                                                >
-                                                    {item.name}
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
+                <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+                    <p className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Institutional Modules</p>
+                    {menuItems.map((item) => (
+                        <Link
+                            key={item.name}
+                            to={item.path}
+                            onClick={() => setIsOpen(false)}
+                            className={`flex items-center space-x-3 px-4 py-3 rounded-2xl transition duration-200 group ${
+                                location.pathname === item.path ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600'
+                            }`}
+                        >
+                            <svg className={`h-5 w-5 ${location.pathname === item.path ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                            </svg>
+                            <span className="font-bold text-sm tracking-tight">{item.name}</span>
+                        </Link>
                     ))}
                 </nav>
-
-                {/* User Profile Section (Bottom) */}
-                <div className="p-3 border-t border-slate-100 bg-slate-50/20 shrink-0">
-                    <div className={cn(
-                        "flex items-center gap-3 p-2 rounded-2xl transition-all duration-300",
-                        !isCollapsed ? "bg-white shadow-sm border border-slate-100" : "justify-center"
-                    )}>
-                        <div className="relative shrink-0">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm uppercase shadow-lg shadow-indigo-100">
-                                {userName.charAt(0)}
+                <div className="p-6 border-t border-gray-100 bg-white mt-auto">
+                    <div className="mb-4 px-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Active Session</p>
+                        <div className="flex items-center space-x-3 bg-gray-50 p-3 rounded-2xl">
+                            <div className="h-10 w-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-sm uppercase">{role?.charAt(0) || 'U'}</div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-black text-gray-900 truncate uppercase">{role || 'User'}</p>
+                                <div className="flex items-center text-[10px] text-green-500 font-bold"><span className="h-1.5 w-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>ONLINE</div>
                             </div>
-                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-[3px] border-white rounded-full"></div>
                         </div>
-
-                        {!isCollapsed && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-w-0 flex-1">
-                                <p className="text-[13px] font-black text-slate-900 truncate leading-tight">{userName}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 truncate">{role || 'Academic Staff'}</p>
-                            </motion.div>
-                        )}
-
-                        {!isCollapsed && (
-                            <button
-                                onClick={handleLogout}
-                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all group"
-                                title="Sign Out"
-                            >
-                                <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            </button>
-                        )}
                     </div>
+                    <button onClick={handleLogout} className="w-full flex items-center justify-center space-x-2 py-3 border-2 border-red-500 text-red-500 rounded-xl hover:bg-red-50 transition-colors font-bold text-xs uppercase tracking-widest">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        <span>Sign Out</span>
+                    </button>
                 </div>
-            </motion.aside>
-        </>
+            </div>
+        </React.Fragment>
     );
 };
 

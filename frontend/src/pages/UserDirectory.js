@@ -180,10 +180,8 @@ const UserDirectory = () => {
                                     </td>
                                     <td className="p-4 md:p-6">
                                         <div className="flex items-center space-x-2">
-                                            <div className={`h-2 w-2 rounded-full ${user.is_deleted ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                                            <span className="text-xs font-bold text-gray-700">
-                                                {user.is_deleted ? 'Deleted/Inactive' : 'Active'}
-                                            </span>
+                                            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                                            <span className="text-xs font-bold text-gray-700">Active</span>
                                         </div>
                                     </td>
                                     <td className="p-4 md:p-6">
