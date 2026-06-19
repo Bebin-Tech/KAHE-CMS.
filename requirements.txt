@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+ortools
+pandas
+openpyxl
+fpdf2
+psycopg2-binary
+bcrypt
+python-jose[cryptography]
+python-multipart
