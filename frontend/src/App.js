@@ -62,7 +62,7 @@ function App() {
                                     {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
                                 </PrivateRoute>
                             } />
-                            <Route path="/timetable-manager" element={
+                            <Route path="/timetable/*" element={
                                 <PrivateRoute>
                                     {(role === 'admin' || role === 'hod' || role === 'dean' || role === 'principal') ? <TimetableManager /> : <Navigate to="/" />}
                                 </PrivateRoute>

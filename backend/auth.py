@@ -86,16 +86,34 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 
 def check_admin(user: models.User = Depends(get_current_user)):
     """Enforces administrative module access control."""
-    if user.role != "admin":
+    if user.role not in ["super_admin", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Administrative access required for this institutional module."
+            detail="Administrative access required."
+        )
+    return user
+
+def check_hod(user: models.User = Depends(get_current_user)):
+    """Enforces HOD level access control."""
+    if user.role not in ["super_admin", "admin", "hod", "dean"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="HOD level access required."
+        )
+    return user
+
+def check_principal(user: models.User = Depends(get_current_user)):
+    """Enforces Principal/Dean level access control."""
+    if user.role not in ["super_admin", "admin", "dean"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Principal/Dean level access required."
         )
     return user
 
 def check_faculty(user: models.User = Depends(get_current_user)):
     """Enforces faculty/staff level access control."""
-    if user.role not in ["admin", "faculty", "hod"]:
+    if user.role not in ["super_admin", "admin", "faculty", "hod", "dean"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Faculty/Staff level access required."
