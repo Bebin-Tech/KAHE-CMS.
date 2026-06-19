@@ -93,6 +93,18 @@ def check_admin(user: models.User = Depends(get_current_user)):
         )
     return user
 
+def check_hod(user: models.User = Depends(get_current_user)):
+    """Enforces HOD level access control."""
+    if user.role not in ["admin", "hod", "dean"]:
+        raise HTTPException(status_code=403, detail="HOD level access required.")
+    return user
+
+def check_principal(user: models.User = Depends(get_current_user)):
+    """Enforces Principal/Dean level access control."""
+    if user.role not in ["admin", "dean"]:
+        raise HTTPException(status_code=403, detail="Principal/Dean level access required.")
+    return user
+
 def check_faculty(user: models.User = Depends(get_current_user)):
     """Enforces faculty/staff level access control."""
     if user.role not in ["admin", "faculty", "hod"]:
