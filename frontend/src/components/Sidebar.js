@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
+    Home,
     LayoutDashboard,
     BookOpen,
     Users,
@@ -12,8 +13,15 @@ import {
     ChevronDown,
     ChevronRight,
     Search,
+    Bell,
     LogOut,
+    User as UserIcon,
+    Menu,
     X,
+    FolderOpen,
+    GraduationCap,
+    Clock,
+    FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
@@ -29,7 +37,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
     const role = localStorage.getItem('role')?.toLowerCase();
     const userName = localStorage.getItem('name') || 'Administrator';
 
-    const [expandedGroups, setExpandedGroups] = useState(['Dashboard', 'Academic Management']);
+    const [expandedGroups, setExpandedGroups] = useState(['Academic Management']);
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleLogout = () => {
@@ -50,10 +58,10 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
     };
 
     // ERPNext Style Navigation Data
-    const navigationData = useMemo(() => [
+    const navigationData = [
         {
-            title: 'Dashboard',
-            icon: LayoutDashboard,
+            title: 'Home',
+            icon: Home,
             items: [
                 { name: 'Dashboard', path: '/', icon: LayoutDashboard }
             ]
@@ -67,8 +75,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
                 { name: 'Programs', path: '/timetable/academic/programs' },
                 { name: 'Semesters', path: '/timetable/academic/semesters' },
                 { name: 'Sections', path: '/timetable/academic/sections' },
-                { name: 'Subjects', path: '/timetable/academic/subjects' },
-                { name: 'Curriculum', path: '/timetable/academic/curriculum' }
+                { name: 'Subjects', path: '/timetable/academic/subjects' }
             ]
         },
         {
@@ -118,9 +125,8 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
         {
             title: 'Administration',
             icon: Settings,
-            roles: ['super_admin', 'admin'],
+            roles: ['admin'],
             items: [
-                { name: 'User Management', path: '/user-directory' },
                 { name: 'Academic Year', path: '/timetable/settings' },
                 { name: 'Semester Configuration', path: '/timetable/settings' },
                 { name: 'Working Days', path: '/timetable/settings' },
@@ -138,9 +144,9 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
                 { name: 'Timetable Change History', path: '/timetable/audit/history' }
             ]
         }
-    ], []);
+    ];
 
-    const filteredNav = useMemo(() => navigationData.filter(group => {
+    const filteredNav = navigationData.filter(group => {
         if (group.roles && !group.roles.includes(role)) return false;
 
         if (searchTerm) {
@@ -161,13 +167,13 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             };
         }
         return group;
-    }), [navigationData, role, searchTerm]);
+    });
 
     useEffect(() => {
         if (searchTerm) {
             setExpandedGroups(filteredNav.map(g => g.title));
         }
-    }, [filteredNav, searchTerm]);
+    }, [searchTerm]);
 
     return (
         <>

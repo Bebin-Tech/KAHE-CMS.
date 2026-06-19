@@ -1,6 +1,6 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
+django
+djangorestframework
+django-cors-headers
 ortools
 pandas
 openpyxl

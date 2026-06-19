@@ -58,40 +58,17 @@ def migrate_db(db: Session):
         # 2. Users alignment
         user_updates = {
             "faculty_id": "VARCHAR", "department_id": "INTEGER", "designation": "VARCHAR",
-            "phone": "VARCHAR",
             "max_hours_per_day": "INTEGER", "max_hours_per_week": "INTEGER",
-            "availability_status": "VARCHAR", "last_login": "DATETIME", "status": "VARCHAR"
+            "availability_status": "VARCHAR"
         }
         for col, col_type in user_updates.items():
             add_col("users", col, col_type)
 
         # 3. Department alignment
-        for col, col_type in {
-            "code": "VARCHAR", "name": "VARCHAR", "classification": "VARCHAR",
-            "semester": "VARCHAR", "hod_id": "INTEGER", "status": "VARCHAR"
-        }.items():
+        for col, col_type in {"code": "VARCHAR", "name": "VARCHAR"}.items():
             add_col("departments", col, col_type)
 
-        # 4. Programs alignment
-        for col, col_type in {
-            "code": "VARCHAR", "regulation": "VARCHAR", "duration": "INTEGER",
-            "status": "VARCHAR"
-        }.items():
-            add_col("programs", col, col_type)
-
-        # 4b. Semester and section alignment
-        for col, col_type in {
-            "name": "VARCHAR", "academic_year": "VARCHAR", "odd_even": "VARCHAR",
-            "status": "VARCHAR"
-        }.items():
-            add_col("semesters", col, col_type)
-
-        for col, col_type in {
-            "program_id": "INTEGER", "status": "VARCHAR"
-        }.items():
-            add_col("sections", col, col_type)
-
-        # 5. Rooms alignment
+        # 4. Rooms alignment
         room_updates = {
             "room_number": "VARCHAR", "room_name": "VARCHAR", "floor": "VARCHAR",
             "building": "VARCHAR", "type": "VARCHAR", "capacity": "INTEGER",
@@ -100,23 +77,21 @@ def migrate_db(db: Session):
         for col, col_type in room_updates.items():
             add_col("rooms", col, col_type)
 
-        # 6. Subject alignment
-        for c in ["code", "type", "category", "credits", "weekly_hours", "semester_id", "department_id",
+        # 5. Subject alignment
+        for c in ["code", "type", "credits", "weekly_hours", "semester_id", "department_id",
                   "department_name", "status"]:
             col_type = "INTEGER" if "id" in c or c in ["credits", "weekly_hours"] else "VARCHAR"
             add_col("subjects", c, col_type)
 
-        # 7. Global Soft Delete Alignment
+        # 6. Global Soft Delete Alignment
         enterprise_tables = [
             "users", "departments", "programs", "semesters", "sections", "subjects",
             "faculty_assignments", "rooms", "timetables", "class_sessions",
             "bookings", "audit_logs", "faculty_leaves", "substitutions",
-            "approval_workflows", "faculty_workload", "curricula", "timetable_settings"
+            "approval_workflows", "faculty_workload"
         ]
         for table_name in enterprise_tables:
             add_col(table_name, "is_deleted", "BOOLEAN DEFAULT 0")
-            # Ensure existing records have is_deleted = 0
-            db.execute(text(f"UPDATE {table_name} SET is_deleted = 0 WHERE is_deleted IS NULL"))
 
         db.commit()
     except Exception as e:
@@ -124,44 +99,12 @@ def migrate_db(db: Session):
         db.rollback()
 
 def sync_registry():
-    """Fail-proof institutional structural seeding and user recovery."""
+    """Fail-proof institutional structural seeding."""
     db = database.SessionLocal()
     try:
         migrate_db(db)
         
-        # 1. Recover/Synchronize Identities
-        all_users = db.query(models.User).all()
-        for u in all_users:
-            if not u.faculty_id:
-                u.faculty_id = f"{u.role or 'user'}_{u.id:02d}"
-            if not u.password:
-                # Default passwords for recovery of previous system users
-                pwd = "faculty123" if u.role == "faculty" else "staff123"
-                if u.role in ["admin", "super_admin"]: pwd = "admin123"
-                u.password = auth.get_password_hash(pwd)
-            if not u.status:
-                u.status = "Active"
-        db.commit()
-
-        # 2. Ensure Super Admin exists
-        admin = db.query(models.User).filter(models.User.email == "admin@kahe.edu").first()
-        if not admin:
-            admin = models.User(
-                name="System Admin",
-                email="admin@kahe.edu",
-                password=auth.get_password_hash("admin123"),
-                role="super_admin",
-                faculty_id="admin_01",
-                status="Active"
-            )
-            db.add(admin)
-        else:
-            if admin.role == "admin": admin.role = "super_admin"
-            if not admin.password:
-                admin.password = auth.get_password_hash("admin123")
-        db.commit()
-
-        # 3. Static Config (Periods)
+        # 1. Static Config (Periods/Days) - Preserve existing, only sync if empty
         if db.query(models.PeriodTiming).count() == 0:
             periods = [
                 (1, 1, "09:00", "09:50", False, "CLASS"),
@@ -174,9 +117,84 @@ def sync_registry():
                 (8, 6, "14:20", "15:10", False, "CLASS")
             ]
             for p in periods:
-                db.add(models.PeriodTiming(id=p[0], period_number=p[1], start_time=p[2], end_time=p[3], is_break=p[4], type=p[5]))
+                query = text("INSERT INTO period_timings (id, period_number, start_time, end_time, "
+                             "is_break, type) VALUES (:id, :pn, :st, :et, :ib, :t)")
+                db.execute(query, {"id": p[0], "pn": p[1], "st": p[2], "et": p[3], "ib": p[4], "t": p[5]})
+
+        # 2. Structural Root
+        dept = db.query(models.Department).filter(
+            models.Department.name == "Computer Science"
+        ).first()
+        if not dept:
+            dept = models.Department(name="Computer Science", code="CS")
+            db.add(dept)
+            db.commit()
+            db.refresh(dept)
+
+        prog = db.query(models.Program).filter(models.Program.name == "B.Sc CS").first()
+        if not prog:
+            prog = models.Program(name="B.Sc CS", type="UG", department_id=dept.id)
+            db.add(prog)
+            db.commit()
+            db.refresh(prog)
+
+        if db.query(models.Semester).filter(models.Semester.program_id == prog.id).count() == 0:
+            for i in range(1, 7):
+                db.add(models.Semester(number=i, program_id=prog.id, is_active=True))
             db.commit()
 
+        # 3. Core Identities
+        admin = db.query(models.User).filter(models.User.email == "admin@kahe.edu").first()
+        if not admin:
+            admin = models.User(
+                name="System Admin",
+                email="admin@kahe.edu",
+                password=auth.get_password_hash("admin123"),
+                role="admin",
+                faculty_id="admin_01"
+            )
+            db.add(admin)
+        else:
+            # Ensure existing admin has proper credentials and role
+            if not admin.faculty_id:
+                admin.faculty_id = "admin_01"
+            admin.role = "admin"
+            # In development/localhost, ensure the default password works if it's the only admin
+            if admin.email == "admin@kahe.edu" and not admin.password:
+                admin.password = auth.get_password_hash("admin123")
+
+        if db.query(models.User).filter(models.User.role == "faculty").count() == 0:
+            facs = [("Dr. Arul", "arul@kahe.edu", "FAC01"),
+                    ("Mrs. Priya", "priya@kahe.edu", "FAC02")]
+            for n, e, fid in facs:
+                db.add(models.User(
+                    name=n, email=e, faculty_id=fid,
+                    password=auth.get_password_hash("faculty123"),
+                    role="faculty", department_id=dept.id, max_hours_per_week=24
+                ))
+
+        # 4. Curriculum
+        sem3 = db.query(models.Semester).filter(models.Semester.number == 3).first()
+        if sem3 and db.query(models.Subject).filter(models.Subject.semester_id == sem3.id).count() == 0:
+            subs = [("Operating Systems", 4), ("Computer Networks", 4), ("Python Lab", 3)]
+            for sn, hrs in subs:
+                db.add(models.Subject(
+                    name=sn, department_name="Computer Science", weekly_hours=hrs,
+                    semester_id=sem3.id, type="Theory" if "Lab" not in sn else "Practical"
+                ))
+
+        # 5. Rooms
+        if db.query(models.Room).count() == 0:
+            db.add(models.Room(
+                room_number="A-101", type="Classroom", capacity=60,
+                department="Computer Science", status="AVAILABLE"
+            ))
+            db.add(models.Room(
+                room_number="L-201", type="Lab", capacity=30,
+                department="Computer Science", status="AVAILABLE"
+            ))
+
+        db.commit()
     except Exception as e:
         logger.error(f"Sync Registry Error: {e}")
         db.rollback()
@@ -302,8 +320,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     is_failsafe = (form_data.username.lower() in ["admin@kahe.edu", "admin_01"] and form_data.password == "admin123")
     if is_failsafe or (user and auth.verify_password(form_data.password, user.password)):
         u = user or db.query(models.User).filter(models.User.email == "admin@kahe.edu").first()
-        u.last_login = datetime.now()
-        db.commit()
         token = auth.create_access_token(data={"sub": u.email, "role": u.role})
         log_action(db, u.id, "LOGIN", "User", u.id, "Institutional access granted.")
         return {"access_token": token, "token_type": "bearer", "role": u.role, "user_id": u.id, "name": u.name}
@@ -427,7 +443,7 @@ def list_users(db: Session = Depends(database.get_db)):
 
 @api_router.post("/users", response_model=schemas.User)
 def create_user(u: schemas.UserCreate, db: Session = Depends(database.get_db),
-                admin: models.User = Depends(auth.check_hod)):
+                admin: models.User = Depends(auth.check_admin)):
     # Prevent duplicate faculty entries by email or faculty_id
     existing = db.query(models.User).filter(or_(
         models.User.email == u.email,
@@ -441,42 +457,31 @@ def create_user(u: schemas.UserCreate, db: Session = Depends(database.get_db),
     db.commit()
     db.refresh(db_u)
 
-    log_action(db, admin.id, "USER_CREATED", "User", db_u.id, f"Institutional identity created for {db_u.name} (Role: {db_u.role})")
-
     # Auto-Sync: Initialize Workload if Faculty
     if db_u.role == "faculty":
         workload = models.FacultyWorkload(faculty_id=db_u.id)
         db.add(workload)
         db.commit()
         log_action(db, admin.id, "SYNC_FACULTY", "User", db_u.id,
-                   f"Faculty workload profile initialized for {db_u.name}.")
+                   f"Faculty identity {db_u.name} synchronized with registry.")
 
     return db_u
 
 
 @api_router.put("/users/{user_id}", response_model=schemas.User)
 def update_user(user_id: int, u: schemas.UserUpdate, db: Session = Depends(database.get_db),
-                admin: models.User = Depends(auth.check_hod)):
+                admin: models.User = Depends(auth.check_admin)):
     db_u = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_u:
         raise HTTPException(404, detail="Identity not found")
 
     old_role = db_u.role
     update_data = u.model_dump(exclude_unset=True)
-    password_changed = False
-    
     if "password" in update_data and update_data["password"]:
         update_data["password"] = auth.get_password_hash(update_data["password"])
-        password_changed = True
-        
     for k, v in update_data.items():
         setattr(db_u, k, v)
     db.commit()
-
-    if password_changed:
-        log_action(db, admin.id, "PASSWORD_RESET", "User", db_u.id, f"Security credentials reset for {db_u.name}")
-    else:
-        log_action(db, admin.id, "USER_UPDATED", "User", db_u.id, f"Registry data updated for {db_u.name}")
 
     # Auto-Sync: Initialize Workload if role changed to Faculty
     if old_role != "faculty" and db_u.role == "faculty":
@@ -501,7 +506,7 @@ def update_user(user_id: int, u: schemas.UserUpdate, db: Session = Depends(datab
 
 @api_router.delete("/users/{user_id}")
 def purge_user(user_id: int, db: Session = Depends(database.get_db),
-               admin: models.User = Depends(auth.check_hod)):
+               admin: models.User = Depends(auth.check_admin)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(404)
@@ -643,12 +648,12 @@ def clear_class_history(db: Session = Depends(database.get_db)):
 # --- SUBJECTS ---
 @api_router.get("/subjects", response_model=List[schemas.Subject])
 def list_subjects(db: Session = Depends(database.get_db)):
-    return db.query(models.Subject).filter(models.Subject.is_deleted.is_(False)).all()
+    return db.query(models.Subject).all()
 
 
 @api_router.post("/subjects", response_model=schemas.Subject)
 def add_subject(sub: schemas.SubjectCreate, db: Session = Depends(database.get_db),
-                _admin: models.User = Depends(auth.check_hod)):
+                _admin: models.User = Depends(auth.check_admin)):
     try:
         db_sub = models.Subject(**sub.model_dump())
         db.add(db_sub)
@@ -666,7 +671,7 @@ def add_subject(sub: schemas.SubjectCreate, db: Session = Depends(database.get_d
 
 @api_router.put("/subjects/{subject_id}", response_model=schemas.Subject)
 def update_subject(subject_id: int, sub: schemas.SubjectUpdate, db: Session = Depends(database.get_db),
-                   _admin: models.User = Depends(auth.check_hod)):
+                   _admin: models.User = Depends(auth.check_admin)):
     db_sub = db.query(models.Subject).filter(models.Subject.id == subject_id).first()
     update_data = sub.model_dump(exclude_unset=True)
     for k, v in update_data.items():
@@ -678,7 +683,7 @@ def update_subject(subject_id: int, sub: schemas.SubjectUpdate, db: Session = De
 
 @api_router.delete("/subjects/{subject_id}")
 def delete_subject(subject_id: int, db: Session = Depends(database.get_db),
-                   _admin: models.User = Depends(auth.check_hod)):
+                   _admin: models.User = Depends(auth.check_admin)):
     sub = db.query(models.Subject).filter(models.Subject.id == subject_id).first()
     if not sub:
         raise HTTPException(404)
@@ -691,58 +696,6 @@ def delete_subject(subject_id: int, db: Session = Depends(database.get_db),
     ).update({"is_deleted": True})
     db.commit()
     return {"ok": True}
-
-
-def update_model(instance, payload):
-    for key, value in payload.model_dump(exclude_unset=True).items():
-        setattr(instance, key, value)
-    return instance
-
-
-def require_record(db: Session, model, record_id: int):
-    record = db.query(model).filter(model.id == record_id).first()
-    if not record or getattr(record, "is_deleted", False):
-        raise HTTPException(404, detail="Record not found.")
-    return record
-
-
-def timetable_readiness(db: Session):
-    checks = [
-        ("Department exists", db.query(models.Department).filter(models.Department.is_deleted.is_(False)).count() > 0),
-        ("Program exists", db.query(models.Program).filter(models.Program.is_deleted.is_(False)).count() > 0),
-        ("Semester exists", db.query(models.Semester).filter(models.Semester.is_deleted.is_(False)).count() > 0),
-        ("Section exists", db.query(models.Section).filter(models.Section.is_deleted.is_(False)).count() > 0),
-        ("Subject exists", db.query(models.Subject).filter(models.Subject.is_deleted.is_(False)).count() > 0),
-        ("Faculty exists", db.query(models.User).filter(and_(
-            models.User.role == "faculty",
-            models.User.is_deleted.is_(False)
-        )).count() > 0),
-        ("Faculty Mapping exists", db.query(models.FacultyAssignment).filter(
-            models.FacultyAssignment.is_deleted.is_(False)
-        ).count() > 0),
-        ("Curriculum configured", db.query(models.Curriculum).filter(
-            models.Curriculum.is_deleted.is_(False)
-        ).count() > 0),
-        ("Timetable Settings configured", db.query(models.TimetableSetting).filter(and_(
-            models.TimetableSetting.is_active.is_(True),
-            models.TimetableSetting.is_deleted.is_(False)
-        )).count() > 0),
-    ]
-    details = [{"label": label, "passed": bool(passed)} for label, passed in checks]
-    return {"is_ready": all(item["passed"] for item in details), "checks": details,
-            "errors": [item["label"] for item in details if not item["passed"]]}
-
-
-def serialize_timetable_setting(setting: models.TimetableSetting):
-    return {
-        "id": setting.id,
-        "working_days": [d for d in (setting.working_days or "").split(",") if d],
-        "total_periods_per_day": setting.total_periods_per_day,
-        "lab_continuous": setting.lab_continuous,
-        "academic_year": setting.academic_year,
-        "active_semester_id": setting.active_semester_id,
-        "is_active": setting.is_active,
-    }
 
 # --- TIMETABLE & ENGINE ---
 @api_router.get("/timetables", response_model=List[schemas.Timetable])
@@ -771,16 +724,8 @@ def notify_users(db: Session, user_ids: List[int], message: str):
 def generate_timetable(department_id: Optional[int] = None,
                        semester_id: Optional[int] = None,
                        db: Session = Depends(database.get_db),
-                       admin: models.User = Depends(auth.check_hod)):
+                       admin: models.User = Depends(auth.check_admin)):
     """Advanced Institutional Scheduling Engine powered by Google OR-Tools"""
-    readiness = timetable_readiness(db)
-    if not readiness["is_ready"]:
-        raise HTTPException(
-            status_code=400,
-            detail={"message": "Timetable generation is disabled until setup is complete.",
-                    "errors": readiness["errors"]}
-        )
-
     solver = scheduler.TimetableSolver(db, department_id=department_id, semester_id=semester_id)
 
     try:
@@ -931,34 +876,10 @@ def detect_timetable_conflicts(db: Session = Depends(database.get_db)):
 
     return conflicts
 
-@api_router.get("/user-stats")
-def get_user_stats(db: Session = Depends(database.get_db), _admin: models.User = Depends(auth.check_admin)):
-    """Enterprise User Management Analytics"""
-    total = db.query(models.User).filter(models.User.is_deleted.is_(False)).count()
-    admins = db.query(models.User).filter(and_(models.User.role.in_(['super_admin', 'admin']), models.User.is_deleted.is_(False))).count()
-    faculty = db.query(models.User).filter(and_(models.User.role == 'faculty', models.User.is_deleted.is_(False))).count()
-    hods = db.query(models.User).filter(and_(models.User.role == 'hod', models.User.is_deleted.is_(False))).count()
-    staff = db.query(models.User).filter(and_(models.User.role == 'staff', models.User.is_deleted.is_(False))).count()
-    active = db.query(models.User).filter(and_(models.User.status == 'Active', models.User.is_deleted.is_(False))).count()
-    inactive = db.query(models.User).filter(and_(models.User.status == 'Inactive', models.User.is_deleted.is_(False))).count()
-
-    return {
-        "total": total,
-        "admins": admins,
-        "faculty": faculty,
-        "hods": hods,
-        "staff": staff,
-        "active": active,
-        "inactive": inactive
-    }
-
 @api_router.get("/dashboard-stats")
 def get_stats(db: Session = Depends(database.get_db)):
     try:
         total_rooms = db.query(models.Room).filter(models.Room.is_deleted.is_(False)).count()
-        classrooms = db.query(models.Room).filter(and_(models.Room.is_deleted.is_(False), models.Room.type == 'Classroom')).count()
-        labs = db.query(models.Room).filter(and_(models.Room.is_deleted.is_(False), models.Room.type == 'Lab')).count()
-        
         occupied_rooms = db.query(models.Timetable).filter(and_(
             models.Timetable.is_deleted.is_(False),
             models.Timetable.status == "PUBLISHED"
@@ -969,7 +890,6 @@ def get_stats(db: Session = Depends(database.get_db)):
             models.User.role == "faculty",
             models.User.is_deleted.is_(False)
         )).all()
-        
         total_load = db.query(models.Timetable).filter(and_(
             models.Timetable.is_deleted.is_(False),
             models.Timetable.status == "PUBLISHED"
@@ -985,13 +905,8 @@ def get_stats(db: Session = Depends(database.get_db)):
         )).count()
         completion = round((actual_hours / required_hours * 100), 1) if required_hours > 0 else 0
 
-        generated = db.query(models.AuditLog).filter(models.AuditLog.action == "GENERATE_TIMETABLE").count()
-
         return {
             "rooms": total_rooms,
-            "total_classrooms": classrooms,
-            "total_labs": labs,
-            "bookings": db.query(models.Booking).filter(models.Booking.is_deleted.is_(False)).count(),
             "active": db.query(models.ClassSession).filter(and_(
                 models.ClassSession.status == "ACTIVE",
                 models.ClassSession.is_deleted.is_(False)
@@ -1013,7 +928,6 @@ def get_stats(db: Session = Depends(database.get_db)):
             "faculty_utilization": fac_util,
             "classroom_utilization": room_util,
             "timetable_completion": completion,
-            "generated_timetables": generated,
             "conflict_alerts": len(detect_timetable_conflicts(db))
         }
     except Exception as e:
@@ -1081,7 +995,7 @@ def list_depts(db: Session = Depends(database.get_db)):
 
 @api_router.post("/departments", response_model=schemas.Department)
 def create_dept(dept: schemas.DepartmentBase, db: Session = Depends(database.get_db),
-                admin: models.User = Depends(auth.check_hod)):
+                admin: models.User = Depends(auth.check_admin)):
     try:
         db_dept = models.Department(**dept.model_dump())
         db.add(db_dept)
@@ -1096,55 +1010,19 @@ def create_dept(dept: schemas.DepartmentBase, db: Session = Depends(database.get
             raise HTTPException(400, detail="Department Name or Code already exists.")
         raise HTTPException(400, detail=str(e))
 
-@api_router.put("/departments/{dept_id}", response_model=schemas.Department)
-def update_dept(dept_id: int, dept: schemas.DepartmentUpdate, db: Session = Depends(database.get_db),
-                admin: models.User = Depends(auth.check_hod)):
-    db_dept = update_model(require_record(db, models.Department, dept_id), dept)
-    db.commit()
-    db.refresh(db_dept)
-    log_action(db, admin.id, "UPDATE", "Department", dept_id, f"Department {db_dept.name} updated.")
-    return db_dept
-
-@api_router.delete("/departments/{dept_id}")
-def delete_dept(dept_id: int, db: Session = Depends(database.get_db),
-                admin: models.User = Depends(auth.check_hod)):
-    db_dept = require_record(db, models.Department, dept_id)
-    db_dept.is_deleted = True
-    db.commit()
-    log_action(db, admin.id, "DELETE", "Department", dept_id, f"Department {db_dept.name} archived.")
-    return {"ok": True}
-
 @api_router.get("/programs", response_model=List[schemas.Program])
 def list_progs(db: Session = Depends(database.get_db)): 
     return db.query(models.Program).filter(models.Program.is_deleted == False).all()
 
 @api_router.post("/programs", response_model=schemas.Program)
 def create_prog(prog: schemas.ProgramBase, db: Session = Depends(database.get_db),
-                admin: models.User = Depends(auth.check_hod)):
+                admin: models.User = Depends(auth.check_admin)):
     db_prog = models.Program(**prog.model_dump())
     db.add(db_prog)
     db.commit()
     db.refresh(db_prog)
     log_action(db, admin.id, "CREATE", "Program", db_prog.id, f"Program {db_prog.name} initialized.")
     return db_prog
-
-@api_router.put("/programs/{program_id}", response_model=schemas.Program)
-def update_prog(program_id: int, prog: schemas.ProgramUpdate, db: Session = Depends(database.get_db),
-                admin: models.User = Depends(auth.check_hod)):
-    db_prog = update_model(require_record(db, models.Program, program_id), prog)
-    db.commit()
-    db.refresh(db_prog)
-    log_action(db, admin.id, "UPDATE", "Program", program_id, f"Program {db_prog.name} updated.")
-    return db_prog
-
-@api_router.delete("/programs/{program_id}")
-def delete_prog(program_id: int, db: Session = Depends(database.get_db),
-                admin: models.User = Depends(auth.check_hod)):
-    db_prog = require_record(db, models.Program, program_id)
-    db_prog.is_deleted = True
-    db.commit()
-    log_action(db, admin.id, "DELETE", "Program", program_id, f"Program {db_prog.name} archived.")
-    return {"ok": True}
 
 
 @api_router.get("/semesters", response_model=List[schemas.Semester])
@@ -1154,33 +1032,21 @@ def list_sems(db: Session = Depends(database.get_db)):
 
 @api_router.post("/semesters", response_model=schemas.Semester)
 def create_sem(sem: schemas.SemesterBase, db: Session = Depends(database.get_db),
-               admin: models.User = Depends(auth.check_hod)):
+               admin: models.User = Depends(auth.check_admin)):
     db_sem = models.Semester(**sem.model_dump())
     db.add(db_sem)
     db.commit()
     db.refresh(db_sem)
 
+    # Auto-Sync: Create Default Section A
+    section = models.Section(name="A", semester_id=db_sem.id)
+    db.add(section)
+    db.commit()
+
     log_action(db, admin.id, "CREATE", "Semester", db_sem.id,
-               f"Semester {db_sem.number} for Program {db_sem.program_id} created.")
+               f"Semester {db_sem.number} for Program {db_sem.program_id} "
+               "created with default Section A.")
     return db_sem
-
-@api_router.put("/semesters/{semester_id}", response_model=schemas.Semester)
-def update_sem(semester_id: int, sem: schemas.SemesterUpdate, db: Session = Depends(database.get_db),
-               admin: models.User = Depends(auth.check_hod)):
-    db_sem = update_model(require_record(db, models.Semester, semester_id), sem)
-    db.commit()
-    db.refresh(db_sem)
-    log_action(db, admin.id, "UPDATE", "Semester", semester_id, f"Semester {db_sem.number} updated.")
-    return db_sem
-
-@api_router.delete("/semesters/{semester_id}")
-def delete_sem(semester_id: int, db: Session = Depends(database.get_db),
-               admin: models.User = Depends(auth.check_hod)):
-    db_sem = require_record(db, models.Semester, semester_id)
-    db_sem.is_deleted = True
-    db.commit()
-    log_action(db, admin.id, "DELETE", "Semester", semester_id, f"Semester {db_sem.number} archived.")
-    return {"ok": True}
 
 
 @api_router.get("/sections", response_model=List[schemas.Section])
@@ -1190,7 +1056,7 @@ def list_sections(db: Session = Depends(database.get_db)):
 
 @api_router.post("/sections", response_model=schemas.Section)
 def create_section(sec: schemas.SectionCreate, db: Session = Depends(database.get_db),
-                   admin: models.User = Depends(auth.check_hod)):
+                   admin: models.User = Depends(auth.check_admin)):
     db_sec = models.Section(**sec.model_dump())
     db.add(db_sec)
     db.commit()
@@ -1198,98 +1064,6 @@ def create_section(sec: schemas.SectionCreate, db: Session = Depends(database.ge
     log_action(db, admin.id, "CREATE", "Section", db_sec.id,
                f"Section {db_sec.name} added to Semester {db_sec.semester_id}.")
     return db_sec
-
-@api_router.put("/sections/{section_id}", response_model=schemas.Section)
-def update_section(section_id: int, sec: schemas.SectionUpdate, db: Session = Depends(database.get_db),
-                   admin: models.User = Depends(auth.check_hod)):
-    db_sec = update_model(require_record(db, models.Section, section_id), sec)
-    db.commit()
-    db.refresh(db_sec)
-    log_action(db, admin.id, "UPDATE", "Section", section_id, f"Section {db_sec.name} updated.")
-    return db_sec
-
-@api_router.delete("/sections/{section_id}")
-def delete_section(section_id: int, db: Session = Depends(database.get_db),
-                   admin: models.User = Depends(auth.check_hod)):
-    db_sec = require_record(db, models.Section, section_id)
-    db_sec.is_deleted = True
-    db.commit()
-    log_action(db, admin.id, "DELETE", "Section", section_id, f"Section {db_sec.name} archived.")
-    return {"ok": True}
-
-
-@api_router.get("/curricula", response_model=List[schemas.Curriculum])
-def list_curricula(db: Session = Depends(database.get_db)):
-    return db.query(models.Curriculum).filter(models.Curriculum.is_deleted.is_(False)).all()
-
-@api_router.post("/curricula", response_model=schemas.Curriculum)
-def create_curriculum(curriculum: schemas.CurriculumBase, db: Session = Depends(database.get_db),
-                      admin: models.User = Depends(auth.check_hod)):
-    existing = db.query(models.Curriculum).filter(and_(
-        models.Curriculum.department_id == curriculum.department_id,
-        models.Curriculum.program_id == curriculum.program_id,
-        models.Curriculum.semester_id == curriculum.semester_id,
-        models.Curriculum.subject_id == curriculum.subject_id,
-        models.Curriculum.is_deleted.is_(False)
-    )).first()
-    if existing:
-        raise HTTPException(400, detail="This curriculum subject is already configured.")
-    db_curriculum = models.Curriculum(**curriculum.model_dump())
-    db.add(db_curriculum)
-    db.commit()
-    db.refresh(db_curriculum)
-    log_action(db, admin.id, "CREATE", "Curriculum", db_curriculum.id, "Curriculum entry configured.")
-    return db_curriculum
-
-@api_router.put("/curricula/{curriculum_id}", response_model=schemas.Curriculum)
-def update_curriculum(curriculum_id: int, curriculum: schemas.CurriculumUpdate,
-                      db: Session = Depends(database.get_db),
-                      admin: models.User = Depends(auth.check_hod)):
-    db_curriculum = update_model(require_record(db, models.Curriculum, curriculum_id), curriculum)
-    db.commit()
-    db.refresh(db_curriculum)
-    log_action(db, admin.id, "UPDATE", "Curriculum", curriculum_id, "Curriculum entry updated.")
-    return db_curriculum
-
-@api_router.delete("/curricula/{curriculum_id}")
-def delete_curriculum(curriculum_id: int, db: Session = Depends(database.get_db),
-                      admin: models.User = Depends(auth.check_hod)):
-    db_curriculum = require_record(db, models.Curriculum, curriculum_id)
-    db_curriculum.is_deleted = True
-    db.commit()
-    log_action(db, admin.id, "DELETE", "Curriculum", curriculum_id, "Curriculum entry archived.")
-    return {"ok": True}
-
-
-@api_router.get("/settings/timetable")
-def get_timetable_settings(db: Session = Depends(database.get_db)):
-    setting = db.query(models.TimetableSetting).filter(and_(
-        models.TimetableSetting.is_active.is_(True),
-        models.TimetableSetting.is_deleted.is_(False)
-    )).order_by(models.TimetableSetting.id.desc()).first()
-    return serialize_timetable_setting(setting) if setting else None
-
-@api_router.post("/settings/timetable")
-def save_timetable_settings(setting: schemas.TimetableSettingBase, db: Session = Depends(database.get_db),
-                            admin: models.User = Depends(auth.check_hod)):
-    db.query(models.TimetableSetting).update({"is_active": False})
-    db_setting = models.TimetableSetting(
-        working_days=",".join(setting.working_days),
-        total_periods_per_day=setting.total_periods_per_day,
-        lab_continuous=setting.lab_continuous,
-        academic_year=setting.academic_year,
-        active_semester_id=setting.active_semester_id,
-        is_active=True
-    )
-    db.add(db_setting)
-    db.commit()
-    db.refresh(db_setting)
-    log_action(db, admin.id, "UPDATE_SETTINGS", "Timetable", db_setting.id, "Timetable settings saved.")
-    return serialize_timetable_setting(db_setting)
-
-@api_router.get("/timetable/readiness")
-def get_timetable_readiness(db: Session = Depends(database.get_db)):
-    return timetable_readiness(db)
 
 
 # --- PDF EXPORT ENGINE ---
@@ -1628,25 +1402,6 @@ def create_faculty_mapping(mapping: schemas.FacultyAssignmentBase, db: Session =
                f"Resource {fac_name} mapped to {sub_name} (Sec {mapping.section}).")
 
     return db_mapping
-
-@api_router.put("/faculty-assignments/{mapping_id}", response_model=schemas.FacultyAssignment)
-def update_faculty_mapping(mapping_id: int, mapping: schemas.FacultyAssignmentUpdate,
-                           db: Session = Depends(database.get_db),
-                           admin: models.User = Depends(auth.check_hod)):
-    db_mapping = update_model(require_record(db, models.FacultyAssignment, mapping_id), mapping)
-    db.commit()
-    db.refresh(db_mapping)
-    log_action(db, admin.id, "UPDATE", "Faculty Mapping", mapping_id, "Faculty mapping updated.")
-    return db_mapping
-
-@api_router.delete("/faculty-assignments/{mapping_id}")
-def delete_faculty_mapping(mapping_id: int, db: Session = Depends(database.get_db),
-                           admin: models.User = Depends(auth.check_hod)):
-    db_mapping = require_record(db, models.FacultyAssignment, mapping_id)
-    db_mapping.is_deleted = True
-    db.commit()
-    log_action(db, admin.id, "DELETE", "Faculty Mapping", mapping_id, "Faculty mapping archived.")
-    return {"ok": True}
 
 
 # --- ROUTER REGISTRATION ---
