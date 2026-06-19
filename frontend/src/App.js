@@ -62,12 +62,12 @@ function App() {
                             <Route path="/schedule" element={<PrivateRoute><Schedule /></PrivateRoute>} />
                             <Route path="/user-directory" element={
                                 <PrivateRoute>
-                                    {role === 'admin' ? <UserDirectory /> : <Navigate to="/" />}
+                                    {(role === 'admin' || role === 'super_admin') ? <UserDirectory /> : <Navigate to="/" />}
                                 </PrivateRoute>
                             } />
                             <Route path="/timetable/*" element={
                                 <PrivateRoute>
-                                    {(role === 'admin' || role === 'hod' || role === 'dean' || role === 'principal') ? <TimetableManager /> : <Navigate to="/" />}
+                                    {(role === 'admin' || role === 'super_admin' || role === 'hod' || role === 'dean' || role === 'principal') ? <TimetableManager /> : <Navigate to="/" />}
                                 </PrivateRoute>
                             } />
                         </Routes>

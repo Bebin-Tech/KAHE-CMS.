@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api';
+import {
+    AlertCircle,
+    BarChart3,
+    BookOpen,
+    ClipboardList,
+    DoorOpen,
+    School,
+    Users,
+    Zap
+} from 'lucide-react';
 
 const Dashboard = () => {
     const [stats, setStats] = useState({
@@ -20,24 +30,29 @@ const Dashboard = () => {
     });
     const [recentActivity, setRecentActivity] = useState([]);
     const [rooms, setRooms] = useState([]);
+    const [curricula, setCurricula] = useState([]);
+    const [timetables, setTimetables] = useState([]);
+    const [conflicts, setConflicts] = useState([]);
     const [loading, setLoading] = useState(true);
-
-    const role = localStorage.getItem('role')?.toLowerCase();
-    const userName = localStorage.getItem('name');
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // Fetch stats and rooms in parallel
-                const [statsRes, roomsRes, historyRes] = await Promise.allSettled([
+                const [statsRes, roomsRes, historyRes, curriculaRes, timetablesRes, conflictsRes] = await Promise.allSettled([
                     API.get('/dashboard-stats'),
                     API.get('/rooms'),
-                    API.get('/class-history')
+                    API.get('/class-history'),
+                    API.get('/curricula'),
+                    API.get('/timetables'),
+                    API.get('/timetable-conflicts')
                 ]);
 
                 if (statsRes.status === 'fulfilled') setStats(prev => ({ ...prev, ...statsRes.value.data }));
                 if (roomsRes.status === 'fulfilled') setRooms(Array.isArray(roomsRes.value.data) ? roomsRes.value.data : []);
                 if (historyRes.status === 'fulfilled') setRecentActivity(Array.isArray(historyRes.value.data) ? historyRes.value.data.slice(0, 5) : []);
+                if (curriculaRes.status === 'fulfilled') setCurricula(Array.isArray(curriculaRes.value.data) ? curriculaRes.value.data : []);
+                if (timetablesRes.status === 'fulfilled') setTimetables(Array.isArray(timetablesRes.value.data) ? timetablesRes.value.data : []);
+                if (conflictsRes.status === 'fulfilled') setConflicts(Array.isArray(conflictsRes.value.data) ? conflictsRes.value.data : []);
 
                 setLoading(false);
             } catch (err) {
@@ -51,104 +66,96 @@ const Dashboard = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const getTimeAgo = (dateStr) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        const now = new Date();
-        const diffInSeconds = Math.floor((now - date) / 1000);
-        if (diffInSeconds < 60) return 'Just now';
-        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-        return date.toLocaleDateString();
-    };
+    const activeSessions = recentActivity.filter(item => item?.status === 'ACTIVE').length || stats.active || 0;
+    const classroomCount = stats.total_classrooms || rooms.filter(room => room?.type === 'Classroom').length || stats.rooms || 0;
+    const generatedSlots = timetables.filter(slot => !slot?.is_deleted).length || stats.generated_timetables || 0;
+    const roomUtilization = stats.classroom_utilization ?? stats.room_utilization ?? 0;
+    const securityAlerts = conflicts.length || stats.conflict_alerts || 0;
 
-    const handleClearActivity = async () => {
-        if (window.confirm('Are you sure you want to clear all recent activity?')) {
-            try {
-                await API.delete('/class-history');
-                setRecentActivity([]);
-            } catch (err) {
-                console.error("Failed to clear history:", err);
-            }
+    const cards = [
+        {
+            label: 'Departments',
+            value: stats.total_departments || 0,
+            icon: DoorOpen,
+            color: 'text-blue-600',
+            iconBg: 'bg-blue-50'
+        },
+        {
+            label: 'Curriculum',
+            value: curricula.length || stats.total_subjects || 0,
+            icon: BookOpen,
+            color: 'text-indigo-600',
+            iconBg: 'bg-indigo-50'
+        },
+        {
+            label: 'Faculty Count',
+            value: stats.total_faculties || 0,
+            icon: Users,
+            color: 'text-violet-600',
+            iconBg: 'bg-violet-50'
+        },
+        {
+            label: 'Classrooms',
+            value: classroomCount,
+            icon: School,
+            color: 'text-emerald-600',
+            iconBg: 'bg-emerald-50'
+        },
+        {
+            label: 'Active Sessions',
+            value: activeSessions,
+            icon: Zap,
+            color: 'text-amber-600',
+            iconBg: 'bg-amber-50'
+        },
+        {
+            label: 'Generated Slots',
+            value: generatedSlots,
+            icon: ClipboardList,
+            color: 'text-sky-600',
+            iconBg: 'bg-sky-50'
+        },
+        {
+            label: 'Room Utilization',
+            value: `${roomUtilization}%`,
+            icon: BarChart3,
+            color: 'text-slate-600',
+            iconBg: 'bg-slate-50'
+        },
+        {
+            label: 'Security Alerts',
+            value: securityAlerts,
+            icon: AlertCircle,
+            color: 'text-rose-600',
+            iconBg: 'bg-rose-50'
         }
-    };
+    ];
 
     if (loading) return <div className="p-10 text-center animate-pulse font-black text-gray-300 tracking-widest uppercase">Securing Institutional Data...</div>;
 
-    if (role !== 'admin') {
-        const welcomeColor = role === 'hod' ? 'text-violet-600' : (role === 'faculty' ? 'text-indigo-600' : 'text-slate-600');
-        return (
-            <div className="p-6 sm:p-10 bg-gray-50 min-h-screen flex items-center justify-center">
-                <div className="text-center animate-in fade-in zoom-in duration-700">
-                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
-                        Welcome back, <span className={welcomeColor}>{userName || role?.toUpperCase() || 'User'}</span>.
-                    </h1>
-                    <p className="mt-4 text-gray-500 font-medium text-sm sm:text-lg uppercase tracking-widest">Karpagam Academy of Higher Education</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="p-4 sm:p-6 lg:p-8 bg-transparent min-h-screen">
-            <header className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tightest uppercase italic">
-                        Enterprise <span className="text-indigo-600">Dashboard</span>
-                    </h1>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Institutional Intelligence Hub</p>
-                </div>
-            </header>
-
-            {/* Admin Stats Grid - Fluid Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {[
-                    { label: 'Total Rooms', value: stats.rooms, icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5' },
-                    { label: 'Timetables', value: stats.generated_timetables, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', color: 'text-indigo-600' },
-                    { label: 'Today\'s Usage', value: stats.bookings, icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-                    { label: 'Active Classes', value: stats.active, icon: 'M13 10V3L4 14h7v7l9-11h-7z', color: 'text-red-500' },
-                    { label: 'Conflicts', value: stats.conflict_alerts, icon: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: stats.conflict_alerts > 0 ? 'text-orange-500' : 'text-green-500' }
-                ].map((item, idx) => (
-                    <div key={idx} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col items-center group hover:shadow-xl transition-all duration-500">
-                        <div className="p-4 rounded-2xl mb-4 bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} /></svg>
-                        </div>
-                        <p className={`text-4xl font-black ${item.color || 'text-gray-900'}`}>{item.value || 0}</p>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">{item.label}</p>
-                    </div>
-                ))}
-            </div>
-
-            {/* Recent Activity */}
-            <div className="mt-12 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                    <h2 className="text-xl font-black text-gray-900">Recent Campus Activity</h2>
-                    <div className="flex items-center space-x-3">
-                        <button onClick={handleClearActivity} className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-50 transition-colors">Clear History</button>
-                        <button className="px-4 py-2 border-2 border-indigo-600 text-indigo-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-colors">View All</button>
-                    </div>
-                </div>
-                <div className="space-y-6">
-                    {recentActivity.map((activity, index) => (
-                        <div key={activity?.id} className="flex items-center space-x-4 border-b border-gray-50 pb-4 last:border-0">
-                            <div className="h-12 w-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 text-xs font-black">
-                                {index + 1}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-bold text-gray-800 truncate">
-                                    Room {rooms.find(r => r?.id === activity?.room_id)?.room_number || activity?.room_id} is {activity?.status === 'ACTIVE' ? 'occupied' : 'released'} by {activity?.faculty_name}
-                                </p>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{getTimeAgo(activity?.start_time)}</p>
+        <div className="min-h-screen bg-[#f7faff] p-5 sm:p-6 lg:p-8">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                {cards.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                        <div key={item.label} className="min-h-[174px] rounded-[18px] border border-slate-200 bg-white px-6 py-7 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+                            <div className="flex h-full flex-col items-center justify-center text-center">
+                                <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl ${item.iconBg}`}>
+                                    <Icon className={`h-6 w-6 ${item.color}`} strokeWidth={2.4} />
+                                </div>
+                                <div className={`text-3xl font-black leading-none ${item.color}`}>
+                                    {item.value}
+                                </div>
+                                <div className="mt-3 text-[11px] font-black uppercase tracking-[0.28em] text-slate-400">
+                                    {item.label}
+                                </div>
                             </div>
                         </div>
-                    ))}
-                    {recentActivity.length === 0 && (
-                        <div className="py-20 text-center">
-                            <p className="text-gray-400 font-medium italic">No recent institutional activities detected.</p>
-                        </div>
-                    )}
-                </div>
+                    );
+                })}
             </div>
+
         </div>
     );
 };

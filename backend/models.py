@@ -31,12 +31,12 @@ class TimetableStatus(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    faculty_id = Column(String, unique=True, index=True, nullable=True) # Employee ID
+    faculty_id = Column(String, unique=True, index=True, nullable=True) # Employee ID / Username
     name = Column(String)
     email = Column(String, unique=True, index=True)
     password = Column(String)
     phone = Column(String, nullable=True)
-    role = Column(String) # admin, principal, hod, faculty, student
+    role = Column(String) # super_admin, admin, hod, faculty, staff, student
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     designation = Column(String, nullable=True)
     
@@ -45,6 +45,8 @@ class User(Base):
     max_hours_per_week = Column(Integer, default=24)
     availability_status = Column(String, default="Available") # Available, On Leave
     
+    last_login = Column(DateTime, nullable=True)
+    status = Column(String, default="Active") # Active, Inactive
     is_deleted = Column(Boolean, default=False)
     
     department = relationship("Department", foreign_keys=[department_id], back_populates="users")
@@ -54,6 +56,8 @@ class Department(Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String, unique=True, index=True, nullable=True)
     name = Column(String, unique=True, index=True)
+    classification = Column(String, nullable=True)
+    semester = Column(String, nullable=True)
     hod_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     status = Column(String, default="Active") # Active, Inactive
     is_deleted = Column(Boolean, default=False)
@@ -71,6 +75,7 @@ class Program(Base):
     regulation = Column(String, nullable=True) # e.g., 2021, 2023
     duration = Column(Integer, default=3) # in years
     department_id = Column(Integer, ForeignKey("departments.id"))
+    status = Column(String, default="Active")
     is_deleted = Column(Boolean, default=False)
     
     department = relationship("Department", back_populates="programs")
@@ -80,6 +85,10 @@ class Semester(Base):
     __tablename__ = "semesters"
     id = Column(Integer, primary_key=True, index=True)
     number = Column(Integer)
+    name = Column(String, nullable=True)
+    academic_year = Column(String, nullable=True)
+    odd_even = Column(String, nullable=True)
+    status = Column(String, default="Active")
     program_id = Column(Integer, ForeignKey("programs.id"))
     is_deleted = Column(Boolean, default=False)
     program = relationship("Program", back_populates="semesters")
@@ -90,11 +99,14 @@ class Section(Base):
     __tablename__ = "sections"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String) # A, B, C
+    program_id = Column(Integer, ForeignKey("programs.id"), nullable=True)
     semester_id = Column(Integer, ForeignKey("semesters.id"))
     student_strength = Column(Integer, default=60)
     assigned_room_id = Column(Integer, ForeignKey("rooms.id"), nullable=True)
+    status = Column(String, default="Active")
     is_deleted = Column(Boolean, default=False)
     
+    program = relationship("Program")
     semester = relationship("Semester")
     assigned_room = relationship("Room")
 
@@ -137,9 +149,27 @@ class FacultyAssignment(Base):
     subject_id = Column(Integer, ForeignKey("subjects.id"))
     semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True)
     section = Column(String, nullable=True)
+    section_id = Column(Integer, ForeignKey("sections.id"), nullable=True)
     is_deleted = Column(Boolean, default=False)
     
     faculty = relationship("User")
+    subject = relationship("Subject")
+    section_ref = relationship("Section")
+
+class Curriculum(Base):
+    __tablename__ = "curricula"
+    id = Column(Integer, primary_key=True, index=True)
+    department_id = Column(Integer, ForeignKey("departments.id"))
+    program_id = Column(Integer, ForeignKey("programs.id"))
+    semester_id = Column(Integer, ForeignKey("semesters.id"))
+    subject_id = Column(Integer, ForeignKey("subjects.id"))
+    weekly_hours = Column(Integer, default=0)
+    status = Column(String, default="Active")
+    is_deleted = Column(Boolean, default=False)
+
+    department = relationship("Department")
+    program = relationship("Program")
+    semester = relationship("Semester")
     subject = relationship("Subject")
 
 class Room(Base):
@@ -162,6 +192,19 @@ class AcademicSetting(Base):
     academic_year = Column(String) # e.g., 2023-2024
     semester_type = Column(String) # Odd, Even
     is_active = Column(Boolean, default=True)
+
+class TimetableSetting(Base):
+    __tablename__ = "timetable_settings"
+    id = Column(Integer, primary_key=True)
+    working_days = Column(String, default="")
+    total_periods_per_day = Column(Integer, default=6)
+    lab_continuous = Column(Boolean, default=True)
+    academic_year = Column(String)
+    active_semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True)
+    is_active = Column(Boolean, default=True)
+    is_deleted = Column(Boolean, default=False)
+
+    active_semester = relationship("Semester")
 
 class WorkingDay(Base):
     __tablename__ = "working_days"

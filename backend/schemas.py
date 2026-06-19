@@ -16,6 +16,7 @@ class UserBase(BaseModel):
     max_hours_per_day: Optional[int] = 6
     max_hours_per_week: Optional[int] = 24
     availability_status: Optional[str] = "Available"
+    status: Optional[str] = "Active"
     is_deleted: Optional[bool] = False
 
 class UserCreate(UserBase):
@@ -28,13 +29,16 @@ class UserUpdate(BaseModel):
     faculty_id: Optional[str] = None
     department_id: Optional[int] = None
     designation: Optional[str] = None
+    phone: Optional[str] = None
     password: Optional[str] = None
     max_hours_per_day: Optional[int] = None
     max_hours_per_week: Optional[int] = None
     availability_status: Optional[str] = None
+    status: Optional[str] = None
 
 class User(UserBase):
     id: int
+    last_login: Optional[datetime] = None
     class Config:
         from_attributes = True
 
@@ -72,8 +76,18 @@ class Room(RoomBase):
 class DepartmentBase(BaseModel):
     code: Optional[str] = None
     name: str
+    classification: Optional[str] = None
+    semester: Optional[str] = None
     hod_id: Optional[int] = None
     status: Optional[str] = "Active"
+
+class DepartmentUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    classification: Optional[str] = None
+    semester: Optional[str] = None
+    hod_id: Optional[int] = None
+    status: Optional[str] = None
 
 class Department(DepartmentBase):
     id: int
@@ -83,10 +97,20 @@ class Department(DepartmentBase):
 class ProgramBase(BaseModel):
     name: str
     code: Optional[str] = None
-    type: str # UG, PG
+    type: Optional[str] = "UG" # UG, PG
     regulation: Optional[str] = "2023"
     duration: Optional[int] = 3
     department_id: int
+    status: Optional[str] = "Active"
+
+class ProgramUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    type: Optional[str] = None
+    regulation: Optional[str] = None
+    duration: Optional[int] = None
+    department_id: Optional[int] = None
+    status: Optional[str] = None
 
 class Program(ProgramBase):
     id: int
@@ -96,7 +120,20 @@ class Program(ProgramBase):
 class SemesterBase(BaseModel):
     number: int
     program_id: int
+    name: Optional[str] = None
+    academic_year: Optional[str] = None
+    odd_even: Optional[str] = None
+    status: Optional[str] = "Active"
     is_active: Optional[bool] = True
+
+class SemesterUpdate(BaseModel):
+    number: Optional[int] = None
+    program_id: Optional[int] = None
+    name: Optional[str] = None
+    academic_year: Optional[str] = None
+    odd_even: Optional[str] = None
+    status: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class Semester(SemesterBase):
     id: int
@@ -131,12 +168,22 @@ class SubjectUpdate(BaseModel):
 
 class SectionBase(BaseModel):
     name: str
+    program_id: Optional[int] = None
     semester_id: int
     student_strength: Optional[int] = 60
     assigned_room_id: Optional[int] = None
+    status: Optional[str] = "Active"
 
 class SectionCreate(SectionBase):
     pass
+
+class SectionUpdate(BaseModel):
+    name: Optional[str] = None
+    program_id: Optional[int] = None
+    semester_id: Optional[int] = None
+    student_strength: Optional[int] = None
+    assigned_room_id: Optional[int] = None
+    status: Optional[str] = None
 
 class Section(SectionBase):
     id: int
@@ -297,6 +344,52 @@ class FacultyAssignmentBase(BaseModel):
     subject_id: int
     semester_id: Optional[int] = None
     section: Optional[str] = None
+    section_id: Optional[int] = None
+
+class FacultyAssignmentUpdate(BaseModel):
+    faculty_id: Optional[int] = None
+    subject_id: Optional[int] = None
+    semester_id: Optional[int] = None
+    section: Optional[str] = None
+    section_id: Optional[int] = None
+
+class CurriculumBase(BaseModel):
+    department_id: int
+    program_id: int
+    semester_id: int
+    subject_id: int
+    weekly_hours: int
+    status: Optional[str] = "Active"
+
+class CurriculumUpdate(BaseModel):
+    department_id: Optional[int] = None
+    program_id: Optional[int] = None
+    semester_id: Optional[int] = None
+    subject_id: Optional[int] = None
+    weekly_hours: Optional[int] = None
+    status: Optional[str] = None
+
+class Curriculum(CurriculumBase):
+    id: int
+    department: Optional[Department] = None
+    program: Optional[Program] = None
+    semester: Optional[Semester] = None
+    subject: Optional[Subject] = None
+    class Config:
+        from_attributes = True
+
+class TimetableSettingBase(BaseModel):
+    working_days: List[str]
+    total_periods_per_day: int = 6
+    lab_continuous: bool = True
+    academic_year: str
+    active_semester_id: Optional[int] = None
+
+class TimetableSetting(TimetableSettingBase):
+    id: int
+    is_active: bool
+    class Config:
+        from_attributes = True
 
 class AuditLogBase(BaseModel):
     action: str
@@ -338,8 +431,8 @@ class Substitution(SubstitutionBase):
 
 class FacultyAssignment(FacultyAssignmentBase):
     id: int
-    faculty: User
-    subject: Subject
+    faculty: Optional[User] = None
+    subject: Optional[Subject] = None
     class Config:
         from_attributes = True
 
