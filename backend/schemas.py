@@ -39,6 +39,10 @@ class Token(BaseModel):
     user_id: int
     name: str
 
+class TokenData(BaseModel):
+    email: Optional[str] = None
+    role: Optional[str] = None
+
 class DepartmentBase(BaseModel):
     code: Optional[str] = None
     name: str
@@ -54,8 +58,8 @@ class Department(DepartmentBase):
 class ProgramBase(BaseModel):
     name: str
     code: Optional[str] = None
-    type: str
-    department_id: int
+    type: Optional[str] = "UG"
+    department_id: Optional[int] = None
     status: Optional[str] = "Active"
 
 class Program(ProgramBase):
@@ -65,7 +69,7 @@ class Program(ProgramBase):
 
 class SemesterBase(BaseModel):
     number: int
-    program_id: int
+    program_id: Optional[int] = None
     name: Optional[str] = None
     academic_year: Optional[str] = None
     odd_even: Optional[str] = "Odd"
@@ -78,7 +82,7 @@ class Semester(SemesterBase):
 
 class SectionBase(BaseModel):
     name: str
-    semester_id: int
+    semester_id: Optional[int] = None
     student_strength: Optional[int] = 60
     status: Optional[str] = "Active"
 
@@ -93,9 +97,9 @@ class Section(SectionBase):
 class SubjectBase(BaseModel):
     name: str
     code: str
-    type: str
-    credits: int
-    weekly_hours: int
+    type: Optional[str] = "Theory"
+    credits: Optional[int] = 0
+    weekly_hours: Optional[int] = 3
     status: Optional[str] = "Active"
 
 class SubjectCreate(SubjectBase):
@@ -121,8 +125,8 @@ class Curriculum(CurriculumBase):
 
 class RoomBase(BaseModel):
     room_number: str
-    type: str
-    capacity: int
+    type: Optional[str] = "Classroom"
+    capacity: Optional[int] = 60
     building: Optional[str] = None
     floor: Optional[str] = None
     status: Optional[str] = "AVAILABLE"
@@ -150,9 +154,9 @@ class TimetableSetting(TimetableSettingBase):
 class TimetableBase(BaseModel):
     day_of_week: str
     period_id: int
-    subject_name: str
-    faculty_name: str
-    room_number: str
+    subject_name: Optional[str] = None
+    faculty_name: Optional[str] = None
+    room_number: Optional[str] = None
     semester_number: Optional[int] = None
     section: Optional[str] = None
 

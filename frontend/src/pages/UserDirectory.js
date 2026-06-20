@@ -1,320 +1,383 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import API from '../api';
+import {
+    Users,
+    UserCheck,
+    UserX,
+    ShieldCheck,
+    GraduationCap,
+    Briefcase,
+    Search,
+    Plus,
+    Edit2,
+    Trash2,
+    X,
+    Phone,
+    Mail,
+    Building2,
+    Clock
+} from 'lucide-react';
 
 const UserDirectory = () => {
     const [users, setUsers] = useState([]);
-    const [searchTerm, setSearchBar] = useState('');
+    const [depts, setDepts] = useState([]);
+    const [stats, setStats] = useState({
+        total: 0, admins: 0, faculty: 0, hods: 0, active: 0, inactive: 0
+    });
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterRole, setFilterRole] = useState('');
+    const [filterDept, setFilterDept] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
+
     const [showModal, setShowModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
+    const [confirmPassword, setConfirmPassword] = useState('');
+
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         password: '',
         faculty_id: '',
-        role: 'faculty'
+        role: 'faculty',
+        department_id: '',
+        designation: '',
+        phone: '',
+        status: 'Active'
     });
 
-    useEffect(() => {
-        fetchUsers();
+    const fetchAllData = useCallback(async () => {
+        try {
+            const [usersRes, statsRes, deptsRes] = await Promise.all([
+                API.get('/users_list'),
+                API.get('/user-stats'),
+                API.get('/departments')
+            ]);
+            setUsers(usersRes.data || []);
+            setStats(statsRes.data || {});
+            setDepts(deptsRes.data || []);
+        } catch (err) {
+            console.error("User Directory Data Fetch Error:", err);
+        }
     }, []);
 
-    const fetchUsers = async () => {
-        try {
-            const allUsersRes = await API.get('/users_list');
-            setUsers(allUsersRes.data || []);
-        } catch (err) {
-            console.error("User fetch error:", err);
-            if (err.response?.status === 401) {
-                alert("Session expired. Please logout and login again.");
-            }
-        }
-    };
+    useEffect(() => {
+        fetchAllData();
+    }, [fetchAllData]);
 
-    const handleCreateOrUpdate = async (e) => {
+    const handleFormSubmit = async (e) => {
         if (e) e.preventDefault();
+
+        if (!isEditing && formData.password !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+        }
+
         try {
-            console.log("Saving user with data:", formData);
             if (isEditing) {
-                const res = await API.put(`/users/${selectedUser.id}`, formData);
-                if (res.status === 200) alert('User updated successfully');
+                await API.put(`/users/${selectedUser.id}`, formData);
+                alert('User profile synchronized successfully.');
             } else {
-                const res = await API.post('/users', formData);
-                if (res.status === 200 || res.status === 201) alert('User created successfully');
+                await API.post('/users', formData);
+                alert('New user registered in enterprise system.');
             }
             setShowModal(false);
-            fetchUsers();
+            fetchAllData();
+            setFormData({
+                name: '', email: '', password: '', faculty_id: '',
+                role: 'faculty', department_id: '', designation: '',
+                phone: '', status: 'Active'
+            });
+            setConfirmPassword('');
         } catch (err) {
-            console.error("Operation error:", err);
-            if (err.response?.status === 401) {
-                alert("Your session has expired. Please login again.");
-                localStorage.clear();
-                window.location.href = '/login';
-            } else {
-                const detail = err.response?.data?.detail;
-                const message = typeof detail === 'string' ? detail : 'Operation failed';
-                alert(message);
-            }
+            alert(err.response?.data?.detail || "Operation failed");
         }
     };
 
     const handleDelete = async (id) => {
-        if (!id) {
-            alert("Error: Invalid User ID selection.");
-            return;
-        }
-        if (window.confirm('Are you sure you want to delete this user?')) {
+        if (window.confirm('Mark this user as deleted? They will be retained for audit logs but removed from active registry.')) {
             try {
-                console.log(`CMS Security: Attempting to purge user identity ID=${id}`);
-                const res = await API.delete(`/users/${id}`);
-                fetchUsers();
-                alert(res.data.detail || 'User identity purged successfully.');
+                await API.delete(`/users/${id}`);
+                fetchAllData();
             } catch (err) {
-                console.error("purging failed:", err);
-                const errorMessage = err.response?.data?.detail || ' purging failed due to institutional record dependencies or network error.';
-                alert(errorMessage);
+                alert("Failed to deactivate user.");
             }
         }
     };
 
-    const filteredUsers = users.filter(u =>
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.faculty_id?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredUsers = users.filter(u => {
+        const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             u.faculty_id?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesRole = !filterRole || u.role === filterRole;
+        const matchesDept = !filterDept || u.department_id === parseInt(filterDept);
+        const matchesStatus = !filterStatus || u.status === filterStatus;
+        return matchesSearch && matchesRole && matchesDept && matchesStatus;
+    });
 
-    const stats = {
-        total: users.length,
-        admins: users.filter(u => u.role === 'admin').length,
-        active: users.length // Assuming all in db are active for now
+    const getRoleBadge = (role) => {
+        const styles = {
+            super_admin: 'bg-rose-100 text-rose-700 border-rose-200',
+            admin: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+            hod: 'bg-violet-100 text-violet-700 border-violet-200',
+            faculty: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+            staff: 'bg-blue-100 text-blue-700 border-blue-200',
+            student: 'bg-slate-100 text-slate-700 border-slate-200'
+        };
+        return styles[role] || 'bg-gray-100 text-gray-700 border-gray-200';
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen">
-            <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="min-h-screen bg-[#f8fafc] p-8 lg:p-12">
+            <header className="mb-12 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">User Directory</h1>
-                    <p className="text-gray-500 font-medium mt-1 text-sm sm:text-base">Manage user accounts, roles and passwords</p>
+                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-1">Institutional ERP Module</p>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tightest uppercase italic">User Directory</h1>
                 </div>
                 <button
-                    onClick={() => {
-                        setIsEditing(false);
-                        setFormData({ name: '', email: '', password: '', faculty_id: '', role: 'faculty' });
-                        setShowModal(true);
-                    }}
-                    className="bg-white border-2 border-indigo-600 rounded-xl px-8 py-3 shadow-sm transition-all hover:bg-indigo-50 active:scale-95 group"
+                    onClick={() => { setIsEditing(false); setShowModal(true); }}
+                    className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
                 >
-                    <span className="text-indigo-600 font-black text-[10px] uppercase tracking-widest">Create User</span>
+                    <Plus className="w-4 h-4" /> Register New Account
                 </button>
             </header>
 
-            {/* Stats Section */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-10">
+            {/* Statistics Section */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-12">
                 {[
-                    { label: 'TOTAL USERS', val: stats.total, color: 'text-indigo-600' },
-                    { label: 'ADMINS', val: stats.admins, color: 'text-green-600' },
-                    { label: 'ACTIVE', val: stats.active, color: 'text-blue-600' }
+                    { label: 'Total Users', val: stats.total, color: 'indigo', icon: Users },
+                    { label: 'Admins', val: stats.admins, color: 'rose', icon: ShieldCheck },
+                    { label: 'Faculty', val: stats.faculty, color: 'emerald', icon: GraduationCap },
+                    { label: 'HODs', val: stats.hods, color: 'violet', icon: Briefcase },
+                    { label: 'Active', val: stats.active, color: 'blue', icon: UserCheck },
+                    { label: 'Inactive', val: stats.inactive, color: 'slate', icon: UserX }
                 ].map((s, idx) => (
-                    <div key={idx} className="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center">
-                        <p className={`text-3xl md:text-4xl font-black ${s.color}`}>{s.val}</p>
-                        <p className="text-[10px] font-black text-gray-400 mt-2 tracking-widest">{s.label}</p>
+                    <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center group hover:border-indigo-100 transition-colors">
+                        <div className={`w-10 h-10 rounded-xl bg-slate-50 text-indigo-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                            <s.icon className="w-5 h-5" />
+                        </div>
+                        <p className={`text-2xl font-black text-slate-900`}>{s.val}</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">{s.label}</p>
                     </div>
                 ))}
             </div>
 
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 md:p-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <h2 className="text-xl font-black text-gray-800">All Users</h2>
-                    <div className="relative w-full md:w-64">
-                        <input
-                            type="text"
-                            placeholder="Search user..."
-                            className="bg-gray-50 border-none rounded-xl py-3 pl-10 pr-4 w-full focus:ring-2 focus:ring-indigo-500 font-medium outline-none transition-all"
-                            value={searchTerm}
-                            onChange={(e) => setSearchBar(e.target.value)}
-                        />
-                        <svg className="h-5 w-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+            {/* Main Content Card */}
+            <div className="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden">
+                {/* Search & Filter Hub */}
+                <div className="p-8 border-b border-slate-50 bg-slate-50/30">
+                    <div className="flex flex-col lg:flex-row gap-4 items-center">
+                        <div className="relative flex-1 group w-full">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Search by name, username or email..."
+                                className="w-full pl-12 pr-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all shadow-inner"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex gap-4 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
+                            <select className="px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none focus:border-indigo-500" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
+                                <option value="">Role Filter</option>
+                                <option value="super_admin">Super Admin</option>
+                                <option value="admin">Admin</option>
+                                <option value="hod">HOD</option>
+                                <option value="faculty">Faculty</option>
+                                <option value="staff">Staff</option>
+                            </select>
+                            <select className="px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none focus:border-indigo-500" value={filterDept} onChange={e => setFilterDept(e.target.value)}>
+                                <option value="">Department</option>
+                                {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            </select>
+                            <select className="px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none focus:border-indigo-500" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                                <option value="">Status</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                            <button onClick={() => { setSearchTerm(''); setFilterRole(''); setFilterDept(''); setFilterStatus(''); }} className="p-4 bg-slate-100 rounded-2xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all"><X className="w-4 h-4" /></button>
+                        </div>
                     </div>
                 </div>
 
+                {/* Table Hub */}
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[600px]">
+                    <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-gray-50/50 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                <th className="p-4 md:p-6 w-16">#</th>
-                                <th className="p-4 md:p-6">User</th>
-                                <th className="p-4 md:p-6">Email</th>
-                                <th className="p-4 md:p-6">Role</th>
-                                <th className="p-4 md:p-6">Status</th>
-                                <th className="p-4 md:p-6 text-center">Actions</th>
+                            <tr className="bg-slate-50/50 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
+                                <th className="p-8">Identity</th>
+                                <th className="p-8">Department</th>
+                                <th className="p-8">Designation</th>
+                                <th className="p-8">Role</th>
+                                <th className="p-8">Status</th>
+                                <th className="p-8">Last Login</th>
+                                <th className="p-8 text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {filteredUsers.map((user, index) => (
-                                <tr key={user.id} className="border-b border-gray-50 hover:bg-gray-50 transition group">
-                                    <td className="p-4 md:p-6 text-gray-400 font-bold">{index + 1}</td>
-                                    <td className="p-4 md:p-6">
-                                        <div className="flex items-center space-x-4">
-                                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-white font-black text-lg uppercase flex-shrink-0 ${
-                                                user.role === 'admin' ? 'bg-green-600' : 'bg-violet-600'
-                                            }`}>
+                        <tbody className="divide-y divide-slate-50">
+                            {filteredUsers.map(user => (
+                                <tr key={user.id} className="hover:bg-slate-50 transition-colors group">
+                                    <td className="p-8">
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-700 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-100 ring-4 ring-white">
                                                 {user.name.charAt(0)}
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="font-black text-gray-800 leading-tight truncate">{user.name}</p>
-                                                <p className="text-[10px] text-gray-400 font-bold truncate">@{user.faculty_id || 'user'}</p>
+                                            <div>
+                                                <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{user.name}</p>
+                                                <div className="flex items-center gap-3 mt-1.5">
+                                                    <span className="text-[10px] font-bold text-slate-400">@{user.faculty_id}</span>
+                                                    <div className="w-1 h-1 rounded-full bg-slate-300"></div>
+                                                    <span className="text-[10px] font-bold text-slate-400">{user.email}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="p-4 md:p-6 text-gray-600 font-medium truncate max-w-[150px] md:max-w-none">{user.email}</td>
-                                    <td className="p-4 md:p-6">
-                                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black tracking-widest uppercase border inline-block ${
-                                            user.role === 'admin'
-                                                ? 'bg-green-50 text-green-600 border-green-100'
-                                                : 'bg-violet-50 text-violet-600 border-violet-100'
-                                        }`}>
-                                            {user.role}
+                                    <td className="p-8">
+                                        <p className="text-[11px] font-black text-slate-700 uppercase">{depts.find(d => d.id === user.department_id)?.name || 'N/A'}</p>
+                                    </td>
+                                    <td className="p-8">
+                                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{user.designation || 'ACADEMIC STAFF'}</p>
+                                    </td>
+                                    <td className="p-8">
+                                        <span className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getRoleBadge(user.role)}`}>
+                                            {user.role?.replace('_', ' ')}
                                         </span>
                                     </td>
-                                    <td className="p-4 md:p-6">
-                                        <div className="flex items-center space-x-2">
-                                            <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                                            <span className="text-xs font-bold text-gray-700">Active</span>
+                                    <td className="p-8">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${user.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                                            <span className={`text-[10px] font-black uppercase ${user.status === 'Active' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                {user.status}
+                                            </span>
                                         </div>
                                     </td>
-                                    <td className="p-4 md:p-6">
-                                        <div className="flex justify-center space-x-2">
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedUser(user);
-                                                    setFormData({ ...user, password: '' });
-                                                    setIsEditing(true);
-                                                    setShowModal(true);
-                                                }}
-                                                className="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                            >
-                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                                </svg>
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(user.id)}
-                                                className="p-2 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                                            >
-                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
+                                    <td className="p-8">
+                                        <div className="flex items-center gap-2 text-slate-400">
+                                            <Clock className="w-3 h-3" />
+                                            <span className="text-[10px] font-bold uppercase">{user.last_login ? new Date(user.last_login).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'NEVER'}</span>
+                                        </div>
+                                    </td>
+                                    <td className="p-8">
+                                        <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => { setSelectedUser(user); setFormData({...user, password: ''}); setIsEditing(true); setShowModal(true); }} className="p-3 bg-white border border-slate-100 rounded-xl text-indigo-500 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><Edit2 className="w-4 h-4" /></button>
+                                            <button onClick={() => handleDelete(user.id)} className="p-3 bg-white border border-slate-100 rounded-xl text-rose-500 hover:bg-rose-600 hover:text-white transition-all shadow-sm"><Trash2 className="w-4 h-4" /></button>
                                         </div>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    {filteredUsers.length === 0 && (
+                        <div className="p-20 text-center flex flex-col items-center">
+                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                                <Search className="w-8 h-8" />
+                            </div>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No institutional identities matched your query.</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
+            {/* Comprehensive Registry Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50 transition-all duration-300 overflow-y-auto">
-                    <div className="bg-white rounded-[2rem] md:rounded-[3rem] w-full max-w-md shadow-2xl overflow-hidden relative animate-in fade-in zoom-in duration-300 my-auto">
-                        <div className="p-6 md:p-10 max-h-[90vh] overflow-y-auto custom-scrollbar">
-                            <div className="flex justify-between items-center mb-6 md:mb-8">
-                                <h2 className="text-xl md:text-2xl font-black text-[#1e1b4b] tracking-tight">
-                                    {isEditing ? 'Update User Account' : 'Create User Account'}
-                                </h2>
-                                <button
-                                    onClick={() => setShowModal(false)}
-                                    className="text-gray-400 hover:text-gray-600 transition"
-                                >
-                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
+                <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[3rem] w-full max-w-4xl shadow-2xl overflow-hidden border border-white/20 flex flex-col max-h-[90vh]">
+                        <div className="bg-slate-900 p-10 text-white flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase tracking-widest italic">Identity Registry Hub</h3>
+                                <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em] mt-1">Enterprise User Management System v4.0</p>
                             </div>
+                            <button onClick={() => setShowModal(false)} className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"><X className="w-6 h-6" /></button>
+                        </div>
 
-                            <form onSubmit={handleCreateOrUpdate} className="space-y-4 md:space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
-                                    <input
-                                        className="w-full p-4 bg-slate-50 border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-gray-700 outline-none"
-                                        placeholder="John Doe"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                        required
-                                    />
-                                </div>
+                        <form className="p-10 space-y-8 overflow-y-auto custom-scrollbar flex-1" onSubmit={handleFormSubmit}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Basic Identification */}
+                                <div className="space-y-6">
+                                    <h4 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest border-b border-slate-100 pb-3">Primary Identification</h4>
 
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">User ID (Username)</label>
-                                    <input
-                                        className="w-full p-4 bg-[#eff6ff] border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-gray-700 outline-none"
-                                        placeholder="Ex: admin_01"
-                                        value={formData.faculty_id}
-                                        onChange={(e) => setFormData({...formData, faculty_id: e.target.value})}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
-                                    <input
-                                        type="email"
-                                        className="w-full p-4 bg-slate-50 border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-gray-700 outline-none"
-                                        placeholder="Ex: john@kahe.edu"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                        required
-                                    />
-                                </div>
-
-                                {!isEditing && (
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
-                                        <input
-                                            type="password"
-                                            className="w-full p-4 bg-[#eff6ff] border border-transparent rounded-2xl focus:border-indigo-500 focus:bg-white transition-all font-bold text-gray-700 outline-none"
-                                            placeholder="••••••••"
-                                            value={formData.password}
-                                            onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                            required
-                                        />
+                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Full Name</label>
+                                        <input className="w-full p-5 bg-slate-50 rounded-2xl font-black text-xs outline-none border-2 border-transparent focus:border-indigo-500 transition-all" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required placeholder="e.g. Dr. John Doe"/>
                                     </div>
-                                )}
 
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Role</label>
-                                    <div className="relative">
-                                        <select
-                                            className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:border-indigo-500 transition-all font-bold text-gray-700 outline-none appearance-none"
-                                            value={formData.role}
-                                            onChange={(e) => setFormData({...formData, role: e.target.value})}
-                                        >
-                                            <option value="admin">Admin</option>
-                                            <option value="dean">Dean</option>
-                                            <option value="hod">HOD</option>
-                                            <option value="faculty">Faculty</option>
-                                            <option value="staff">Staff</option>
-                                            <option value="accounts">Accounts</option>
-                                            <option value="student">Student</option>
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Employee ID / Username</label>
+                                            <input className="w-full p-5 bg-slate-50 rounded-2xl font-black text-xs outline-none" value={formData.faculty_id} onChange={e => setFormData({...formData, faculty_id: e.target.value})} required placeholder="e.g. FAC001"/>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Phone Number</label>
+                                            <input className="w-full p-5 bg-slate-50 rounded-2xl font-black text-xs outline-none" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="e.g. 9876543210"/>
                                         </div>
                                     </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Email Address</label>
+                                        <input type="email" className="w-full p-5 bg-slate-50 rounded-2xl font-black text-xs outline-none" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required placeholder="email@kahe.edu"/>
+                                    </div>
                                 </div>
 
-                                <button
-                                    type="submit"
-                                    className="w-full border-2 border-indigo-900 text-[#1e1b4b] py-4 rounded-2xl font-bold hover:bg-slate-50 transition-colors uppercase tracking-wider mt-4"
-                                >
-                                    {isEditing ? 'Update Account' : 'Create Account'}
-                                </button>
-                            </form>
-                        </div>
+                                {/* Academic & Role Mapping */}
+                                <div className="space-y-6">
+                                    <h4 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest border-b border-slate-100 pb-3">Organizational Mapping</h4>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Enterprise Role</label>
+                                            <select className="w-full p-5 bg-slate-50 rounded-2xl font-black text-xs outline-none" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
+                                                <option value="super_admin">Super Admin</option>
+                                                <option value="admin">Admin</option>
+                                                <option value="hod">HOD</option>
+                                                <option value="faculty">Faculty</option>
+                                                <option value="staff">Staff</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Current Status</label>
+                                            <select className="w-full p-5 bg-slate-50 rounded-2xl font-black text-xs outline-none" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
+                                                <option value="Active">Active</option>
+                                                <option value="Inactive">Inactive</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Department Registry</label>
+                                        <select className="w-full p-5 bg-slate-50 rounded-2xl font-black text-xs outline-none" value={formData.department_id} onChange={e => setFormData({...formData, department_id: e.target.value})}>
+                                            <option value="">Select Department...</option>
+                                            {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Professional Designation</label>
+                                        <input className="w-full p-5 bg-slate-50 rounded-2xl font-black text-xs outline-none" value={formData.designation} onChange={e => setFormData({...formData, designation: e.target.value})} placeholder="e.g. Assistant Professor"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Authentication Layer */}
+                            <div className="space-y-6">
+                                <h4 className="text-[11px] font-black text-rose-600 uppercase tracking-widest border-b border-slate-100 pb-3">Authentication Security Layer</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">{isEditing ? 'New Password (Optional)' : 'Security Password'}</label>
+                                        <input type="password" title={isEditing ? 'Leave blank to keep existing' : ''} className="w-full p-5 bg-indigo-50/50 rounded-2xl font-black text-xs outline-none border-2 border-transparent focus:border-rose-500" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required={!isEditing}/>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Confirm Security Credential</label>
+                                        <input type="password" className="w-full p-5 bg-indigo-50/50 rounded-2xl font-black text-xs outline-none border-2 border-transparent focus:border-rose-500" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required={!isEditing}/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-8">
+                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-5 border-2 border-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all hover:bg-slate-50">Discard Entry</button>
+                                <button type="submit" className="flex-1 py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all">Synchronize registry</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

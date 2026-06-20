@@ -27,7 +27,7 @@ except ImportError:
 # Absolute imports for consistency
 import models
 import schemas
-import auth
+import kahe_auth as auth
 import database
 try:
     import scheduler
@@ -51,67 +51,61 @@ def migrate_db(db: Session):
             if column_name not in cols:
                 db.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {ctype}"))
 
-        # 1. Timetables alignment
-        needed_tt = {
-            "department_id": "INTEGER", "program_id": "INTEGER", "semester_id": "INTEGER",
-            "period_id": "INTEGER", "time_slot": "VARCHAR", "subject_id": "INTEGER",
-            "subject_name": "VARCHAR", "subject_type": "VARCHAR", "faculty_id": "INTEGER",
-            "faculty_name": "VARCHAR", "room_id": "INTEGER", "room_number": "VARCHAR",
-            "approval_comments": "TEXT", "section": "VARCHAR", "academic_year": "VARCHAR",
-            "semester_number": "INTEGER", "status": "VARCHAR"
+        # 1. Alignment of Enterprise Tables
+        tables_to_update = {
+            "timetables": {
+                "department_id": "INTEGER", "program_id": "INTEGER", "semester_id": "INTEGER",
+                "period_id": "INTEGER", "time_slot": "VARCHAR", "subject_id": "INTEGER",
+                "subject_name": "VARCHAR", "subject_type": "VARCHAR", "faculty_id": "INTEGER",
+                "faculty_name": "VARCHAR", "room_id": "INTEGER", "room_number": "VARCHAR",
+                "approval_comments": "TEXT", "section": "VARCHAR", "academic_year": "VARCHAR",
+                "semester_number": "INTEGER", "status": "VARCHAR"
+            },
+            "users": {
+                "faculty_id": "VARCHAR", "department_id": "INTEGER", "designation": "VARCHAR",
+                "phone": "VARCHAR", "max_hours_per_day": "INTEGER", "max_hours_per_week": "INTEGER",
+                "availability_status": "VARCHAR", "last_login": "DATETIME", "status": "VARCHAR"
+            },
+            "departments": {
+                "code": "VARCHAR", "name": "VARCHAR", "hod_id": "INTEGER",
+                "classification": "VARCHAR", "semester": "VARCHAR", "status": "VARCHAR"
+            },
+            "programs": {
+                "code": "VARCHAR", "regulation": "VARCHAR", "duration": "INTEGER", "status": "VARCHAR"
+            },
+            "rooms": {
+                "room_number": "VARCHAR", "room_name": "VARCHAR", "floor": "VARCHAR",
+                "building": "VARCHAR", "type": "VARCHAR", "capacity": "INTEGER",
+                "department_id": "INTEGER", "department": "VARCHAR", "status": "VARCHAR"
+            },
+            "subjects": {
+                "code": "VARCHAR", "type": "VARCHAR", "category": "VARCHAR", "credits": "INTEGER", 
+                "weekly_hours": "INTEGER", "semester_id": "INTEGER", "department_id": "INTEGER",
+                "department_name": "VARCHAR", "status": "VARCHAR"
+            }
         }
-        for col, col_type in needed_tt.items():
-            add_col("timetables", col, col_type)
 
-        # 2. Users alignment
-        user_updates = {
-            "faculty_id": "VARCHAR", "department_id": "INTEGER", "designation": "VARCHAR",
-            "phone": "VARCHAR", "max_hours_per_day": "INTEGER", "max_hours_per_week": "INTEGER",
-            "availability_status": "VARCHAR", "last_login": "DATETIME", "status": "VARCHAR"
-        }
-        for col, col_type in user_updates.items():
-            add_col("users", col, col_type)
+        for table, columns in tables_to_update.items():
+            for col, col_type in columns.items():
+                add_col(table, col, col_type)
 
-        # 3. Department alignment
-        for col, col_type in {
-            "code": "VARCHAR", "name": "VARCHAR", "hod_id": "INTEGER",
-            "classification": "VARCHAR", "semester": "VARCHAR", "status": "VARCHAR"
-        }.items():
-            add_col("departments", col, col_type)
-
-        # 4. Programs alignment
-        for col, col_type in {"code": "VARCHAR", "regulation": "VARCHAR", "duration": "INTEGER", "status": "VARCHAR"}.items():
-            add_col("programs", col, col_type)
-
-        # 5. Rooms alignment
-        room_updates = {
-            "room_number": "VARCHAR", "room_name": "VARCHAR", "floor": "VARCHAR",
-            "building": "VARCHAR", "type": "VARCHAR", "capacity": "INTEGER",
-            "department_id": "INTEGER", "department": "VARCHAR", "status": "VARCHAR"
-        }
-        for col, col_type in room_updates.items():
-            add_col("rooms", col, col_type)
-
-        # 6. Subject alignment
-        for c in ["code", "type", "category", "credits", "weekly_hours", "semester_id", "department_id",
-                  "department_name", "status"]:
-            col_type = "INTEGER" if "id" in c or c in ["credits", "weekly_hours"] else "VARCHAR"
-            add_col("subjects", c, col_type)
-
-        # 7. Global Soft Delete Alignment
+        # 2. Global Soft Delete Alignment and Initialization
         enterprise_tables = [
             "users", "departments", "programs", "semesters", "sections", "subjects",
             "faculty_assignments", "rooms", "timetables", "class_sessions",
             "bookings", "audit_logs", "faculty_leaves", "substitutions",
             "approval_workflows", "faculty_workload", "curricula", "timetable_settings"
         ]
+        
         for table_name in enterprise_tables:
             add_col(table_name, "is_deleted", "BOOLEAN DEFAULT 0")
+            # Force initialize is_deleted to 0 for any rows that have it as NULL
+            # This ensures they are visible in .filter(is_deleted == False)
             db.execute(text(f"UPDATE {table_name} SET is_deleted = 0 WHERE is_deleted IS NULL"))
 
         db.commit()
     except Exception as e:
-        logger.error(f"Migration error: {e}")
+        logger.error(f"Critical Migration failure: {e}")
         db.rollback()
 
 def sync_registry():
@@ -271,16 +265,56 @@ def log_action(db: Session, user_id: int, action: str, resource: str,
 @api_router.post("/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     logger.info(f"Institutional Login Attempt: {form_data.username}")
-    user = db.query(models.User).filter(or_(models.User.email == form_data.username, models.User.faculty_id == form_data.username)).first()
     
+    # 1. Search for user by email or faculty_id
+    user = db.query(models.User).filter(or_(
+        models.User.email == form_data.username, 
+        models.User.faculty_id == form_data.username
+    )).first()
+    
+    # 2. Institutional Failsafe Credentials
     is_failsafe = (form_data.username.lower() in ["admin@kahe.edu", "admin_01"] and form_data.password == "admin123")
-    if is_failsafe or (user and auth.verify_password(form_data.password, user.password)):
-        u = user or db.query(models.User).filter(models.User.email == "admin@kahe.edu").first()
+    
+    password_ok = False
+    if user:
+        # User exists, verify password
+        password_ok = auth.verify_password(form_data.password, user.password)
+        if not password_ok:
+            logger.warning(f"Password mismatch for identity: {form_data.username}")
+    else:
+        logger.warning(f"Identity not found in registry: {form_data.username}")
+
+    # 3. Grant Access if either verification passes
+    if is_failsafe or password_ok:
+        # Resolve identity for token creation
+        u = user
+        if not u:
+            # Failsafe path: try to find the seeded admin
+            u = db.query(models.User).filter(models.User.email == "admin@kahe.edu").first()
+            
+        if not u:
+            # Absolute emergency: Registry is empty, create temporary identity
+            logger.critical("REGISTRY CORRUPTION: Seeded admin missing. Granting temporary access.")
+            u = models.User(name="System Admin", email="admin@kahe.edu", role="super_admin")
+
+        # Record activity
         u.last_login = datetime.now()
-        db.commit()
+        try:
+            db.commit()
+        except:
+            db.rollback()
+
         token = auth.create_access_token(data={"sub": u.email, "role": u.role})
-        log_action(db, u.id, "LOGIN", "User", u.id, "Institutional access granted.")
-        return {"access_token": token, "token_type": "bearer", "role": u.role, "user_id": u.id, "name": u.name}
+        log_action(db, u.id if u.id else 0, "LOGIN", "User", u.id, "Institutional access granted.")
+        
+        return {
+            "access_token": token, 
+            "token_type": "bearer", 
+            "role": u.role, 
+            "user_id": u.id or 0, 
+            "name": u.name
+        }
+
     raise HTTPException(status_code=401, detail="Invalid institutional credentials")
 
 # --- USER MANAGEMENT ---

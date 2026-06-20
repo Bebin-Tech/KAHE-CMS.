@@ -20,6 +20,7 @@ function App() {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     return (
         <Router>
@@ -28,6 +29,8 @@ function App() {
                     <Sidebar
                         isOpen={isSidebarOpen}
                         setIsOpen={setIsSidebarOpen}
+                        isCollapsed={isCollapsed}
+                        setIsCollapsed={setIsCollapsed}
                     />
                 )}
 

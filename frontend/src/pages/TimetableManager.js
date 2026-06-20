@@ -6,33 +6,45 @@ import {
     Edit3,
     Trash2,
     RefreshCw,
-    Plus,
     X,
     Save,
     Search,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Calendar,
+    Download,
+    Cpu,
+    Filter,
+    LayoutDashboard,
+    BookOpen,
+    Users,
+    School,
+    Settings,
+    Clock,
+    Plus
 } from 'lucide-react';
 import API from '../api';
 
 const TimetableManager = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const role = localStorage.getItem('role')?.toLowerCase();
 
-    // --- MODULE CONFIGURATION ---
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const semesterNames = ['Semester I', 'Semester II', 'Semester III', 'Semester IV', 'Semester V', 'Semester VI'];
+    // --- CONFIGURATION ---
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const semesterNames = ['Semester I', 'Semester II', 'Semester III', 'Semester IV', 'Semester V', 'Semester VI', 'Semester VII', 'Semester VIII'];
 
     const moduleFromPath = useCallback((pathname) => {
-        if (pathname.includes('/programs')) return 'PROGRAMS';
-        if (pathname.includes('/semesters')) return 'SEMESTERS';
-        if (pathname.includes('/sections')) return 'SECTIONS';
-        if (pathname.includes('/subjects')) return 'SUBJECTS';
-        if (pathname.includes('/faculty/directory')) return 'FACULTY';
-        if (pathname.includes('/faculty/mapping')) return 'MAPPINGS';
-        if (pathname.includes('/curriculum')) return 'CURRICULUM';
-        if (pathname.includes('/spatial/infrastructure')) return 'ROOMS';
-        if (pathname.includes('/settings')) return 'SETTINGS';
+        const p = pathname.toLowerCase();
+        if (p.includes('/programs')) return 'PROGRAMS';
+        if (p.includes('/semesters')) return 'SEMESTERS';
+        if (p.includes('/sections')) return 'SECTIONS';
+        if (p.includes('/subjects')) return 'SUBJECTS';
+        if (p.includes('/faculty/directory')) return 'FACULTY';
+        if (p.includes('/faculty/mapping')) return 'MAPPINGS';
+        if (p.includes('/curriculum')) return 'CURRICULUM';
+        if (p.includes('/infrastructure')) return 'ROOMS';
+        if (p.includes('/settings')) return 'SETTINGS';
         return 'DEPARTMENTS';
     }, []);
 
@@ -40,7 +52,7 @@ const TimetableManager = () => {
     const [activeModule, setActiveModule] = useState(() => moduleFromPath(location.pathname));
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState({ text: '', type: '' }); // type: 'success' | 'error'
+    const [message, setMessage] = useState({ text: '', type: '' });
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState(null);
 
@@ -87,20 +99,18 @@ const TimetableManager = () => {
 
     const moduleConfigs = useMemo(() => ({
         DEPARTMENTS: {
-            title: 'Department Registry',
-            endpoint: '/departments',
+            title: 'Department Registry', endpoint: '/departments',
             columns: [['code', 'Code'], ['name', 'Name'], ['classification', 'Classification'], ['semester', 'Semester'], ['status', 'Status']],
             fields: [
                 { key: 'code', label: 'Unique Code', required: true },
                 { key: 'name', label: 'Department Name', required: true },
-                { key: 'classification', label: 'Classification', required: true, placeholder: 'e.g. Theory' },
+                { key: 'classification', label: 'Classification', required: true },
                 { key: 'semester', label: 'Semester', required: true, type: 'select', options: semesterNames },
                 { key: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive'] }
             ]
         },
         PROGRAMS: {
-            title: 'Program Management',
-            endpoint: '/programs',
+            title: 'Program Management', endpoint: '/programs',
             columns: [['code', 'Code'], ['name', 'Name'], ['department_id', 'Department'], ['duration', 'Years'], ['status', 'Status']],
             fields: [
                 { key: 'code', label: 'Program Code', required: true },
@@ -112,8 +122,7 @@ const TimetableManager = () => {
             display: { department_id: lookups.department }
         },
         SEMESTERS: {
-            title: 'Semester Setup',
-            endpoint: '/semesters',
+            title: 'Semester Setup', endpoint: '/semesters',
             columns: [['number', 'No'], ['program_id', 'Program'], ['academic_year', 'Year'], ['odd_even', 'Cycle'], ['status', 'Status']],
             fields: [
                 { key: 'number', label: 'Semester Number', type: 'number', required: true },
@@ -125,8 +134,7 @@ const TimetableManager = () => {
             display: { program_id: lookups.program }
         },
         SECTIONS: {
-            title: 'Section Registry',
-            endpoint: '/sections',
+            title: 'Section Registry', endpoint: '/sections',
             columns: [['name', 'Section'], ['semester_id', 'Semester'], ['student_strength', 'Strength'], ['status', 'Status']],
             fields: [
                 { key: 'name', label: 'Section Name', required: true, placeholder: 'e.g. A' },
@@ -137,8 +145,7 @@ const TimetableManager = () => {
             display: { semester_id: lookups.semester }
         },
         SUBJECTS: {
-            title: 'Subject Curriculum',
-            endpoint: '/subjects',
+            title: 'Subject Curriculum', endpoint: '/subjects',
             columns: [['code', 'Code'], ['name', 'Subject'], ['type', 'Type'], ['weekly_hours', 'Hrs/Wk'], ['status', 'Status']],
             fields: [
                 { key: 'code', label: 'Subject Code', required: true },
@@ -150,8 +157,7 @@ const TimetableManager = () => {
             ]
         },
         FACULTY: {
-            title: 'Faculty Expert Directory',
-            endpoint: '/users',
+            title: 'Faculty Expert Directory', endpoint: '/users',
             columns: [['faculty_id', 'ID'], ['name', 'Name'], ['department_id', 'Dept'], ['designation', 'Rank'], ['status', 'Status']],
             fields: [
                 { key: 'faculty_id', label: 'Employee ID', required: true },
@@ -166,8 +172,7 @@ const TimetableManager = () => {
             display: { department_id: lookups.department }
         },
         MAPPINGS: {
-            title: 'Resource Allocation',
-            endpoint: '/faculty-assignments',
+            title: 'Resource Allocation', endpoint: '/faculty-assignments',
             columns: [['faculty_id', 'Faculty'], ['subject_id', 'Subject'], ['section', 'Section']],
             fields: [
                 { key: 'faculty_id', label: 'Faculty Expert', type: 'select', options: datasets.faculty.map(f => [f.id, f.name]), required: true },
@@ -177,8 +182,7 @@ const TimetableManager = () => {
             display: { faculty_id: lookups.faculty, subject_id: lookups.subject }
         },
         CURRICULUM: {
-            title: 'Workload Parameters',
-            endpoint: '/curricula',
+            title: 'Workload Parameters', endpoint: '/curricula',
             columns: [['semester_id', 'Semester'], ['subject_id', 'Subject'], ['weekly_hours', 'Hrs/Wk'], ['status', 'Status']],
             fields: [
                 { key: 'semester_id', label: 'Semester', type: 'select', options: datasets.semesters.map(s => [s.id, lookups.semester(s.id)]), required: true },
@@ -189,8 +193,7 @@ const TimetableManager = () => {
             display: { semester_id: lookups.semester, subject_id: lookups.subject }
         },
         ROOMS: {
-            title: 'Institutional Spaces',
-            endpoint: '/rooms',
+            title: 'Institutional Spaces', endpoint: '/rooms',
             columns: [['room_number', 'Room'], ['type', 'Type'], ['capacity', 'Seats'], ['status', 'Status']],
             fields: [
                 { key: 'room_number', label: 'Room Index', required: true },
@@ -202,17 +205,17 @@ const TimetableManager = () => {
             ]
         },
         SETTINGS: {
-            title: 'Engine Settings',
-            endpoint: '/settings/timetable',
+            title: 'Engine Settings', endpoint: '/settings/timetable',
             columns: [['academic_year', 'Year'], ['total_periods_per_day', 'Periods/Day'], ['lab_continuous', 'Lab Flow']],
             fields: [
                 { key: 'academic_year', label: 'Active Year', required: true },
                 { key: 'total_periods_per_day', label: 'Periods Per Day', type: 'number', required: true },
                 { key: 'lab_continuous', label: 'Lab Flow', type: 'select', options: [[true, 'Continuous'], [false, 'Single']] },
-                { key: 'working_days', label: 'Operational Days', type: 'checks', options: days }
-            ]
+                { key: 'working_days', label: 'Operational Days', type: 'checks', options: days.slice(0, 5) }
+            ],
+            display: { working_days: v => (v || []).join(', ') }
         }
-    }), [datasets, lookups, days, semesterNames]);
+    }), [datasets, lookups, semesterNames, days]);
 
     const fetchData = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -244,118 +247,75 @@ const TimetableManager = () => {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    const currentConfig = moduleConfigs[activeModule] || moduleConfigs.DEPARTMENTS;
-    const moduleKey = activeModule.toLowerCase();
-    const rows = activeModule === 'SETTINGS' ? (datasets.settings ? [datasets.settings] : []) : (datasets[moduleKey] || []);
-    const filteredRows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(searchTerm.toLowerCase()));
-    const totalPages = Math.ceil(filteredRows.length / pageSize) || 1;
-    const pagedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
     const handleSave = async (e) => {
         if (e) e.preventDefault();
         setSaving(true);
         setMessage({ text: '', type: '' });
         try {
             const p = { ...formData };
-            // Conversion logic
             Object.keys(p).forEach(k => {
                 if (k.endsWith('_id') || ['duration', 'number', 'student_strength', 'credits', 'weekly_hours', 'capacity', 'total_periods_per_day'].includes(k)) {
                     if (p[k] !== undefined && p[k] !== '') p[k] = Number(p[k]);
                 }
                 if (k === 'lab_continuous') p[k] = p[k] === 'true' || p[k] === true;
             });
-
             if (activeModule === 'FACULTY') p.role = 'faculty';
-
-            const endpoint = currentConfig.endpoint;
+            const endpoint = moduleConfigs[activeModule].endpoint;
             if (editingRecord) await API.put(`${endpoint}/${editingRecord.id}`, p);
             else await API.post(endpoint, p);
-
             setMessage({ text: 'Registry synchronized successfully.', type: 'success' });
-            setTimeout(() => {
-                setShowModal(false);
-                setEditingRecord(null);
-                setFormData({});
-                fetchData(true);
-            }, 800);
+            setTimeout(() => { setShowModal(false); setEditingRecord(null); setFormData({}); fetchData(true); }, 800);
         } catch (err) {
-            console.error("Save failure:", err);
-            const detail = err.response?.data?.detail;
-            let errorMsg = 'Institutional Registry rejected the entry.';
-            if (typeof detail === 'string') errorMsg = detail;
-            else if (Array.isArray(detail)) errorMsg = detail.map(d => `${d.loc.join('.')}: ${d.msg}`).join(' | ');
-            setMessage({ text: errorMsg, type: 'error' });
-        } finally {
-            setSaving(false);
-        }
+            setMessage({ text: err.response?.data?.detail || 'Registry rejection.', type: 'error' });
+        } finally { setSaving(false); }
     };
 
-    const handleDelete = async (row) => {
-        if (!window.confirm('Archive this record? This action will hide it from active modules.')) return;
-        try {
-            await API.delete(`${currentConfig.endpoint}/${row.id}`);
-            fetchData(true);
-        } catch (err) {
-            alert('Operation blocked: Record has institutional dependencies.');
-        }
-    };
+    if (loading) return <div className="p-20 text-center animate-pulse font-black text-indigo-500 uppercase tracking-widest">Booting Institutional Kernel...</div>;
 
-    if (loading) return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-50 font-black text-indigo-500 uppercase tracking-[0.3em] animate-pulse">
-            Institutional Kernel Booting...
-        </div>
-    );
+    const currentConfig = moduleConfigs[activeModule];
+    const moduleKey = activeModule.toLowerCase();
+    const rows = datasets[moduleKey] || [];
+    const filteredRows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(searchTerm.toLowerCase()));
+    const pagedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const totalPages = Math.ceil(filteredRows.length / pageSize) || 1;
 
     return (
         <div className="min-h-screen bg-[#f8fafc] p-6 lg:p-10">
-            <header className="mb-10 flex justify-between items-center">
+
+            {/* HEADER */}
+            <header className="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-1">Academic Registry</p>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tightest uppercase italic">Institutional Input Modules</h1>
+                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-1">Institutional ERP</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tightest uppercase italic">Input Modules</h1>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button onClick={() => fetchData()} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><RefreshCw size={18}/></button>
+
+                <div className="flex items-center gap-3">
+                    <button onClick={() => fetchData()} className="p-4 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><RefreshCw size={18}/></button>
                 </div>
             </header>
 
-            {/* Readiness Summary */}
-            <div className={`mb-8 p-6 rounded-[2rem] border-2 transition-all ${
-                readiness.is_ready ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100'
-            }`}>
-                <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-2.5 h-2.5 rounded-full ${readiness.is_ready ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
-                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-700">Institutional Readiness: {readiness.is_ready ? 'READY' : 'INCOMPLETE'}</h2>
+            {/* READINESS WIDGET */}
+            <div className={`mb-10 p-8 rounded-[2.5rem] border-2 transition-all ${readiness.is_ready ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100'}`}>
+                <div className="flex items-center gap-3 mb-6">
+                    <div className={`w-3 h-3 rounded-full ${readiness.is_ready ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-700">Institutional Engine Readiness: {readiness.is_ready ? 'READY' : 'INCOMPLETE'}</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {(readiness.checks || []).map((c, i) => (
-                        <div key={i} className="flex items-center gap-3 bg-white/60 p-3 rounded-xl border border-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    {readiness.checks.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between p-4 bg-white/60 rounded-2xl border border-slate-100">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight">{c.label}</span>
                             {c.passed ? <CheckCircle2 className="text-emerald-500" size={14} /> : <AlertCircle className="text-rose-500" size={14} />}
-                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">{c.label}</span>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* MODULE NAVIGATION (Auto-synced with URL) */}
+            {/* NAVIGATION TABS */}
             <div className="mb-10 flex gap-2 overflow-x-auto pb-4 custom-scrollbar">
                 {Object.keys(moduleConfigs).map(m => (
                     <button
                         key={m}
-                        onClick={() => {
-                            const paths = {
-                                DEPARTMENTS: '/timetable/academic/departments',
-                                PROGRAMS: '/timetable/academic/programs',
-                                SEMESTERS: '/timetable/academic/semesters',
-                                SECTIONS: '/timetable/academic/sections',
-                                SUBJECTS: '/timetable/academic/subjects',
-                                FACULTY: '/timetable/faculty/directory',
-                                MAPPINGS: '/timetable/faculty/mapping',
-                                CURRICULUM: '/timetable/academic/curriculum',
-                                ROOMS: '/timetable/spatial/infrastructure',
-                                SETTINGS: '/timetable/settings'
-                            };
-                            if (paths[m]) navigate(paths[m]);
-                        }}
+                        onClick={() => { setActiveModule(m); setCurrentPage(1); setSearchTerm(''); }}
                         className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all border ${
                             activeModule === m ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200' : 'bg-white text-slate-400 border-slate-100 hover:border-indigo-200 hover:text-indigo-600'
                         }`}
@@ -365,7 +325,7 @@ const TimetableManager = () => {
                 ))}
             </div>
 
-            {/* DATA TABLE SECTION */}
+            {/* DATA GRID */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
                 <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-50/30">
                     <div>
@@ -377,12 +337,7 @@ const TimetableManager = () => {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={16} />
                             <input className="w-full pl-10 pr-4 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 shadow-inner" placeholder="Search records..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}/>
                         </div>
-                        {activeModule !== 'SETTINGS' && (
-                            <button onClick={() => { setEditingRecord(null); setFormData({}); setShowModal(true); }} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all">+ Register entry</button>
-                        )}
-                        {activeModule === 'SETTINGS' && datasets.settings && (
-                            <button onClick={() => { setEditingRecord(datasets.settings); setFormData(datasets.settings); setShowModal(true); }} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all">Configure Engine</button>
-                        )}
+                        <button onClick={() => { setEditingRecord(null); setFormData({}); setShowModal(true); }} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all">+ Register entry</button>
                     </div>
                 </div>
 
@@ -391,7 +346,7 @@ const TimetableManager = () => {
                         <thead>
                             <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">
                                 {currentConfig.columns.map(c => <th key={c[0]} className="p-8">{c[1]}</th>)}
-                                <th className="p-8 text-right">Operation</th>
+                                <th className="p-8 text-right">Ops</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -399,37 +354,33 @@ const TimetableManager = () => {
                                 <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors group">
                                     {currentConfig.columns.map(c => {
                                         const key = c[0];
-                                        const value = row[key];
+                                        const val = row[key];
                                         const display = currentConfig.display?.[key];
-                                        let finalValue = display ? display(value, row) : (value ?? '-');
+                                        let finalVal = display ? display(val, row) : (val ?? '-');
 
                                         if (key === 'status') {
-                                            const isS = ['Active', 'AVAILABLE'].includes(value);
-                                            finalValue = <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${isS ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{value || 'Active'}</span>;
+                                            const isS = ['Active', 'AVAILABLE'].includes(val);
+                                            finalVal = <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${isS ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{val || 'Active'}</span>;
                                         }
-
-                                        return <td key={key} className="p-8 text-sm font-bold text-slate-600">{finalValue}</td>;
+                                        return <td key={key} className="p-8 text-sm font-bold text-slate-600">{finalVal}</td>;
                                     })}
                                     <td className="p-8 text-right">
                                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button onClick={() => { setEditingRecord(row); setFormData(row); setShowModal(true); }} className="p-2 bg-white border border-slate-100 rounded-lg text-indigo-500 shadow-sm"><Edit3 size={14} /></button>
-                                            {activeModule !== 'SETTINGS' && <button onClick={() => handleDelete(row)} className="p-2 bg-white border border-slate-100 rounded-lg text-rose-400 shadow-sm"><Trash2 size={14} /></button>}
+                                            <button onClick={async () => { if(window.confirm('Delete?')) { await API.delete(`${currentConfig.endpoint}/${row.id}`); fetchData(true); } }} className="p-2 bg-white border border-slate-100 rounded-lg text-rose-400 shadow-sm"><Trash2 size={14} /></button>
                                         </div>
                                     </td>
                                 </tr>
                             ))}
-                            {pagedRows.length === 0 && (
-                                <tr><td colSpan={currentConfig.columns.length + 1} className="p-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest italic">No institutional records found in this module.</td></tr>
-                            )}
                         </tbody>
                     </table>
                 </div>
 
                 <div className="p-8 border-t border-slate-50 flex justify-between items-center bg-slate-50/20">
-                    <span className="text-[10px] font-black text-slate-400 uppercase">Registry page {currentPage} / {totalPages}</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase">Page {currentPage} / {totalPages}</span>
                     <div className="flex gap-2">
-                        <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-2 bg-white border border-slate-100 rounded-lg disabled:opacity-30"><ChevronLeft size={16}/></button>
-                        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="p-2 bg-white border border-slate-100 rounded-lg disabled:opacity-30"><ChevronRight size={16}/></button>
+                        <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-2 bg-white border border-slate-100 rounded-lg disabled:opacity-30 transition-all hover:bg-slate-50"><ChevronLeft size={16}/></button>
+                        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="p-2 bg-white border border-slate-100 rounded-lg disabled:opacity-30 transition-all hover:bg-slate-50"><ChevronRight size={16}/></button>
                     </div>
                 </div>
             </div>
@@ -439,20 +390,11 @@ const TimetableManager = () => {
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden border border-white/10 flex flex-col max-h-[90vh]">
                         <div className="bg-slate-900 p-8 text-white flex justify-between items-center shrink-0">
-                            <div>
-                                <h3 className="text-lg font-black uppercase tracking-widest italic">{editingRecord ? 'Modify' : 'Initialize'} Institutional Entry</h3>
-                                <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] mt-1">{currentConfig.title}</p>
-                            </div>
-                            <button onClick={() => { setShowModal(false); setMessage({text:'', type:''}); }} className="text-white/40 hover:text-white transition-all"><X size={20} /></button>
+                            <h3 className="text-lg font-black uppercase tracking-widest italic">{editingRecord ? 'Modify' : 'Initialize'} Institutional Entry</h3>
+                            <button onClick={() => setShowModal(false)} className="text-white/40 hover:text-white transition-all"><X size={20} /></button>
                         </div>
                         <form className="p-10 space-y-6 overflow-y-auto custom-scrollbar" onSubmit={handleSave}>
-                            {message.text && (
-                                <div className={`p-4 rounded-xl text-[10px] font-black uppercase border ${
-                                    message.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700'
-                                }`}>
-                                    {message.text}
-                                </div>
-                            )}
+                            {message.text && <div className={`p-4 rounded-xl text-[10px] font-black uppercase ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>{message.text}</div>}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {currentConfig.fields.map(f => (
                                     <div key={f.key} className={f.type === 'checks' ? 'md:col-span-2' : ''}>
@@ -476,8 +418,8 @@ const TimetableManager = () => {
                                 ))}
                             </div>
                             <div className="flex gap-4 pt-6 shrink-0">
-                                <button type="button" onClick={() => { setShowModal(false); setMessage({text:'', type:''}); }} className="flex-1 py-4 border-2 border-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all hover:bg-slate-50">Discard</button>
-                                <button type="submit" disabled={saving} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all">{saving ? 'Syncing...' : 'Save Registry'}</button>
+                                <button type="button" onClick={() => { setShowModal(false); }} className="flex-1 py-4 border-2 border-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all">Discard</button>
+                                <button type="submit" disabled={saving} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all">{saving ? 'Syncing...' : 'Confirm Entry'}</button>
                             </div>
                         </form>
                     </div>
