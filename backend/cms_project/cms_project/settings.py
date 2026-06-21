@@ -2,7 +2,8 @@ import os
 import dj_database_url
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-kahe-cms-production-ready-secret-key')
 
@@ -40,7 +41,7 @@ ROOT_URLCONF = 'cms_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR.parent.parent, 'frontend', 'build')],
+        'DIRS': [os.path.join(BASE_DIR, 'frontend', 'build')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -57,7 +58,7 @@ WSGI_APPLICATION = 'cms_project.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR.parent.parent}/kahe_cms.db',
+        default=f'sqlite:///{BASE_DIR}/kahe_cms.db',
         conn_max_age=600
     )
 }
@@ -82,7 +83,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Frontend build directory
-FRONTEND_DIR = os.path.join(BASE_DIR.parent.parent, 'frontend', 'build')
+FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend', 'build')
 
 # Only add STATICFILES_DIRS if the directory exists (it will be created during build on Render)
 if os.path.exists(FRONTEND_DIR):

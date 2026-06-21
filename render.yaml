@@ -3,7 +3,7 @@ services:
     name: kahe-cms
     runtime: python
     buildCommand: "./build.sh"
-    startCommand: "cd backend/cms_project && gunicorn cms_project.wsgi:application"
+    startCommand: "gunicorn backend.cms_project.cms_project.wsgi:application"
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0

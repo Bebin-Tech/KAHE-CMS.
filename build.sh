@@ -8,7 +8,7 @@ pip install -r requirements.txt
 # Build frontend
 cd frontend
 npm install
-npm run build
+CI=false npm run build
 cd ..
 
 # Add backend and its settings to python path
