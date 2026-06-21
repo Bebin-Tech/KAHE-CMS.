@@ -2,7 +2,7 @@
 # exit on error
 set -o errexit
 
-# Install dependencies
+# Install dependencies (requirements.txt is in the root)
 pip install -r requirements.txt
 
 # Build frontend
@@ -11,11 +11,11 @@ npm install
 CI=false npm run build
 cd ..
 
-# Add backend and its settings to python path
-export PYTHONPATH=$PYTHONPATH:$(pwd)/backend/cms_project
-
-# Move to backend directory to run manage commands
+# Move to the directory containing manage.py
 cd backend/cms_project
+
+# Add current directory to PYTHONPATH so manage.py finds cms_project.settings
+export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 # Collect static files
 python manage.py collectstatic --noinput
@@ -24,4 +24,5 @@ python manage.py collectstatic --noinput
 python manage.py migrate
 
 # Initialize institutional identity (Create Admin)
+# init_db.py is also in backend/cms_project
 python init_db.py

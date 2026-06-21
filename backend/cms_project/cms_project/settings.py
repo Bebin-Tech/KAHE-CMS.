@@ -2,8 +2,9 @@ import os
 import dj_database_url
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Path to settings.py is: ROOT/backend/cms_project/cms_project/settings.py
+# .parent.parent.parent.parent reaches ROOT
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-kahe-cms-production-ready-secret-key')
 
@@ -62,6 +63,9 @@ DATABASES = {
         conn_max_age=600
     )
 }
+
+# IMPORTANT: Render doesn't allow SQLite to persist. 
+# Ensure DATABASE_URL environment variable is set on Render to use Postgres.
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
