@@ -26,7 +26,7 @@ const Login = () => {
             params.append('username', email.trim());
             params.append('password', password);
 
-            const response = await API.post('/login', params, {
+            const response = await API.post('/login/', params, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             });
 
@@ -35,8 +35,8 @@ const Login = () => {
             localStorage.setItem('user_id', response.data.user_id);
             localStorage.setItem('name', response.data.name);
 
-            navigate('/');
-            window.location.reload();
+            // Use window.location.href for a full app reset and reliable redirection
+            window.location.href = '/';
         } catch (err) {
             setError(err.response?.data?.detail || 'Invalid credentials');
         } finally {

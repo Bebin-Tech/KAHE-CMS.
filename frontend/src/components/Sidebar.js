@@ -13,19 +13,13 @@ import {
     ChevronDown,
     ChevronRight,
     Search,
-    Bell,
     LogOut,
-    User as UserIcon,
-    Menu,
-    X,
-    FolderOpen,
-    GraduationCap,
-    Clock,
-    FileText
+    X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import API from '../api';
 
 function cn(...inputs) {
     return twMerge(clsx(inputs));
@@ -40,7 +34,12 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
     const [expandedGroups, setExpandedGroups] = useState(['Academic Management']);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await API.post('/logout/');
+        } catch (e) {
+            console.error("Logout audit failed:", e);
+        }
         localStorage.clear();
         navigate('/login');
         window.location.reload();
@@ -71,11 +70,11 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             icon: BookOpen,
             roles: ['admin', 'hod', 'dean', 'principal'],
             items: [
-                { name: 'Departments', path: '/timetable/academic/departments' },
-                { name: 'Programs', path: '/timetable/academic/programs' },
-                { name: 'Semesters', path: '/timetable/academic/semesters' },
-                { name: 'Sections', path: '/timetable/academic/sections' },
-                { name: 'Subjects', path: '/timetable/academic/subjects' }
+                { name: 'Departments', path: '/departments' },
+                { name: 'Programs', path: '/programs' },
+                { name: 'Semesters', path: '/semesters' },
+                { name: 'Sections', path: '/sections' },
+                { name: 'Subjects', path: '/subjects' }
             ]
         },
         {
@@ -83,20 +82,31 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             icon: Users,
             roles: ['admin', 'hod', 'dean', 'principal'],
             items: [
-                { name: 'Faculty Directory', path: '/timetable/faculty/directory' },
-                { name: 'Faculty Mapping', path: '/timetable/faculty/mapping' },
-                { name: 'Workload Analytics', path: '/timetable/faculty/workload' },
-                { name: 'Faculty Availability', path: '/timetable/faculty/availability' }
+                { name: 'Faculty Mapping', path: '/mappings' },
+                { name: 'Workload Analytics', path: '/timetable/faculty/workload' }
+            ]
+        },
+        {
+            title: 'User Management',
+            icon: Users,
+            roles: ['admin', 'super_admin'],
+            items: [
+                { name: 'System User Registry', path: '/users' }
             ]
         },
         {
             title: 'Classroom Management',
             icon: School,
             items: [
-                { name: 'Classrooms', path: '/timetable/spatial/infrastructure' },
-                { name: 'Laboratories', path: '/timetable/spatial/infrastructure' },
-                { name: 'Room Allocation', path: '/timetable/spatial/occupancy' },
-                { name: 'Resource Booking', path: '/bookings' }
+                { name: 'Infrastructures', path: '/rooms' },
+                { name: 'Live Room Tracking', path: '/classroom-tracking' }
+            ]
+        },
+        {
+            title: 'Curriculum Management',
+            icon: BookOpen,
+            items: [
+                { name: 'Workload Mapping', path: '/curriculum' }
             ]
         },
         {
@@ -104,11 +114,8 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             icon: Calendar,
             roles: ['admin', 'hod', 'dean', 'principal', 'faculty'],
             items: [
-                { name: 'Timetable Dashboard', path: '/timetable/dashboard' },
-                { name: 'Timetable Matrix', path: '/timetable/matrix' },
-                { name: 'Auto Scheduler', path: '/timetable/dashboard' },
-                { name: 'Conflict Resolution', path: '/timetable/dashboard' },
-                { name: 'Published Timetables', path: '/timetable/dashboard' }
+                { name: 'Control Dashboard', path: '/timetable/dashboard' },
+                { name: 'Master Matrix', path: '/timetable/matrix' }
             ]
         },
         {
@@ -140,14 +147,16 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             roles: ['admin'],
             items: [
                 { name: 'Activity Logs', path: '/timetable/audit/logs' },
-                { name: 'Audit History', path: '/timetable/audit/history' },
-                { name: 'Timetable Change History', path: '/timetable/audit/history' }
+                { name: 'Audit History', path: '/timetable/audit/history' }
             ]
         }
     ];
 
     const filteredNav = navigationData.filter(group => {
-        if (group.roles && !group.roles.includes(role)) return false;
+        if (group.roles) {
+            const hasAccess = group.roles.includes(role) || (role === 'super_admin' && group.roles.includes('admin'));
+            if (!hasAccess) return false;
+        }
 
         if (searchTerm) {
             const matchesGroup = group.title.toLowerCase().includes(searchTerm.toLowerCase());

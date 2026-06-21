@@ -48,12 +48,12 @@ const Dashboard = () => {
     const fetchAll = async () => {
         try {
             const results = await Promise.allSettled([
-                API.get('/dashboard-stats'),
-                API.get('/rooms'),
-                API.get('/class-history'),
-                API.get('/curricula'),
-                API.get('/timetables'),
-                API.get('/timetable-conflicts')
+                API.get('/dashboard-stats/'),
+                API.get('/rooms/'),
+                API.get('/class-history/'),
+                API.get('/curricula/'),
+                API.get('/timetables/'),
+                API.get('/timetable-conflicts/')
             ]);
 
             const d = (idx) => results[idx].status === 'fulfilled' ? results[idx].value.data : null;
