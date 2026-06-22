@@ -10,7 +10,6 @@ const Login = () => {
     const [error, setError] = useState('');
     const [emailError, setEmailError] = useState(false);
     const [passwordError, setPasswordError] = useState(false);
-    const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         if (e) e.preventDefault();
@@ -35,8 +34,8 @@ const Login = () => {
             localStorage.setItem('user_id', response.data.user_id);
             localStorage.setItem('name', response.data.name);
 
-            // Use window.location.href for a full app reset and reliable redirection
-            window.location.href = '/';
+            // Redirect to home page using navigate instead of full reload to prevent blinking
+            window.location.replace('/');
         } catch (err) {
             setError(err.response?.data?.detail || 'Invalid credentials');
         } finally {

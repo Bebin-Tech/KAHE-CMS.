@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Clock,
     CheckCircle,
-    AlertTriangle,
     Search,
     RefreshCw,
     Trash2,
@@ -13,11 +12,10 @@ import {
 } from 'lucide-react';
 
 const ClassroomTracking = () => {
-    const { datasets, fetchData, loading: registryLoading } = useRegistry();
+    const { datasets, loading: registryLoading } = useRegistry();
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('All');
     const [showStartModal, setShowModal] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState(null);
 
@@ -99,8 +97,7 @@ const ClassroomTracking = () => {
     const filteredRooms = rooms.filter(r => {
         const matchesSearch = r.room_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.session?.faculty_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = filterStatus === 'All' || r.status === filterStatus;
-        return matchesSearch && matchesStatus;
+        return matchesSearch;
     });
 
     if (loading && rooms.length === 0) return (

@@ -182,7 +182,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
         if (searchTerm) {
             setExpandedGroups(filteredNav.map(g => g.title));
         }
-    }, [searchTerm]);
+    }, [searchTerm, filteredNav]);
 
     return (
         <>

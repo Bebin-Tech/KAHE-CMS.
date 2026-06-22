@@ -8,7 +8,6 @@ import {
     ClipboardList,
     DoorOpen,
     School,
-    Users,
     Zap,
     GraduationCap,
     ShieldCheck,
@@ -41,7 +40,6 @@ const Dashboard = () => {
     const [conflicts, setConflicts] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const role = localStorage.getItem('role')?.toLowerCase();
     const userName = localStorage.getItem('name') || 'Institutional User';
 
     // --- REFRESH ENGINE ---

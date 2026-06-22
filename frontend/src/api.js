@@ -38,10 +38,13 @@ API.interceptors.response.use(
             data: error.response?.data
         });
 
-        const isLoginRequest = error.config?.url?.includes('/login');
+        const isLoginRequest = error.config?.url?.includes('/login/');
         if (error.response && error.response.status === 401 && !isLoginRequest) {
-            localStorage.clear();
-            window.location.href = '/login';
+            // Only redirect if we're not already on the login page to prevent loops
+            if (window.location.pathname !== '/login') {
+                localStorage.clear();
+                window.location.replace('/login');
+            }
         }
         return Promise.reject(error);
     }

@@ -11,17 +11,13 @@ import {
     ChevronLeft,
     ChevronRight,
     Lock,
-    UserCheck,
-    UserX,
     Calendar,
-    LayoutDashboard,
     Zap,
     Download
 } from 'lucide-react';
 import API from '../api';
 
 const DAYS_LIST = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const SEMESTER_NAMES = ['Semester I', 'Semester II', 'Semester III', 'Semester IV', 'Semester V', 'Semester VI', 'Semester VII', 'Semester VIII'];
 
 const TimetableManager = () => {
     const location = useLocation();

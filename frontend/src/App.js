@@ -20,7 +20,14 @@ import ClassroomTracking from './pages/modules/ClassroomTracking';
 
 const PrivateRoute = ({ children }) => {
     const token = localStorage.getItem('token');
-    return token ? children : <Navigate to="/login" />;
+    // Ensure we replace history to prevent blinking loops
+    return token ? children : <Navigate to="/login" replace />;
+};
+
+const PublicRoute = ({ children }) => {
+    const token = localStorage.getItem('token');
+    // If logged in, don't allow access to login page
+    return token ? <Navigate to="/" replace /> : children;
 };
 
 function App() {
@@ -61,7 +68,7 @@ function App() {
 
                         <main className="flex-1 overflow-y-auto focus:outline-none p-4 md:p-8">
                             <Routes>
-                                <Route path="/login" element={<Login />} />
+                                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                                 <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
 
                                 {/* Dedicated Module Routes */}
