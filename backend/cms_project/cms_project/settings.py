@@ -59,18 +59,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'cms_project.wsgi.application'
 
-# Render DATABASE_URL format fix
-db_url = os.environ.get('DATABASE_URL')
-if db_url:
-    # Ensure there's no whitespace or accidental characters that cause '://' error
-    db_url = db_url.strip().strip('"').strip("'")
-    
-DATABASES = {
-    'default': dj_database_url.parse(db_url) if db_url else dj_database_url.config(
-        default=f'sqlite:///{ROOT_DIR}/kahe_cms.db',
-        conn_max_age=600
-    )
-}
+# Robust Database Configuration
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Clean the URL to avoid "Scheme ://" error caused by empty or malformed strings
+    DATABASE_URL = DATABASE_URL.strip().strip('"').strip("'")
+
+if DATABASE_URL and '://' in DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=True)
+    }
+else:
+    # Fallback to local SQLite if no valid database URL is provided
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ROOT_DIR / 'kahe_cms.db',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -94,14 +101,14 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Frontend build directory
 FRONTEND_DIR = os.path.join(ROOT_DIR, 'frontend', 'build')
 
-# Only add STATICFILES_DIRS if the directory exists (it will be created during build on Render)
+# Only add STATICFILES_DIRS if the directory exists
 if os.path.exists(FRONTEND_DIR):
     STATICFILES_DIRS = [
         FRONTEND_DIR,
     ]
 else:
     STATICFILES_DIRS = []
-    
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
