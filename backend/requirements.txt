@@ -1,0 +1,14 @@
+django
+djangorestframework
+django-cors-headers
+ortools
+pandas
+openpyxl
+fpdf2
+bcrypt
+psycopg2-binary
+python-jose[cryptography]
+python-multipart
+gunicorn
+whitenoise
+dj-database-url

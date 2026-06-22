@@ -1,17 +1,14 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
     AlertCircle,
     CheckCircle2,
     Edit3,
     Trash2,
-    RefreshCw,
     X,
     Search,
     ChevronLeft,
     ChevronRight,
-    Lock,
-    Download,
-    Plus
+    Download
 } from 'lucide-react';
 import API from '../api';
 
