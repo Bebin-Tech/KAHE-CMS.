@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 const ClassroomTracking = () => {
-    const { datasets } = useRegistry();
+    const { datasets, loading: registryLoading } = useRegistry();
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
