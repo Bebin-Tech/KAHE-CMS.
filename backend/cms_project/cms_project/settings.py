@@ -3,8 +3,10 @@ import dj_database_url
 from pathlib import Path
 
 # Path to settings.py is: ROOT/backend/cms_project/cms_project/settings.py
-# .parent.parent.parent.parent reaches ROOT
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+# BASE_DIR reaches ROOT/backend/cms_project (where manage.py is)
+BASE_DIR = Path(__file__).resolve().parent.parent
+# ROOT_DIR reaches project root
+ROOT_DIR = BASE_DIR.parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-kahe-cms-production-ready-secret-key')
 
@@ -42,7 +44,7 @@ ROOT_URLCONF = 'cms_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'frontend', 'build')],
+        'DIRS': [os.path.join(ROOT_DIR, 'frontend', 'build')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -57,15 +59,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'cms_project.wsgi.application'
 
+# Render DATABASE_URL format fix
+db_url = os.environ.get('DATABASE_URL')
+if db_url:
+    # Ensure there's no whitespace or accidental characters that cause '://' error
+    db_url = db_url.strip().strip('"').strip("'")
+    
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR}/kahe_cms.db',
+    'default': dj_database_url.parse(db_url) if db_url else dj_database_url.config(
+        default=f'sqlite:///{ROOT_DIR}/kahe_cms.db',
         conn_max_age=600
     )
 }
-
-# IMPORTANT: Render doesn't allow SQLite to persist. 
-# Ensure DATABASE_URL environment variable is set on Render to use Postgres.
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -87,7 +92,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Frontend build directory
-FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend', 'build')
+FRONTEND_DIR = os.path.join(ROOT_DIR, 'frontend', 'build')
 
 # Only add STATICFILES_DIRS if the directory exists (it will be created during build on Render)
 if os.path.exists(FRONTEND_DIR):
@@ -96,7 +101,7 @@ if os.path.exists(FRONTEND_DIR):
     ]
 else:
     STATICFILES_DIRS = []
-
+    
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
