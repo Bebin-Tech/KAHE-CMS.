@@ -124,12 +124,13 @@ const Dashboard = () => {
                     </button>
 
                     <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-5">
-                    <div className="text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Welcome back,</p>
-                        <p className="text-sm font-black text-slate-800 mt-1">{userName}</p>
-                    </div>
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-lg shadow-indigo-100">
-                        {userName.charAt(0)}
+                        <div className="text-right">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Welcome back,</p>
+                            <p className="text-sm font-black text-slate-800 mt-1">{userName}</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-lg shadow-indigo-100">
+                            {userName.charAt(0)}
+                        </div>
                     </div>
                 </div>
             </header>
