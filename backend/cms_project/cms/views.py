@@ -411,6 +411,27 @@ def get_live_rooms(request):
     return Response(res)
 
 @api_view(['GET'])
+def find_class(request):
+    query = request.query_params.get('q', '')
+    if not query:
+        return Response([])
+    
+    # Search for active sessions matching query (section or subject or faculty or room)
+    sessions = ClassSession.objects.filter(status='Active')
+    
+    if query:
+        sessions = sessions.filter(
+            models.Q(section__name__icontains=query) |
+            models.Q(subject__name__icontains=query) |
+            models.Q(faculty__first_name__icontains=query) |
+            models.Q(faculty__last_name__icontains=query) |
+            models.Q(room__room_number__icontains=query)
+        )
+    
+    serializer = ClassSessionSerializer(sessions, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
 def dashboard_stats(request):
     data = {
         "rooms": Room.objects.count(),

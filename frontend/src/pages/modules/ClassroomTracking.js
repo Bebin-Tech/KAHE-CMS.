@@ -96,7 +96,9 @@ const ClassroomTracking = () => {
 
     const filteredRooms = rooms.filter(r => {
         const matchesSearch = r.room_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.session?.faculty_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+            (r.session?.faculty_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (r.session?.section_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (r.session?.subject_name || '').toLowerCase().includes(searchTerm.toLowerCase());
         return matchesSearch;
     });
 
@@ -179,6 +181,10 @@ const ClassroomTracking = () => {
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                         <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Faculty</span>
                                         <span className="text-xs font-black text-white truncate max-w-[120px] uppercase">{room.session?.faculty_name}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Section</span>
+                                        <span className="text-xs font-black text-white truncate max-w-[120px] uppercase">{room.session?.section_name || 'N/A'}</span>
                                     </div>
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                         <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Subject</span>

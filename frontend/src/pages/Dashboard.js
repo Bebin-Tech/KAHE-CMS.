@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import { motion } from 'framer-motion';
 import {
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
+    const navigate = useNavigate();
     // --- DYNAMIC DATA STATE ---
     const [stats, setStats] = useState({
         rooms: 0,
@@ -112,7 +114,16 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-5">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/find-class')}
+                        className="px-6 py-4 bg-indigo-600 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-200 hover:scale-105 transition-all flex items-center gap-2"
+                    >
+                        <Search size={14} />
+                        Find a Class
+                    </button>
+
+                    <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-5">
                     <div className="text-right">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Welcome back,</p>
                         <p className="text-sm font-black text-slate-800 mt-1">{userName}</p>

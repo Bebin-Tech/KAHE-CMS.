@@ -34,6 +34,7 @@ urlpatterns = [
     path('swap-slots/', swap_slots),
     path('bulk-import-faculty/', bulk_import_faculty),
     path('live-rooms/', get_live_rooms),
+    path('find-class/', find_class),
     path('start-session/', start_session),
     path('end-session/', end_session),
     path('faculty-workload/', get_faculty_workload_json),

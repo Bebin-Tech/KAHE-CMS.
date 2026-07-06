@@ -17,6 +17,7 @@ import FacultyMapping from './pages/modules/FacultyMapping';
 import CurriculumMap from './pages/modules/CurriculumMap';
 import Rooms from './pages/modules/Rooms';
 import ClassroomTracking from './pages/modules/ClassroomTracking';
+import FindClass from './pages/modules/FindClass';
 
 const PrivateRoute = ({ children }) => {
     const token = localStorage.getItem('token');
@@ -81,6 +82,7 @@ function App() {
                                 <Route path="/mappings" element={<PrivateRoute><FacultyMapping /></PrivateRoute>} />
                                 <Route path="/curriculum" element={<PrivateRoute><CurriculumMap /></PrivateRoute>} />
                                 <Route path="/rooms" element={<PrivateRoute><Rooms /></PrivateRoute>} />
+                                <Route path="/find-class" element={<PrivateRoute><FindClass /></PrivateRoute>} />
                                 <Route path="/classroom-tracking" element={<PrivateRoute><ClassroomTracking /></PrivateRoute>} />
 
                                 {/* Legacy Routes / Fallback */}

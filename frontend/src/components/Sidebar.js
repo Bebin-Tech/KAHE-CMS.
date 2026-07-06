@@ -98,6 +98,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             title: 'Classroom Management',
             icon: School,
             items: [
+                { name: 'Find a Class', path: '/find-class' },
                 { name: 'Infrastructures', path: '/rooms' },
                 { name: 'Live Room Tracking', path: '/classroom-tracking' }
             ]
