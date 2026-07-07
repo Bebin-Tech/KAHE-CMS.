@@ -3,7 +3,6 @@ import API from '../../api';
 import { useRegistry } from '../../context/RegistryContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Clock,
     CheckCircle,
     Search,
     RefreshCw,
@@ -113,26 +112,34 @@ const ClassroomTracking = () => {
     const handleCreateRoom = async (e) => {
         e.preventDefault();
         setMessage({ text: '', type: '' });
-        const block = roomForm.building || 'Main Block';
+        const block = (roomForm.building || 'Main Block').trim();
+        const roomNumber = String(roomForm.room_number || '').trim();
         const duplicate = rooms.some(room =>
             String(room.building || 'Main Block').trim().toLowerCase() === block.trim().toLowerCase() &&
-            String(room.room_number).trim().toLowerCase() === String(roomForm.room_number).trim().toLowerCase()
+            String(room.room_number).trim().toLowerCase() === roomNumber.toLowerCase()
         );
 
         if (duplicate) {
-            setMessage({ text: `Classroom ${roomForm.room_number} already exists in ${block}.`, type: 'error' });
+            setMessage({ text: `Classroom ${roomNumber} already exists in ${block}.`, type: 'error' });
             return;
         }
 
         try {
-            await API.post('/rooms/', {
+            const res = await API.post('/rooms/', {
                 ...roomForm,
+                room_number: roomNumber,
                 capacity: Number(roomForm.capacity),
                 building: block
             });
+            setRooms(prev => [...prev, res.data].sort((a, b) => {
+                const blockCompare = String(a.building || '').localeCompare(String(b.building || ''));
+                if (blockCompare !== 0) return blockCompare;
+                return String(a.room_number || '').localeCompare(String(b.room_number || ''), undefined, { numeric: true });
+            }));
+            setSearchTerm('');
             setRoomForm({ room_number: '', building: '', capacity: 60, type: 'Classroom', status: 'Available' });
             setShowRoomModal(false);
-            fetchLiveRooms(true);
+            await fetchLiveRooms(true);
         } catch (err) {
             setMessage({ text: getApiError(err, 'ROOM CREATION FAILED'), type: 'error' });
         }
@@ -169,7 +176,7 @@ const ClassroomTracking = () => {
     );
 
     return (
-        <div className="space-y-10">
+        <div className="min-h-screen -m-4 md:-m-8 p-4 md:p-8 space-y-10 bg-slate-50">
             {/* HEADER */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
@@ -206,97 +213,75 @@ const ClassroomTracking = () => {
                         <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{block}</h2>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{blockRooms.length} Classrooms</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {blockRooms.map(room => (
                     <motion.div
                         layout
                         key={room.id}
-                        className="bg-[#1e1e1e] rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col group border border-white/5"
+                        className="bg-[#1e1e1e] rounded-md shadow-lg overflow-hidden min-h-[285px] flex flex-col group border border-white/5"
                     >
-                        <div className="relative h-56 overflow-hidden">
+                        <div className="h-24 relative overflow-hidden">
                             <img
-                                src="https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&q=80&w=800"
+                                src="/classroom-card-bg.png"
                                 alt="Classroom"
-                                className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700"
+                                className="w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-700"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#1e1e1e] via-transparent to-black/20"></div>
-                            <div className={`absolute top-6 right-6 px-4 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-md border ${room.status === 'Available' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-rose-500/20 border-rose-500/50 text-rose-400'}`}>
-                                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${room.status === 'Available' ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{room.status}</span>
-                            </div>
-                            {room.status === 'Occupied' && (
-                                <div className="absolute bottom-4 left-6 flex items-center gap-2 text-rose-500/80">
-                                    <Clock size={14} className="animate-spin-slow" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Stale Session: {calculateDuration(room.session?.start_time)}</span>
-                                </div>
-                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#1e1e1e] via-[#1e1e1e]/25 to-white/10"></div>
+                            <span className={`absolute top-3 right-3 shrink-0 px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest backdrop-blur-sm ${room.status === 'Available' ? 'bg-emerald-500/20 text-emerald-100' : 'bg-rose-500/20 text-rose-100'}`}>
+                                {room.status}
+                            </span>
                         </div>
 
-                        <div className="p-8 flex-1 flex flex-col">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 className="text-3xl font-black text-white tracking-tighter uppercase">{room.room_number}</h3>
-                                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.3em] mt-1">{room.building || 'Main Block'}</p>
+                        <div className="p-5 flex-1 flex flex-col">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-bold text-slate-300 truncate">{room.building || 'Main Block'}</p>
+                                    <h3 className="text-3xl font-black text-white tracking-tight mt-2 uppercase truncate">{room.room_number}</h3>
+                                    <p className="text-sm font-bold text-slate-400 mt-2">{room.type}</p>
                                 </div>
                             </div>
-                            <p className="text-xs font-bold text-slate-500 leading-relaxed mb-8">
-                                Room {room.room_number} situated at {room.building || 'Floor 2'}. Optimized for {room.capacity} students.
-                            </p>
-                            {room.status === 'Occupied' ? (
-                                <div className="space-y-3 mb-8">
-                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Faculty</span>
-                                        <span className="text-xs font-black text-white truncate max-w-[120px] uppercase">{room.session?.faculty_name}</span>
+
+                            <div className="mt-5 min-w-0">
+                                {room.status === 'Occupied' ? (
+                                    <div className="space-y-1.5">
+                                        <p className="text-sm font-black text-white truncate">{room.session?.faculty_name || 'Faculty'}</p>
+                                        <p className="text-sm font-bold text-slate-300 truncate">{room.session?.subject_name || 'Subject'}</p>
+                                        <p className="text-xs font-bold text-slate-500 uppercase truncate">{room.session?.department_name || 'Department'}</p>
+                                        <p className="text-[10px] font-black text-rose-300 uppercase tracking-widest pt-1">{calculateDuration(room.session?.start_time)}</p>
                                     </div>
-                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Section</span>
-                                        <span className="text-xs font-black text-white truncate max-w-[120px] uppercase">{room.session?.section_name || 'N/A'}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Subject</span>
-                                        <span className="text-xs font-black text-white truncate max-w-[120px] uppercase">{room.session?.subject_name}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Department</span>
-                                        <span className="text-xs font-black text-white truncate max-w-[120px] uppercase">{room.session?.department_name || 'N/A'}</span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 gap-3 mb-8">
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col items-center">
-                                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Type</span>
-                                        <span className="text-[10px] font-black text-slate-300 uppercase">{room.type}</span>
-                                    </div>
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col items-center">
-                                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Capacity</span>
-                                        <span className="text-[10px] font-black text-slate-300 uppercase">{room.capacity} Seats</span>
-                                    </div>
-                                </div>
-                            )}
-                            {canManageSessions ? <div className="mt-auto flex gap-3">
-                                {room.status === 'Available' ? (
-                                    <button
-                                        onClick={() => { setSelectedRoom(room); setShowModal(true); }}
-                                        className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"
-                                    >
-                                        Start Class
-                                    </button>
                                 ) : (
-                                    <button
-                                        onClick={() => handleEndClass(room)}
-                                        className="flex-1 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg shadow-rose-900/20 active:scale-95 transition-all"
-                                    >
-                                        End Class
+                                    <p className="text-sm font-bold text-slate-300 leading-relaxed">
+                                        Available for {room.capacity} students.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="mt-auto flex items-center gap-3 pt-6">
+                                {canManageSessions ? (
+                                    room.status === 'Available' ? (
+                                        <button
+                                            onClick={() => { setSelectedRoom(room); setShowModal(true); }}
+                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-black uppercase text-xs tracking-wide shadow-lg shadow-emerald-950/20 transition-all"
+                                        >
+                                            Start Class
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleEndClass(room)}
+                                            className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-md font-black uppercase text-xs tracking-wide shadow-lg shadow-rose-950/20 transition-all"
+                                        >
+                                            End Class
+                                        </button>
+                                    )
+                                ) : (
+                                    <span className="text-slate-400 font-black uppercase text-xs tracking-wide">View Only</span>
+                                )}
+                                {canManageRooms && (
+                                    <button onClick={() => handleDeleteRoom(room)} className="ml-auto text-rose-400 hover:text-rose-300 transition-all">
+                                        <Trash2 size={15} />
                                     </button>
                                 )}
-                                {canManageRooms && <button onClick={() => handleDeleteRoom(room)} className="p-4 bg-white/5 border border-white/10 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all">
-                                    <Trash2 size={18} />
-                                </button>}
-                            </div> : (
-                                <div className={`mt-auto py-4 text-center rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] ${room.status === 'Available' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
-                                    {room.status === 'Available' ? 'Available' : 'Occupied'}
-                                </div>
-                            )}
+                            </div>
                         </div>
                     </motion.div>
                 ))}
