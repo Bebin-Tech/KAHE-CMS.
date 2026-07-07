@@ -3,7 +3,7 @@ import RegistryPage from '../../components/RegistryPage';
 import { useRegistry } from '../../context/RegistryContext';
 
 const CurriculumMap = () => {
-    const { datasets, lookups, fetchData, saving, setSaving, readiness } = useRegistry();
+    const { datasets, lookups, fetchData, saving, setSaving } = useRegistry();
     const config = {
         title: 'Workload Parameters', endpoint: '/curricula/',
         columns: [['semester', 'Semester'], ['subject', 'Subject'], ['weekly_hours', 'Hrs/Wk']],
@@ -16,7 +16,7 @@ const CurriculumMap = () => {
         ],
         display: { semester: lookups.semester, subject: lookups.subject }
     };
-    return <RegistryPage moduleKey="curricula" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} readiness={readiness} />;
+    return <RegistryPage moduleKey="curricula" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} />;
 };
 
 export default CurriculumMap;

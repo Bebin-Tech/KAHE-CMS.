@@ -1,6 +1,6 @@
 # KAHE Campus Management System
 
-An optimized, full-stack campus management solution designed for real-time classroom tracking, faculty scheduling, and resource management at Karpagam Academy of Higher Education (KAHE).
+An optimized, full-stack campus management solution designed for real-time classroom availability tracking and resource management at Karpagam Academy of Higher Education (KAHE).
 
 ## 🚀 Key Features
 
@@ -8,14 +8,14 @@ An optimized, full-stack campus management solution designed for real-time class
 - **Dynamic Booking System**: Secure room reservation with conflict detection and automated queuing.
 - **Class Session Management**: Seamless start/end of sessions with automated room status updates.
 - **Smart Notifications**: Instant alerts when queued rooms become available.
-- **Comprehensive Admin Dashboard**: Full control over users, rooms, departments, subjects, and schedules.
+- **Comprehensive Admin Dashboard**: Full control over users, rooms, departments, and subjects.
 - **User Directory**: Centralized management of faculty, staff, and student accounts.
 - **Usage History**: Detailed logs of classroom utilization and faculty activity.
 
 ## 🛠 Tech Stack
 
 - **Frontend**: React.js, Tailwind CSS, Axios, React Router.
-- **Backend**: FastAPI (Python), SQLAlchemy ORM.
+- **Backend**: Django, Django REST Framework.
 - **Database**: PostgreSQL (Production) / SQLite (Development).
 - **Authentication**: JWT (JSON Web Tokens) with Bcrypt password hashing.
 - **Deployment**: Render (Unified Web Service).
@@ -24,11 +24,11 @@ An optimized, full-stack campus management solution designed for real-time class
 
 ### 1. Backend Setup
 ```bash
-cd backend
+cd backend/cms_project
 python -m venv venv
 source venv/bin/activate  # venv\Scripts\activate on Windows
-pip install -r requirements.txt
-python main.py
+pip install -r ../../requirements.txt
+python manage.py runserver
 ```
 
 ### 2. Frontend Setup

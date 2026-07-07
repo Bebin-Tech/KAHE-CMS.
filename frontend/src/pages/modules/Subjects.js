@@ -3,7 +3,7 @@ import RegistryPage from '../../components/RegistryPage';
 import { useRegistry } from '../../context/RegistryContext';
 
 const Subjects = () => {
-    const { datasets, lookups, fetchData, saving, setSaving, readiness } = useRegistry();
+    const { datasets, lookups, fetchData, saving, setSaving } = useRegistry();
     const config = {
         title: 'Subject Curriculum', endpoint: '/subjects/',
         columns: [['code', 'Code'], ['name', 'Subject'], ['mne', 'MNE'], ['weekly_hours', 'Hrs/Wk'], ['status', 'Status']],
@@ -20,7 +20,7 @@ const Subjects = () => {
             { key: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive'] }
         ]
     };
-    return <RegistryPage moduleKey="subjects" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} readiness={readiness} />;
+    return <RegistryPage moduleKey="subjects" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} />;
 };
 
 export default Subjects;

@@ -85,34 +85,6 @@ class RoomSerializer(serializers.ModelSerializer):
         model = Room
         fields = '__all__'
 
-class TimetableSettingSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TimetableSetting
-        fields = '__all__'
-
-class PeriodTimingSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PeriodTiming
-        fields = '__all__'
-
-class TimetableSerializer(serializers.ModelSerializer):
-    subject = serializers.SerializerMethodField()
-    faculty = serializers.SerializerMethodField()
-    room = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Timetable
-        fields = '__all__'
-
-    def get_subject(self, obj):
-        return {"id": obj.subject.id, "name": obj.subject.name}
-
-    def get_faculty(self, obj):
-        return {"id": obj.faculty.id, "name": obj.faculty.get_full_name()}
-
-    def get_room(self, obj):
-        return {"id": obj.room.id, "room_number": obj.room.room_number}
-
 class BookingSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
     room_number = serializers.CharField(source='room.room_number', read_only=True)

@@ -4,7 +4,7 @@ import { useRegistry } from '../../context/RegistryContext';
 import { Lock, RefreshCw } from 'lucide-react';
 
 const UserManagement = () => {
-    const { datasets, lookups, fetchData, saving, setSaving, readiness } = useRegistry();
+    const { datasets, lookups, fetchData, saving, setSaving } = useRegistry();
     const config = {
         title: 'System User Registry', endpoint: '/users/',
         columns: [['username', 'Username'], ['full_name', 'Name'], ['department_name', 'Dept'], ['role', 'Role'], ['status', 'Status']],
@@ -22,7 +22,7 @@ const UserManagement = () => {
             { label: 'Toggle Status', icon: RefreshCw, color: 'text-blue-500', type: 'TOGGLE_STATUS' }
         ]
     };
-    return <RegistryPage moduleKey="users" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} readiness={readiness} />;
+    return <RegistryPage moduleKey="users" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} />;
 };
 
 export default UserManagement;

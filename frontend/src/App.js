@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Sidebar from './components/Sidebar';
-import TimetableManager from './pages/TimetableManager';
 import { RegistryProvider } from './context/RegistryContext';
 
 // Module Pages
@@ -85,8 +84,6 @@ function App() {
                                 <Route path="/find-class" element={<PrivateRoute><FindClass /></PrivateRoute>} />
                                 <Route path="/classroom-tracking" element={<PrivateRoute><ClassroomTracking /></PrivateRoute>} />
 
-                                {/* Legacy Routes / Fallback */}
-                                <Route path="/timetable/*" element={<PrivateRoute><TimetableManager /></PrivateRoute>} />
                                 <Route path="*" element={<Navigate to="/" />} />
                             </Routes>
                         </main>

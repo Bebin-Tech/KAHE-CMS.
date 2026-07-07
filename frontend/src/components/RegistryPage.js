@@ -1,23 +1,18 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
-    AlertCircle,
-    CheckCircle2,
     Edit3,
     Trash2,
-    RefreshCw,
     X,
     Search,
     ChevronLeft,
     ChevronRight,
-    Lock,
-    Download,
-    Plus
+    Download
 } from 'lucide-react';
 import API from '../api';
 
 const pageSize = 8;
 
-const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving, setSaving, readiness }) => {
+const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving, setSaving }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [showModal, setShowModal] = useState(false);
@@ -119,24 +114,6 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
 
     return (
         <div className="space-y-10">
-            {/* READINESS WIDGET */}
-            {readiness && (
-                <div className={`p-8 rounded-[2.5rem] border-2 transition-all ${readiness.is_ready ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100'}`}>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className={`w-3 h-3 rounded-full ${readiness.is_ready ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-700">Institutional Engine Readiness: {readiness.is_ready ? 'READY' : 'INCOMPLETE'}</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {(readiness.checks || []).map((c, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 bg-white/60 rounded-2xl border border-slate-100">
-                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight">{c.label}</span>
-                                {c.passed ? <CheckCircle2 className="text-emerald-500" size={14} /> : <AlertCircle className="text-rose-500" size={14} />}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-50/30">
                 <div>

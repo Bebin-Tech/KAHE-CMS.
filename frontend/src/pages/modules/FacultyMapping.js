@@ -3,7 +3,7 @@ import RegistryPage from '../../components/RegistryPage';
 import { useRegistry } from '../../context/RegistryContext';
 
 const FacultyMapping = () => {
-    const { datasets, lookups, fetchData, saving, setSaving, readiness } = useRegistry();
+    const { datasets, lookups, fetchData, saving, setSaving } = useRegistry();
     const config = {
         title: 'Resource Allocation', endpoint: '/faculty-assignments/',
         columns: [['faculty', 'Faculty'], ['subject', 'Subject'], ['section', 'Section']],
@@ -14,7 +14,7 @@ const FacultyMapping = () => {
         ],
         display: { faculty: lookups.faculty, subject: lookups.subject, section: lookups.section }
     };
-    return <RegistryPage moduleKey="mappings" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} readiness={readiness} />;
+    return <RegistryPage moduleKey="mappings" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} />;
 };
 
 export default FacultyMapping;

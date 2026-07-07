@@ -6,10 +6,7 @@ import {
     BookOpen,
     Users,
     School,
-    Calendar,
-    BarChart3,
     Settings,
-    ClipboardList,
     ChevronDown,
     ChevronRight,
     Search,
@@ -82,8 +79,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             icon: Users,
             roles: ['admin', 'hod', 'dean', 'principal'],
             items: [
-                { name: 'Faculty Mapping', path: '/mappings' },
-                { name: 'Workload Analytics', path: '/timetable/faculty/workload' }
+                { name: 'Faculty Mapping', path: '/mappings' }
             ]
         },
         {
@@ -111,44 +107,11 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             ]
         },
         {
-            title: 'Timetable Management',
-            icon: Calendar,
-            roles: ['admin', 'hod', 'dean', 'principal', 'faculty'],
-            items: [
-                { name: 'Control Dashboard', path: '/timetable/dashboard' },
-                { name: 'Master Matrix', path: '/timetable/matrix' }
-            ]
-        },
-        {
-            title: 'Reports & Analytics',
-            icon: BarChart3,
-            roles: ['admin', 'hod', 'dean', 'principal'],
-            items: [
-                { name: 'Faculty Reports', path: '/timetable/reports/faculty' },
-                { name: 'Department Reports', path: '/timetable/reports/department' },
-                { name: 'Classroom Reports', path: '/timetable/reports/classroom' },
-                { name: 'Utilization Analytics', path: '/timetable/reports/utilization' }
-            ]
-        },
-        {
             title: 'Administration',
             icon: Settings,
             roles: ['admin'],
             items: [
-                { name: 'Academic Year', path: '/timetable/settings' },
-                { name: 'Semester Configuration', path: '/timetable/settings' },
-                { name: 'Working Days', path: '/timetable/settings' },
-                { name: 'Period Timings', path: '/timetable/settings' },
-                { name: 'System Settings', path: '/timetable/settings' }
-            ]
-        },
-        {
-            title: 'Audit & Logs',
-            icon: ClipboardList,
-            roles: ['admin'],
-            items: [
-                { name: 'Activity Logs', path: '/timetable/audit/logs' },
-                { name: 'Audit History', path: '/timetable/audit/history' }
+                { name: 'System User Registry', path: '/users' }
             ]
         }
     ];

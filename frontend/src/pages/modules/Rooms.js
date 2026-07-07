@@ -3,7 +3,7 @@ import RegistryPage from '../../components/RegistryPage';
 import { useRegistry } from '../../context/RegistryContext';
 
 const Rooms = () => {
-    const { datasets, lookups, fetchData, saving, setSaving, readiness } = useRegistry();
+    const { datasets, lookups, fetchData, saving, setSaving } = useRegistry();
     const config = {
         title: 'Institutional Spaces', endpoint: '/rooms/',
         columns: [['room_number', 'Room'], ['type', 'Type'], ['capacity', 'Seats'], ['status', 'Status']],
@@ -15,7 +15,7 @@ const Rooms = () => {
             { key: 'status', label: 'Operational Status', type: 'select', options: ['Available', 'Occupied'] }
         ]
     };
-    return <RegistryPage moduleKey="rooms" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} readiness={readiness} />;
+    return <RegistryPage moduleKey="rooms" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} />;
 };
 
 export default Rooms;

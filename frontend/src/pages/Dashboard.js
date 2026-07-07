@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import { motion } from 'framer-motion';
 import {
-    AlertCircle,
     BarChart3,
     BookOpen,
-    ClipboardList,
     DoorOpen,
     School,
     Zap,
@@ -14,7 +12,8 @@ import {
     ShieldCheck,
     Clock,
     ChevronRight,
-    MapPin
+    MapPin,
+    Search
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -30,16 +29,12 @@ const Dashboard = () => {
         total_faculties: 0,
         total_classrooms: 0,
         total_labs: 0,
-        generated_timetables: 0,
-        conflict_alerts: 0,
         room_utilization: 0
     });
 
     const [recentActivity, setRecentActivity] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [curricula, setCurricula] = useState([]);
-    const [timetables, setTimetables] = useState([]);
-    const [conflicts, setConflicts] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const userName = localStorage.getItem('name') || 'Institutional User';
@@ -51,9 +46,7 @@ const Dashboard = () => {
                 API.get('/dashboard-stats/'),
                 API.get('/rooms/'),
                 API.get('/class-history/'),
-                API.get('/curricula/'),
-                API.get('/timetables/'),
-                API.get('/timetable-conflicts/')
+                API.get('/curricula/')
             ]);
 
             const d = (idx) => results[idx].status === 'fulfilled' ? results[idx].value.data : null;
@@ -62,8 +55,6 @@ const Dashboard = () => {
             if (d(1)) setRooms(Array.isArray(d(1)) ? d(1) : []);
             if (d(2)) setRecentActivity(Array.isArray(d(2)) ? d(2).slice(0, 8) : []);
             if (d(3)) setCurricula(Array.isArray(d(3)) ? d(3) : []);
-            if (d(4)) setTimetables(Array.isArray(d(4)) ? d(4) : []);
-            if (d(5)) setConflicts(Array.isArray(d(5)) ? d(5) : []);
 
             setLoading(false);
         } catch (err) {
@@ -85,10 +76,8 @@ const Dashboard = () => {
         { label: 'Faculty Count', value: stats.total_faculties, icon: GraduationCap, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100' },
         { label: 'Total Spaces', value: stats.rooms, icon: School, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
         { label: 'Active Classes', value: stats.active, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-        { label: 'Generated Slots', value: timetables.length, icon: ClipboardList, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-100' },
-        { label: 'Utilization', value: `${stats.room_utilization || 0}%`, icon: BarChart3, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100' },
-        { label: 'Conflict Alerts', value: conflicts.length || stats.conflict_alerts, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100' }
-    ], [stats, curricula, timetables, conflicts]);
+        { label: 'Utilization', value: `${stats.room_utilization || 0}%`, icon: BarChart3, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100' }
+    ], [stats, curricula]);
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-screen bg-white">
@@ -209,8 +198,8 @@ const Dashboard = () => {
                     <div className="space-y-8 relative z-10 flex-1">
                         {[
                             { label: 'Classroom Availability', val: stats.total_classrooms ? (100 - (stats.active / stats.total_classrooms * 100)).toFixed(0) : 0, color: 'bg-indigo-500' },
-                            { label: 'Institutional Completion', val: stats.total_subjects ? (timetables.length / stats.total_subjects * 10).toFixed(0) : 0, color: 'bg-emerald-500' },
-                            { label: 'Workload Optimization', val: 94, color: 'bg-violet-500' }
+                            { label: 'Room Utilization', val: stats.room_utilization || 0, color: 'bg-emerald-500' },
+                            { label: 'Active Session Load', val: stats.rooms ? (stats.active / stats.rooms * 100).toFixed(0) : 0, color: 'bg-violet-500' }
                         ].map((p, i) => (
                             <div key={i} className="space-y-3">
                                 <div className="flex justify-between items-end">

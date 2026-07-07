@@ -8,7 +8,6 @@ from django.utils import timezone
 import pandas as pd
 from .models import *
 from .serializers import *
-from .scheduler import TimetableSolver
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -111,18 +110,6 @@ class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
 
-class TimetableSettingViewSet(viewsets.ModelViewSet):
-    queryset = TimetableSetting.objects.all()
-    serializer_class = TimetableSettingSerializer
-
-class PeriodTimingViewSet(viewsets.ModelViewSet):
-    queryset = PeriodTiming.objects.all()
-    serializer_class = PeriodTimingSerializer
-
-class TimetableViewSet(viewsets.ModelViewSet):
-    queryset = Timetable.objects.all()
-    serializer_class = TimetableSerializer
-
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
@@ -138,119 +125,13 @@ def users_list(request):
     return Response(serializer.data)
 
 @api_view(['GET'])
-def get_readiness(request):
-    # Ensure TimetableSetting exists
-    if not TimetableSetting.objects.exists():
-        TimetableSetting.objects.create(
-            academic_year="2024-2025",
-            working_days="Monday,Tuesday,Wednesday,Thursday,Friday,Saturday",
-            periods_per_day=6,
-            is_active=True
-        )
-
-    checks = [
-        ("Departments Registered", Department.objects.count() > 0),
-        ("Programs Configured", Program.objects.count() > 0),
-        ("Faculty Directory Synchronized", User.objects.filter(role='faculty').count() > 0),
-        ("Curriculum Map Exists", Subject.objects.count() > 0)
-    ]
-    is_ready = all(c[1] for c in checks)
-    return Response({
-        "is_ready": is_ready,
-        "checks": [{"label": c[0], "passed": c[1]} for c in checks]
-    })
-
-@api_view(['GET'])
-def get_working_days(request):
-    setting = TimetableSetting.objects.filter(is_active=True).first()
-    days_str = setting.working_days if setting else "Monday,Tuesday,Wednesday,Thursday,Friday"
-    days = days_str.split(',')
-    return Response([{"id": idx, "day_name": day, "is_working": True} for idx, day in enumerate(days)])
-
-@api_view(['GET'])
-def get_period_timings(request):
-    periods = PeriodTiming.objects.all().order_by('period_number')
-    if not periods.exists():
-        # Seed default periods as per the user's institutional timing (6 Periods per day)
-        defaults = [
-            (1, "09:00:00", "10:00:00", False, "CLASS"),
-            (2, "10:00:00", "11:00:00", False, "CLASS"),
-            (3, "11:00:00", "11:15:00", True, "BREAK"),
-            (4, "11:15:00", "12:15:00", False, "CLASS"),
-            (5, "12:15:00", "13:15:00", False, "CLASS"),
-            (6, "13:15:00", "14:00:00", True, "LUNCH"),
-            (7, "14:00:00", "15:00:00", False, "CLASS"),
-            (8, "15:00:00", "16:00:00", False, "CLASS"),
-        ]
-        for p in defaults:
-            PeriodTiming.objects.create(period_number=p[0], start_time=p[1], end_time=p[2], is_break=p[3], label=p[4])
-        periods = PeriodTiming.objects.all().order_by('period_number')
-    
-    serializer = PeriodTimingSerializer(periods, many=True)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-def timetable_approval(request):
-    semester_id = request.query_params.get('semester_id')
-    status_str = request.query_params.get('status')
-    if not semester_id or not status_str:
-        return Response({"detail": "semester_id and status required"}, status=400)
-    
-    Timetable.objects.filter(section__semester_id=semester_id).update(status=status_str)
-    return Response({"status": "success"})
-
-@api_view(['POST'])
-def swap_slots(request):
-    tt1_id = request.query_params.get('tt1_id')
-    tt2_id = request.query_params.get('tt2_id')
-    
-    try:
-        tt1 = Timetable.objects.get(id=tt1_id)
-        tt2 = Timetable.objects.get(id=tt2_id)
-        
-        # Swap temporal/spatial coordinates
-        tt1.day, tt2.day = tt2.day, tt1.day
-        tt1.period, tt2.period = tt2.period, tt1.period
-        
-        tt1.save()
-        tt2.save()
-        return Response({"status": "success"})
-    except Timetable.DoesNotExist:
-        return Response({"detail": "Slot not found"}, status=404)
-
-@api_view(['GET'])
 def class_history(request):
     sessions = ClassSession.objects.all().order_by('-start_time')[:20]
     serializer = ClassSessionSerializer(sessions, many=True)
     return Response(serializer.data)
 
-@api_view(['GET'])
-def timetable_conflicts(request):
-    # For production, we would iterate and find overlaps. 
-    # For now, return empty as the generator ensures no conflicts.
-    return Response([])
-
 import io
 from django.http import HttpResponse
-
-@api_view(['GET'])
-def get_faculty_workload_report(request, format):
-    # This is a placeholder for the actual PDF/Excel generation logic
-    # In a production system, use reportlab or fpdf and pandas
-    buf = io.BytesIO()
-    if format == 'pdf':
-        content_type = 'application/pdf'
-        filename = 'faculty_workload.pdf'
-        buf.write(b"PDF Content Placeholder")
-    else:
-        content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        filename = 'faculty_workload.xlsx'
-        buf.write(b"Excel Content Placeholder")
-
-    buf.seek(0)
-    response = HttpResponse(buf, content_type=content_type)
-    response['Content-Disposition'] = f'attachment; filename={filename}'
-    return response
 
 @api_view(['GET'])
 def get_classroom_utilization_report(request, format):
@@ -262,60 +143,19 @@ def get_classroom_utilization_report(request, format):
     return response
 
 @api_view(['GET'])
-def get_department_summary_report(request, format):
-    buf = io.BytesIO()
-    buf.write(b"Report Placeholder")
-    buf.seek(0)
-    response = HttpResponse(buf, content_type='application/pdf' if format == 'pdf' else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename=department_summary.{format}'
-    return response
-
-@api_view(['GET'])
-def get_department_summary_json(request):
-    depts = Department.objects.all()
-    res = []
-    for d in depts:
-        res.append({
-            "id": d.id,
-            "name": d.name,
-            "programs_count": d.programs.count(),
-            "subjects_count": d.subjects.count(),
-            "faculties_count": User.objects.filter(department=d, role='faculty').count(),
-            "schedules_count": Timetable.objects.filter(section__semester__program__department=d).count()
-        })
-    return Response(res)
-
-@api_view(['GET'])
-def get_faculty_workload_json(request):
-    faculties = User.objects.filter(role='faculty')
-    res = []
-    for f in faculties:
-        actual = Timetable.objects.filter(faculty=f).count()
-        target = f.max_hours_per_week
-        res.append({
-            "faculty_id": f.employee_id,
-            "name": f.get_full_name(),
-            "department": f.department.name if f.department else "N/A",
-            "actual_hours": actual,
-            "target_hours": target,
-            "utilization": round((actual / target * 100), 1) if target > 0 else 0
-        })
-    return Response(res)
-
-@api_view(['GET'])
 def get_classroom_availability(request):
     rooms = Room.objects.all()
     res = []
     for r in rooms:
-        occupied = Timetable.objects.filter(room=r).count()
-        total = 30
+        active_session = ClassSession.objects.filter(room=r, status='Active').first()
+        is_occupied = active_session is not None or r.status == 'Occupied'
         res.append({
             "room_number": r.room_number,
             "type": r.type,
-            "occupied_slots": occupied,
-            "total_slots": total,
-            "utilization_percentage": round((occupied / total * 100), 1) if total > 0 else 0,
-            "status": "Occupied" if occupied > 25 else "Available"
+            "occupied_slots": 1 if is_occupied else 0,
+            "total_slots": 1,
+            "utilization_percentage": 100 if is_occupied else 0,
+            "status": "Occupied" if is_occupied else "Available"
         })
     return Response(res)
 
@@ -443,9 +283,6 @@ def dashboard_stats(request):
         "total_faculties": User.objects.filter(role='faculty').count(),
         "total_classrooms": Room.objects.filter(type='Classroom').count(),
         "total_labs": Room.objects.filter(type='Lab').count(),
-        "generated_timetables": Timetable.objects.count(),
-        "approved_timetables": Timetable.objects.filter(status='APPROVED').count(),
-        "conflict_alerts": 0,
         "room_utilization": round((ClassSession.objects.filter(status='Active').count() / Room.objects.count() * 100), 1) if Room.objects.count() > 0 else 0
     }
     return Response(data)
@@ -520,14 +357,3 @@ def bulk_import_faculty(request):
     except Exception as e:
         return Response({"detail": str(e)}, status=500)
 
-@api_view(['POST'])
-def generate_timetable(request):
-    department_id = request.data.get('department_id') or request.query_params.get('department_id')
-    semester_id = request.data.get('semester_id') or request.query_params.get('semester_id')
-
-    solver = TimetableSolver(department_id=department_id, semester_id=semester_id)
-    success = solver.solve()
-    if success:
-        return Response({"status": "success", "message": "Timetable generated successfully"})
-    else:
-        return Response({"status": "error", "message": "Could not satisfy constraints."}, status=status.HTTP_400_BAD_REQUEST)

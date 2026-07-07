@@ -12,9 +12,6 @@ router.register(r'subjects', SubjectViewSet)
 router.register(r'curricula', CurriculumViewSet)
 router.register(r'faculty-assignments', FacultyAssignmentViewSet)
 router.register(r'rooms', RoomViewSet)
-router.register(r'settings/timetable', TimetableSettingViewSet, basename='timetable-settings')
-router.register(r'period-timings', PeriodTimingViewSet)
-router.register(r'timetables', TimetableViewSet)
 router.register(r'bookings', BookingViewSet)
 router.register(r'audit-logs', AuditLogViewSet)
 
@@ -25,23 +22,12 @@ urlpatterns = [
     path('users_list/', users_list),
     path('dashboard-stats/', dashboard_stats),
     path('class-history/', class_history),
-    path('timetable-conflicts/', timetable_conflicts),
-    path('generate-timetable/', generate_timetable),
-    path('timetable/readiness/', get_readiness),
-    path('working-days/', get_working_days),
-    path('period-timings/', get_period_timings),
-    path('timetable-approval/', timetable_approval),
-    path('swap-slots/', swap_slots),
     path('bulk-import-faculty/', bulk_import_faculty),
     path('live-rooms/', get_live_rooms),
     path('find-class/', find_class),
     path('start-session/', start_session),
     path('end-session/', end_session),
-    path('faculty-workload/', get_faculty_workload_json),
     path('classroom-availability/', get_classroom_availability),
-    path('reports/department-summary/', get_department_summary_json),
-    path('reports/<str:format>/faculty-workload/', get_faculty_workload_report),
     path('reports/<str:format>/classroom-utilization/', get_classroom_utilization_report),
     path('reports/<str:format>/lab-utilization/', get_classroom_utilization_report),
-    path('reports/<str:format>/department-summary/', get_department_summary_report),
 ]

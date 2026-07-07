@@ -3,7 +3,7 @@ import RegistryPage from '../../components/RegistryPage';
 import { useRegistry } from '../../context/RegistryContext';
 
 const Sections = () => {
-    const { datasets, lookups, fetchData, saving, setSaving, readiness } = useRegistry();
+    const { datasets, lookups, fetchData, saving, setSaving } = useRegistry();
     const config = {
         title: 'Section Registry', endpoint: '/sections/',
         columns: [['name', 'Section'], ['semester', 'Semester'], ['student_count', 'Strength'], ['status', 'Status']],
@@ -15,7 +15,7 @@ const Sections = () => {
         ],
         display: { semester: lookups.semester }
     };
-    return <RegistryPage moduleKey="sections" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} readiness={readiness} />;
+    return <RegistryPage moduleKey="sections" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} />;
 };
 
 export default Sections;

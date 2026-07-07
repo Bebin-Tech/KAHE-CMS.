@@ -3,7 +3,7 @@ import RegistryPage from '../../components/RegistryPage';
 import { useRegistry } from '../../context/RegistryContext';
 
 const Semesters = () => {
-    const { datasets, lookups, fetchData, saving, setSaving, readiness } = useRegistry();
+    const { datasets, lookups, fetchData, saving, setSaving } = useRegistry();
     const config = {
         title: 'Semester Setup', endpoint: '/semesters/',
         columns: [['number', 'No'], ['program', 'Program'], ['is_active', 'Active']],
@@ -14,7 +14,7 @@ const Semesters = () => {
         ],
         display: { program: lookups.program }
     };
-    return <RegistryPage moduleKey="semesters" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} readiness={readiness} />;
+    return <RegistryPage moduleKey="semesters" config={config} datasets={datasets} lookups={lookups} fetchData={fetchData} saving={saving} setSaving={setSaving} />;
 };
 
 export default Semesters;
