@@ -78,58 +78,58 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f0f7ff] font-sans px-4">
-            <div className="max-w-[440px] w-full bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] p-8 md:p-14 flex flex-col items-center">
+        <div className="h-screen overflow-hidden flex items-center justify-center bg-[#f0f7ff] font-sans px-4 py-4">
+            <div className="max-w-[430px] w-full max-h-full bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] px-8 py-7 md:px-11 md:py-9 flex flex-col items-center">
 
                 {/* Institutional Logo */}
-                <div className="mb-6 flex justify-center">
+                <div className="mb-4 flex justify-center">
                     <img
                         src="/logo.svg"
                         alt="KAHE Logo"
-                        className="w-[120px] h-[120px] object-contain"
+                        className="w-[96px] h-[96px] object-contain"
                     />
                 </div>
 
                 {/* Title Section */}
-                <h2 className="text-3xl font-black text-[#0072bc] tracking-tight mb-1">
+                <h2 className="text-[28px] font-black text-[#0072bc] tracking-tight mb-1">
                     KAHE CMS
                 </h2>
-                <p className="text-slate-400 font-medium text-sm mb-10">
+                <p className="text-slate-400 font-medium text-sm mb-6">
                     {mode === 'login' ? 'Sign in to your account' : 'Create your student account'}
                 </p>
 
                 {error && (
-                    <div className="w-full mb-6 p-3 bg-red-50 border border-red-100 rounded-lg text-center">
-                        <p className="text-[11px] text-red-600 font-bold uppercase">{error}</p>
+                    <div className="w-full mb-4 p-2.5 bg-red-50 border border-red-100 rounded-lg text-center">
+                        <p className="text-[10px] text-red-600 font-bold uppercase">{error}</p>
                     </div>
                 )}
 
                 {mode === 'register' && (
-                    <form onSubmit={handleRegister} className="w-full space-y-6">
+                    <form onSubmit={handleRegister} className="w-full space-y-4">
                         <input
                             type="text"
-                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300"
                             placeholder="Full Name"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                         />
                         <input
                             type="text"
-                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300"
                             placeholder="Create Username"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                         <input
                             type="password"
-                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300"
                             placeholder="Create Password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
                         <input
                             type="password"
-                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300"
                             placeholder="Confirm Password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -137,14 +137,14 @@ const Login = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full bg-[#0072bc] text-white py-3.5 rounded-lg font-bold text-lg hover:bg-[#005a96] transition-all disabled:opacity-50 mt-4 active:scale-[0.98] shadow-md shadow-blue-100"
+                            className="w-full bg-[#0072bc] text-white py-3 rounded-lg font-bold text-base hover:bg-[#005a96] transition-all disabled:opacity-50 active:scale-[0.98] shadow-md shadow-blue-100"
                         >
                             {isLoading ? "Creating..." : "Create Account"}
                         </button>
                     </form>
                 )}
 
-                {mode === 'login' && <form onSubmit={handleLogin} className="w-full space-y-6">
+                {mode === 'login' && <form onSubmit={handleLogin} className="w-full space-y-5">
                     {/* Username Field */}
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
@@ -154,12 +154,12 @@ const Login = () => {
                         </div>
                         <input
                             type="text"
-                            className={`w-full pl-11 pr-4 py-3 bg-white border ${emailError ? 'border-red-400' : 'border-slate-300'} rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300`}
+                            className={`w-full pl-11 pr-4 py-3 bg-white border ${emailError ? 'border-red-400' : 'border-slate-300'} rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300`}
                             placeholder="Username"
                             value={email}
                             onChange={(e) => { setEmail(e.target.value); setEmailError(false); }}
                         />
-                        {emailError && <p className="text-[11px] text-red-500 mt-1.5 ml-1">Please enter your email</p>}
+                        {emailError && <p className="text-[10px] text-red-500 mt-1 ml-1">Please enter your username</p>}
                     </div>
 
                     {/* Password Field */}
@@ -171,7 +171,7 @@ const Login = () => {
                         </div>
                         <input
                             type={showPassword ? "text" : "password"}
-                            className={`w-full pl-11 pr-12 py-3 bg-white border ${passwordError ? 'border-red-400' : 'border-slate-300'} rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300`}
+                            className={`w-full pl-11 pr-12 py-3 bg-white border ${passwordError ? 'border-red-400' : 'border-slate-300'} rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300`}
                             placeholder="Password"
                             value={password}
                             onChange={(e) => { setPassword(e.target.value); setPasswordError(false); }}
@@ -187,14 +187,14 @@ const Login = () => {
                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                             )}
                         </button>
-                        {passwordError && <p className="text-[11px] text-red-500 mt-1.5 ml-1">Please enter your password</p>}
+                        {passwordError && <p className="text-[10px] text-red-500 mt-1 ml-1">Please enter your password</p>}
                     </div>
 
                     {/* Sign In Button */}
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-[#0072bc] text-white py-3.5 rounded-lg font-bold text-lg hover:bg-[#005a96] transition-all disabled:opacity-50 mt-4 active:scale-[0.98] shadow-md shadow-blue-100"
+                        className="w-full bg-[#0072bc] text-white py-3 rounded-lg font-bold text-base hover:bg-[#005a96] transition-all disabled:opacity-50 active:scale-[0.98] shadow-md shadow-blue-100"
                     >
                         {isLoading ? "Authenticating..." : "Sign In"}
                     </button>
@@ -208,14 +208,14 @@ const Login = () => {
                         setPassword('');
                         setConfirmPassword('');
                     }}
-                    className="mt-6 text-xs font-black uppercase tracking-widest text-[#0072bc] hover:text-[#005a96]"
+                    className="mt-5 text-[11px] font-black uppercase tracking-widest text-[#0072bc] hover:text-[#005a96]"
                 >
                     {mode === 'login' ? 'Create New Account' : 'Back to Login'}
                 </button>
 
                 {/* Footer Version */}
-                <div className="mt-14 text-center">
-                    <p className="text-xs text-slate-300 font-medium">
+                <div className="mt-6 text-center">
+                    <p className="text-[11px] text-slate-300 font-medium">
                         Beta V 2.5.1
                     </p>
                 </div>
