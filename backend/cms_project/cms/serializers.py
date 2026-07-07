@@ -86,6 +86,19 @@ class RoomSerializer(serializers.ModelSerializer):
         model = Room
         fields = '__all__'
 
+    def validate(self, attrs):
+        building = attrs.get('building') or getattr(self.instance, 'building', None) or 'Main Block'
+        room_number = attrs.get('room_number') or getattr(self.instance, 'room_number', None)
+        if room_number:
+            existing = Room.objects.filter(building=building, room_number=room_number)
+            if self.instance:
+                existing = existing.exclude(id=self.instance.id)
+            if existing.exists():
+                raise serializers.ValidationError({
+                    "detail": f"Classroom {room_number} already exists in {building}."
+                })
+        return attrs
+
 class BookingSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
     room_number = serializers.CharField(source='room.room_number', read_only=True)

@@ -15,24 +15,40 @@ const ClassroomTracking = () => {
     const { datasets } = useRegistry();
     const role = localStorage.getItem('role')?.toLowerCase();
     const canManageSessions = role !== 'student';
+    const canManageRooms = ['admin', 'super_admin'].includes(role);
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [showStartModal, setShowModal] = useState(false);
+    const [showRoomModal, setShowRoomModal] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState(null);
 
     const [formData, setFormData] = useState({
-        faculty_id: localStorage.getItem('user_id'),
-        faculty_name: localStorage.getItem('name'),
+        faculty_name: '',
         dept_id: '',
-        subject_id: '',
-        section_id: '',
-        topic: '',
-        remarks: ''
+        subject_name: ''
+    });
+    const [roomForm, setRoomForm] = useState({
+        room_number: '',
+        building: '',
+        capacity: 60,
+        type: 'Classroom',
+        status: 'Available'
     });
 
     const [message, setMessage] = useState({ text: '', type: '' });
-    const currentUserId = localStorage.getItem('user_id');
+
+    const getApiError = (err, fallback) => {
+        const data = err.response?.data;
+        if (!data) return fallback;
+        if (typeof data === 'string') return data;
+        if (data.detail) return data.detail;
+        const firstError = Object.entries(data)[0];
+        if (!firstError) return fallback;
+        const [field, value] = firstError;
+        const text = Array.isArray(value) ? value.join(', ') : String(value);
+        return `${field}: ${text}`;
+    };
 
     const fetchLiveRooms = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -67,11 +83,9 @@ const ClassroomTracking = () => {
         try {
             await API.post('/start-session/', {
                 room_id: selectedRoom.id,
-                faculty_id: Number(formData.faculty_id),
-                subject_id: Number(formData.subject_id),
-                section_id: Number(formData.section_id),
-                topic: formData.topic,
-                remarks: formData.remarks
+                faculty_name: formData.faculty_name,
+                department_id: Number(formData.dept_id),
+                subject_name: formData.subject_name
             });
             setMessage({ text: 'CLASS STARTED SUCCESSFULLY', type: 'success' });
             setTimeout(() => {
@@ -79,7 +93,7 @@ const ClassroomTracking = () => {
                 fetchLiveRooms(true);
             }, 1500);
         } catch (err) {
-            setMessage({ text: err.response?.data?.detail || 'SESSION INITIATION FAILED', type: 'error' });
+            setMessage({ text: getApiError(err, 'SESSION INITIATION FAILED'), type: 'error' });
         }
     };
 
@@ -88,7 +102,7 @@ const ClassroomTracking = () => {
         try {
             await API.post('/end-session/', {
                 session_id: room.session.id,
-                user_id: currentUserId
+                user_id: localStorage.getItem('user_id')
             });
             fetchLiveRooms(true);
         } catch (err) {
@@ -96,13 +110,57 @@ const ClassroomTracking = () => {
         }
     };
 
+    const handleCreateRoom = async (e) => {
+        e.preventDefault();
+        setMessage({ text: '', type: '' });
+        const block = roomForm.building || 'Main Block';
+        const duplicate = rooms.some(room =>
+            String(room.building || 'Main Block').trim().toLowerCase() === block.trim().toLowerCase() &&
+            String(room.room_number).trim().toLowerCase() === String(roomForm.room_number).trim().toLowerCase()
+        );
+
+        if (duplicate) {
+            setMessage({ text: `Classroom ${roomForm.room_number} already exists in ${block}.`, type: 'error' });
+            return;
+        }
+
+        try {
+            await API.post('/rooms/', {
+                ...roomForm,
+                capacity: Number(roomForm.capacity),
+                building: block
+            });
+            setRoomForm({ room_number: '', building: '', capacity: 60, type: 'Classroom', status: 'Available' });
+            setShowRoomModal(false);
+            fetchLiveRooms(true);
+        } catch (err) {
+            setMessage({ text: getApiError(err, 'ROOM CREATION FAILED'), type: 'error' });
+        }
+    };
+
+    const handleDeleteRoom = async (room) => {
+        if (!window.confirm(`Delete classroom ${room.room_number}?`)) return;
+        try {
+            await API.delete(`/rooms/${room.id}/`);
+            fetchLiveRooms(true);
+        } catch (err) {
+            alert(err.response?.data?.detail || "DELETE REJECTED");
+        }
+    };
+
     const filteredRooms = rooms.filter(r => {
         const matchesSearch = r.room_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (r.building || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.session?.faculty_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.session?.section_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.session?.subject_name || '').toLowerCase().includes(searchTerm.toLowerCase());
         return matchesSearch;
     });
+    const groupedRooms = filteredRooms.reduce((groups, room) => {
+        const block = room.building || 'Main Block';
+        if (!groups[block]) groups[block] = [];
+        groups[block].push(room);
+        return groups;
+    }, {});
 
     if (loading && rooms.length === 0) return (
         <div className="flex items-center justify-center min-h-[50vh]">
@@ -134,16 +192,22 @@ const ClassroomTracking = () => {
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    {canManageSessions && <button className="px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-700 hover:text-indigo-600 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                    {canManageRooms && <button onClick={() => { setMessage({ text: '', type: '' }); setShowRoomModal(true); }} className="px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-700 hover:text-indigo-600 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
                         <Plus size={16} />
-                        Register Space
+                        Create Classroom
                     </button>}
                 </div>
             </header>
 
             {/* ROOM GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                {filteredRooms.map(room => (
+            {Object.entries(groupedRooms).map(([block, blockRooms]) => (
+                <section key={block} className="space-y-5">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{block}</h2>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{blockRooms.length} Classrooms</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {blockRooms.map(room => (
                     <motion.div
                         layout
                         key={room.id}
@@ -192,6 +256,10 @@ const ClassroomTracking = () => {
                                         <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Subject</span>
                                         <span className="text-xs font-black text-white truncate max-w-[120px] uppercase">{room.session?.subject_name}</span>
                                     </div>
+                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Department</span>
+                                        <span className="text-xs font-black text-white truncate max-w-[120px] uppercase">{room.session?.department_name || 'N/A'}</span>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-3 mb-8">
@@ -218,12 +286,12 @@ const ClassroomTracking = () => {
                                         onClick={() => handleEndClass(room)}
                                         className="flex-1 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg shadow-rose-900/20 active:scale-95 transition-all"
                                     >
-                                        {str(room.session?.faculty) === str(currentUserId) ? 'End Class' : 'Force End (Stale)'}
+                                        End Class
                                     </button>
                                 )}
-                                <button className="p-4 bg-white/5 border border-white/10 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all">
+                                {canManageRooms && <button onClick={() => handleDeleteRoom(room)} className="p-4 bg-white/5 border border-white/10 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all">
                                     <Trash2 size={18} />
-                                </button>
+                                </button>}
                             </div> : (
                                 <div className={`mt-auto py-4 text-center rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] ${room.status === 'Available' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
                                     {room.status === 'Available' ? 'Available' : 'Occupied'}
@@ -232,7 +300,50 @@ const ClassroomTracking = () => {
                         </div>
                     </motion.div>
                 ))}
-            </div>
+                    </div>
+                </section>
+            ))}
+
+            {filteredRooms.length === 0 && (
+                <div className="py-16 text-center bg-white rounded-3xl border border-slate-100">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">No classrooms found</p>
+                </div>
+            )}
+
+            <AnimatePresence>
+                {showRoomModal && (
+                    <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white w-full max-w-lg rounded-[2rem] overflow-hidden shadow-2xl"
+                        >
+                            <div className="bg-slate-900 p-8 text-white">
+                                <h3 className="text-2xl font-black uppercase tracking-tight">Create Classroom</h3>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-2 text-slate-400">Organize by block</p>
+                            </div>
+                            <form onSubmit={handleCreateRoom} className="p-8 space-y-5">
+                                {message.text && <div className="p-4 rounded-xl bg-rose-50 text-rose-600 text-[10px] font-black uppercase">{message.text}</div>}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                    <input className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Block Name" value={roomForm.building} onChange={e => setRoomForm({ ...roomForm, building: e.target.value })} required />
+                                    <input className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Classroom Number" value={roomForm.room_number} onChange={e => setRoomForm({ ...roomForm, room_number: e.target.value })} required />
+                                    <input type="number" className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Capacity" value={roomForm.capacity} onChange={e => setRoomForm({ ...roomForm, capacity: e.target.value })} required />
+                                    <select className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={roomForm.type} onChange={e => setRoomForm({ ...roomForm, type: e.target.value })}>
+                                        <option value="Classroom">Classroom</option>
+                                        <option value="Lab">Lab</option>
+                                        <option value="Seminar Hall">Seminar Hall</option>
+                                    </select>
+                                </div>
+                                <div className="flex gap-4 pt-4">
+                                    <button type="button" onClick={() => setShowRoomModal(false)} className="flex-1 py-4 border-2 border-slate-100 text-slate-400 rounded-xl font-black uppercase text-[10px] tracking-widest">Cancel</button>
+                                    <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest">Create</button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {showStartModal && (
@@ -256,51 +367,26 @@ const ClassroomTracking = () => {
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="space-y-6">
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Faculty Name</label>
-                                        <div className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl text-xs font-bold text-slate-300">{formData.faculty_name}</div>
+                                        <input className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter faculty name" value={formData.faculty_name} onChange={e => setFormData({ ...formData, faculty_name: e.target.value })} required />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Identity ID</label>
-                                        <div className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl text-xs font-bold text-slate-300">{formData.faculty_id}</div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Institutional Dept</label>
+                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Department</label>
                                         <select className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.dept_id} onChange={e => setFormData({ ...formData, dept_id: e.target.value })} required>
                                             <option value="">Select Dept</option>
                                             {(datasets.departments || []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Academic Subject</label>
-                                        <select className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.subject_id} onChange={e => setFormData({ ...formData, subject_id: e.target.value })} required>
-                                            <option value="">Select Subject</option>
-                                            {(datasets.subjects || []).filter(s => !formData.dept_id || s.department === Number(formData.dept_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Target Section</label>
-                                        <select className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.section_id} onChange={e => setFormData({ ...formData, section_id: e.target.value })} required>
-                                            <option value="">Select Section</option>
-                                            {(datasets.sections || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Timestamp</label>
-                                        <div className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl text-xs font-bold text-slate-300 flex items-center justify-between">
-                                            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            <Clock size={14} className="text-slate-500" />
-                                        </div>
-                                    </div>
-                                    <div className="sm:col-span-2 space-y-2">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class Topic / Notes</label>
-                                        <input className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Introduction to Quantum Computing" value={formData.topic} onChange={e => setFormData({ ...formData, topic: e.target.value })} required />
+                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Subject</label>
+                                        <input className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter subject" value={formData.subject_name} onChange={e => setFormData({ ...formData, subject_name: e.target.value })} required />
                                     </div>
                                 </div>
                                 <div className="flex gap-4 pt-8">
                                     <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-white/5 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all">Cancel</button>
-                                    <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all">Activate Space</button>
+                                    <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all">Confirm</button>
                                 </div>
                             </form>
                         </motion.div>
@@ -310,7 +396,5 @@ const ClassroomTracking = () => {
         </div>
     );
 };
-
-const str = (val) => String(val || '');
 
 export default ClassroomTracking;

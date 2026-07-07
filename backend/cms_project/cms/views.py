@@ -18,6 +18,16 @@ class IsAdminRole(permissions.BasePermission):
             request.user.role in ['admin', 'super_admin']
         )
 
+class ReadOnlyOrAdminRole(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return bool(request.user and request.user.is_authenticated)
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.role in ['admin', 'super_admin']
+        )
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -166,6 +176,7 @@ class FacultyAssignmentViewSet(viewsets.ModelViewSet):
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
 
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
@@ -223,6 +234,9 @@ def start_session(request):
     faculty_id = request.data.get('faculty_id')
     subject_id = request.data.get('subject_id')
     section_id = request.data.get('section_id')
+    faculty_name = str(request.data.get('faculty_name') or '').strip()
+    subject_name = str(request.data.get('subject_name') or '').strip()
+    department_id = request.data.get('department_id') or request.data.get('dept_id')
     topic = request.data.get('topic')
     remarks = request.data.get('remarks')
     
@@ -238,6 +252,56 @@ def start_session(request):
                 "start_time": active_session.start_time
             }, status=400)
 
+        department = None
+        if department_id:
+            department = Department.objects.filter(id=department_id).first()
+
+        if not faculty_id:
+            if not faculty_name:
+                return Response({"detail": "Faculty name is required"}, status=400)
+            username = ''.join(ch for ch in faculty_name.lower().replace(' ', '_') if ch.isalnum() or ch == '_')[:50]
+            username = username or f"faculty_{timezone.now().timestamp()}"
+            faculty, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    "first_name": faculty_name,
+                    "last_name": "-",
+                    "employee_id": username,
+                    "email": f"{username}@kahe.edu.in",
+                    "role": "faculty",
+                    "department": department,
+                    "status": "Active",
+                    "is_active": True,
+                }
+            )
+            if created:
+                faculty.set_password('faculty123')
+                faculty.save()
+            faculty_id = faculty.id
+
+        if not subject_id:
+            if not subject_name:
+                return Response({"detail": "Subject is required"}, status=400)
+            if not department:
+                return Response({"detail": "Department is required"}, status=400)
+            code_base = ''.join(ch for ch in subject_name.upper().replace(' ', '') if ch.isalnum())[:12] or 'SUBJECT'
+            code = code_base
+            suffix = 1
+            while Subject.objects.filter(code=code).exists():
+                suffix += 1
+                code = f"{code_base}{suffix}"
+            subject, _ = Subject.objects.get_or_create(
+                name=subject_name,
+                department=department,
+                defaults={
+                    "code": code,
+                    "credits": 0,
+                    "weekly_hours": 0,
+                    "status": "Active",
+                }
+            )
+            subject_id = subject.id
+
         room.status = 'Occupied'
         room.save()
         
@@ -245,7 +309,7 @@ def start_session(request):
             room_id=room_id,
             faculty_id=faculty_id,
             subject_id=subject_id,
-            section_id=section_id,
+            section_id=section_id or None,
             topic=topic,
             remarks=remarks,
             status='Active'
@@ -273,7 +337,8 @@ def end_session(request):
         
         # Authorization: Only owner can end
         # (Assuming user_id passed from frontend is the one logged in)
-        if str(session.faculty.id) != str(user_id) and not request.user.is_staff:
+        is_admin = request.user.is_authenticated and request.user.role in ['admin', 'super_admin']
+        if str(session.faculty.id) != str(user_id) and not request.user.is_staff and not is_admin:
             return Response({"detail": "Access Denied: Only the faculty who started this class can end it."}, status=status.HTTP_403_FORBIDDEN)
 
         session.end_time = timezone.now()

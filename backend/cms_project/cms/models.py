@@ -103,14 +103,17 @@ class Room(models.Model):
         ('Lab', 'Lab'),
         ('Seminar Hall', 'Seminar Hall'),
     )
-    room_number = models.CharField(max_length=20, unique=True)
+    room_number = models.CharField(max_length=20)
     building = models.CharField(max_length=100, null=True, blank=True)
     capacity = models.IntegerField()
     type = models.CharField(max_length=20, choices=TYPES, default='Classroom')
     status = models.CharField(max_length=20, default='Available')
 
+    class Meta:
+        unique_together = ('building', 'room_number')
+
     def __str__(self):
-        return self.room_number
+        return f"{self.building or 'Main Block'} - {self.room_number}"
 
 class TimetableSetting(models.Model):
     academic_year = models.CharField(max_length=20)
