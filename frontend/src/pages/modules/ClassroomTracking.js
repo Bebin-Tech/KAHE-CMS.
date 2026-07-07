@@ -13,6 +13,8 @@ import {
 
 const ClassroomTracking = () => {
     const { datasets } = useRegistry();
+    const role = localStorage.getItem('role')?.toLowerCase();
+    const canManageSessions = role !== 'student';
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -132,10 +134,10 @@ const ClassroomTracking = () => {
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <button className="px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-700 hover:text-indigo-600 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                    {canManageSessions && <button className="px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-700 hover:text-indigo-600 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
                         <Plus size={16} />
                         Register Space
-                    </button>
+                    </button>}
                 </div>
             </header>
 
@@ -203,7 +205,7 @@ const ClassroomTracking = () => {
                                     </div>
                                 </div>
                             )}
-                            <div className="mt-auto flex gap-3">
+                            {canManageSessions ? <div className="mt-auto flex gap-3">
                                 {room.status === 'Available' ? (
                                     <button
                                         onClick={() => { setSelectedRoom(room); setShowModal(true); }}
@@ -222,7 +224,11 @@ const ClassroomTracking = () => {
                                 <button className="p-4 bg-white/5 border border-white/10 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all">
                                     <Trash2 size={18} />
                                 </button>
-                            </div>
+                            </div> : (
+                                <div className={`mt-auto py-4 text-center rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] ${room.status === 'Available' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
+                                    {room.status === 'Available' ? 'Available' : 'Occupied'}
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 ))}

@@ -10,7 +10,8 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
             'employee_id', 'role', 'phone', 'department', 'department_name',
             'status', 'designation', 'password', 'is_active',
-            'max_hours_per_day', 'max_hours_per_week', 'availability_status'
+            'max_hours_per_day', 'max_hours_per_week', 'availability_status',
+            'date_joined'
         )
         extra_kwargs = {
             'password': {'write_only': True, 'required': False},

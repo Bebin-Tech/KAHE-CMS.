@@ -20,7 +20,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
     const [formData, setFormData] = useState({});
     const [message, setMessage] = useState({ text: '', type: '' });
 
-    const rows = datasets[moduleKey] || [];
+    const rows = config.rows || datasets[moduleKey] || [];
     const filteredRows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(searchTerm.toLowerCase()));
     const pagedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
     const totalPages = Math.ceil(filteredRows.length / pageSize) || 1;
@@ -58,6 +58,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
         setMessage({ text: '', type: '' });
         try {
             const p = {};
+            Object.assign(p, config.defaultValues || {});
             Object.keys(formData).forEach(key => {
                 const val = formData[key];
                 p[key] = (typeof val === 'string') ? val.trim() : val;
@@ -125,7 +126,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={16} />
                         <input className="w-full pl-10 pr-4 py-3 bg-white border border-slate-100 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 shadow-inner" placeholder="Search records..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}/>
                     </div>
-                    {moduleKey === 'users' && (
+                    {moduleKey === 'users' && config.allowBulkImport !== false && (
                         <label className="px-6 py-3 bg-slate-100 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest cursor-pointer hover:bg-slate-200 transition-all border border-slate-200 flex items-center gap-2 shadow-sm">
                             <Download size={14} className="rotate-180" />
                             Bulk Import
@@ -133,7 +134,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
                         </label>
                     )}
                     {config.fields && config.fields.length > 0 && (
-                        <button onClick={() => { setEditingRecord(null); setFormData({}); setShowModal(true); setMessage({text:'', type:''}); }} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all">+ Register entry</button>
+                        <button onClick={() => { setEditingRecord(null); setFormData(config.defaultValues || {}); setShowModal(true); setMessage({text:'', type:''}); }} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all">{config.createLabel || '+ Register entry'}</button>
                     )}
                 </div>
             </div>
@@ -202,7 +203,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
                                     <div key={f.key} className={f.type === 'checks' ? 'md:col-span-2' : ''}>
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">{f.label}</label>
                                         {f.type === 'select' ? (
-                                            <select className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner" value={String(formData[f.key] || '')} onChange={e => setFormData({...formData, [f.key]: e.target.value})} required={f.required}>
+                                                <select className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner" value={String(formData[f.key] || '')} onChange={e => setFormData({...formData, [f.key]: e.target.value})} required={f.required}>
                                                 <option value="">Select Option...</option>
                                                 {f.options.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return <option key={String(v)} value={String(v)}>{l}</option>; })}
                                             </select>
@@ -215,7 +216,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
                                                     </label>
                                                 ))}
                                             </div>
-                                        ) : <input type={f.type || 'text'} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner" value={formData[f.key] || ''} onChange={e => setFormData({...formData, [f.key]: e.target.value})} required={f.required} placeholder={f.placeholder} />}
+                                        ) : <input type={f.type || 'text'} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner" value={formData[f.key] || ''} onChange={e => setFormData({...formData, [f.key]: e.target.value})} required={editingRecord && ['password', 'confirm_password'].includes(f.key) ? false : f.required} placeholder={f.placeholder} />}
                                     </div>
                                 ))}
                             </div>

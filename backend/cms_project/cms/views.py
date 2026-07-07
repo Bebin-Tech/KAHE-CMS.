@@ -5,13 +5,23 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
+from django.db import IntegrityError
 import pandas as pd
 from .models import *
 from .serializers import *
 
+class IsAdminRole(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.role in ['admin', 'super_admin']
+        )
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [IsAdminRole]
 
     @action(detail=True, methods=['post'])
     def reset_password(self, request, pk=None):
@@ -69,9 +79,56 @@ def login_view(request):
             "token_type": "bearer",
             "role": user.role,
             "user_id": user.id,
+            "username": user.username,
             "name": f"{user.first_name} {user.last_name}"
         })
     return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def register_student(request):
+    username = str(request.data.get('username', '')).strip().replace(' ', '').lower()
+    password = request.data.get('password')
+    full_name = str(request.data.get('full_name') or request.data.get('first_name') or '').strip()
+    email = str(request.data.get('email') or '').strip()
+
+    if not username or not password or not full_name:
+        return Response({"detail": "Full name, username, and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            first_name=full_name,
+            last_name='-',
+            email=email or f"{username}@kahe.edu.in",
+            employee_id=username,
+            role='student',
+            status='Active',
+            is_active=True
+        )
+    except IntegrityError:
+        return Response({"detail": "Username already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+    token, _ = Token.objects.get_or_create(user=user)
+    return Response({
+        "access_token": token.key,
+        "token_type": "bearer",
+        "role": user.role,
+        "user_id": user.id,
+        "username": user.username,
+        "name": user.get_full_name()
+    }, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+def reset_own_password(request):
+    new_password = request.data.get('password')
+    if not new_password:
+        return Response({"detail": "Password is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    request.user.set_password(new_password)
+    request.user.save()
+    return Response({"status": "password set"})
 
 @api_view(['POST'])
 def logout_view(request):
@@ -119,6 +176,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AuditLogSerializer
 
 @api_view(['GET'])
+@permission_classes([IsAdminRole])
 def users_list(request):
     users = User.objects.all()
     serializer = UserSerializer(users, many=True)

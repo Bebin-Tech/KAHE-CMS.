@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import API from '../api';
 
 const Login = () => {
+    const [mode, setMode] = useState('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [fullName, setFullName] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -31,12 +34,44 @@ const Login = () => {
             localStorage.setItem('token', response.data.access_token);
             localStorage.setItem('role', response.data.role);
             localStorage.setItem('user_id', response.data.user_id);
+            localStorage.setItem('username', response.data.username || email.trim());
             localStorage.setItem('name', response.data.name);
+            localStorage.setItem('session_password', password);
 
             // Redirect to home page using navigate instead of full reload to prevent blinking
             window.location.replace('/');
         } catch (err) {
             setError(err.response?.data?.detail || 'Invalid credentials');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!fullName.trim() || !email.trim() || !password || password !== confirmPassword) {
+            setError('Enter your name, username, and matching passwords.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const response = await API.post('/register-student/', {
+                full_name: fullName.trim(),
+                username: email.trim(),
+                password
+            });
+
+            localStorage.setItem('token', response.data.access_token);
+            localStorage.setItem('role', response.data.role);
+            localStorage.setItem('user_id', response.data.user_id);
+            localStorage.setItem('username', response.data.username || email.trim());
+            localStorage.setItem('name', response.data.name);
+            localStorage.setItem('session_password', password);
+            window.location.replace('/classroom-tracking');
+        } catch (err) {
+            setError(err.response?.data?.detail || 'Registration failed');
         } finally {
             setIsLoading(false);
         }
@@ -60,7 +95,7 @@ const Login = () => {
                     KAHE CMS
                 </h2>
                 <p className="text-slate-400 font-medium text-sm mb-10">
-                    Sign in to your account
+                    {mode === 'login' ? 'Sign in to your account' : 'Create your student account'}
                 </p>
 
                 {error && (
@@ -69,7 +104,47 @@ const Login = () => {
                     </div>
                 )}
 
-                <form onSubmit={handleLogin} className="w-full space-y-6">
+                {mode === 'register' && (
+                    <form onSubmit={handleRegister} className="w-full space-y-6">
+                        <input
+                            type="text"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300"
+                            placeholder="Full Name"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                        />
+                        <input
+                            type="text"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300"
+                            placeholder="Create Username"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                        <input
+                            type="password"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300"
+                            placeholder="Create Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                        <input
+                            type="password"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-slate-700 placeholder:text-slate-300"
+                            placeholder="Confirm Password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full bg-[#0072bc] text-white py-3.5 rounded-lg font-bold text-lg hover:bg-[#005a96] transition-all disabled:opacity-50 mt-4 active:scale-[0.98] shadow-md shadow-blue-100"
+                        >
+                            {isLoading ? "Creating..." : "Create Account"}
+                        </button>
+                    </form>
+                )}
+
+                {mode === 'login' && <form onSubmit={handleLogin} className="w-full space-y-6">
                     {/* Username Field */}
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
@@ -123,7 +198,20 @@ const Login = () => {
                     >
                         {isLoading ? "Authenticating..." : "Sign In"}
                     </button>
-                </form>
+                </form>}
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        setMode(mode === 'login' ? 'register' : 'login');
+                        setError('');
+                        setPassword('');
+                        setConfirmPassword('');
+                    }}
+                    className="mt-6 text-xs font-black uppercase tracking-widest text-[#0072bc] hover:text-[#005a96]"
+                >
+                    {mode === 'login' ? 'Create New Account' : 'Back to Login'}
+                </button>
 
                 {/* Footer Version */}
                 <div className="mt-14 text-center">

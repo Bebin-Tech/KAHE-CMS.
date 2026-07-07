@@ -1,0 +1,71 @@
+import React, { useState } from 'react';
+import API from '../../api';
+import { KeyRound, UserRound } from 'lucide-react';
+
+const Settings = () => {
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [message, setMessage] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const username = localStorage.getItem('username') || '';
+    const sessionPassword = localStorage.getItem('session_password') || 'Password is hidden until your next login or reset.';
+
+    const handleReset = async (e) => {
+        e.preventDefault();
+        setMessage('');
+        if (!password || password !== confirmPassword) {
+            setMessage('Passwords do not match.');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            await API.post('/account/reset-password/', { password });
+            localStorage.setItem('session_password', password);
+            setPassword('');
+            setConfirmPassword('');
+            setMessage('Password updated successfully.');
+        } catch (err) {
+            setMessage(err.response?.data?.detail || 'Password reset failed.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-8">
+            <header>
+                <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Settings</h1>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Student account access</p>
+            </header>
+
+            <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 grid gap-6 md:grid-cols-2">
+                <div className="p-6 rounded-xl bg-slate-50 border border-slate-100">
+                    <UserRound className="text-indigo-600 mb-4" size={24} />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Username</p>
+                    <p className="text-lg font-black text-slate-900 mt-2 break-all">{username}</p>
+                </div>
+                <div className="p-6 rounded-xl bg-slate-50 border border-slate-100">
+                    <KeyRound className="text-emerald-600 mb-4" size={24} />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Password</p>
+                    <p className="text-lg font-black text-slate-900 mt-2 break-all">{sessionPassword}</p>
+                </div>
+            </section>
+
+            <form onSubmit={handleReset} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 space-y-5">
+                <h2 className="text-lg font-black text-slate-900 uppercase">Reset Password</h2>
+                {message && <div className="p-4 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-black uppercase">{message}</div>}
+                <div className="grid gap-5 md:grid-cols-2">
+                    <input type="password" className="p-4 bg-slate-50 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="New password" value={password} onChange={e => setPassword(e.target.value)} />
+                    <input type="password" className="p-4 bg-slate-50 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Confirm new password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                </div>
+                <button disabled={saving} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50">
+                    {saving ? 'Updating...' : 'Update Password'}
+                </button>
+            </form>
+        </div>
+    );
+};
+
+export default Settings;

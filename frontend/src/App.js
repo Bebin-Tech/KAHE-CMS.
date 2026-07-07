@@ -5,23 +5,22 @@ import Dashboard from './pages/Dashboard';
 import Sidebar from './components/Sidebar';
 import { RegistryProvider } from './context/RegistryContext';
 
-// Module Pages
-import Departments from './pages/modules/Departments';
-import Programs from './pages/modules/Programs';
-import Semesters from './pages/modules/Semesters';
-import Sections from './pages/modules/Sections';
-import Subjects from './pages/modules/Subjects';
 import UserManagement from './pages/modules/UserManagement';
-import FacultyMapping from './pages/modules/FacultyMapping';
-import CurriculumMap from './pages/modules/CurriculumMap';
-import Rooms from './pages/modules/Rooms';
 import ClassroomTracking from './pages/modules/ClassroomTracking';
-import FindClass from './pages/modules/FindClass';
+import Settings from './pages/modules/Settings';
 
-const PrivateRoute = ({ children }) => {
+const roleHome = () => {
+    const role = localStorage.getItem('role')?.toLowerCase();
+    return role === 'admin' || role === 'super_admin' ? '/' : '/classroom-tracking';
+};
+
+const PrivateRoute = ({ children, roles }) => {
     const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role')?.toLowerCase();
     // Ensure we replace history to prevent blinking loops
-    return token ? children : <Navigate to="/login" replace />;
+    if (!token) return <Navigate to="/login" replace />;
+    if (roles && !roles.includes(role)) return <Navigate to={roleHome()} replace />;
+    return children;
 };
 
 const PublicRoute = ({ children }) => {
@@ -69,19 +68,10 @@ function App() {
                         <main className="flex-1 overflow-y-auto focus:outline-none p-4 md:p-8">
                             <Routes>
                                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                                <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+                                <Route path="/" element={<PrivateRoute roles={['admin', 'super_admin']}><Dashboard /></PrivateRoute>} />
 
-                                {/* Dedicated Module Routes */}
-                                <Route path="/departments" element={<PrivateRoute><Departments /></PrivateRoute>} />
-                                <Route path="/programs" element={<PrivateRoute><Programs /></PrivateRoute>} />
-                                <Route path="/semesters" element={<PrivateRoute><Semesters /></PrivateRoute>} />
-                                <Route path="/sections" element={<PrivateRoute><Sections /></PrivateRoute>} />
-                                <Route path="/subjects" element={<PrivateRoute><Subjects /></PrivateRoute>} />
-                                <Route path="/users" element={<PrivateRoute><UserManagement /></PrivateRoute>} />
-                                <Route path="/mappings" element={<PrivateRoute><FacultyMapping /></PrivateRoute>} />
-                                <Route path="/curriculum" element={<PrivateRoute><CurriculumMap /></PrivateRoute>} />
-                                <Route path="/rooms" element={<PrivateRoute><Rooms /></PrivateRoute>} />
-                                <Route path="/find-class" element={<PrivateRoute><FindClass /></PrivateRoute>} />
+                                <Route path="/users" element={<PrivateRoute roles={['admin', 'super_admin']}><UserManagement /></PrivateRoute>} />
+                                <Route path="/settings" element={<PrivateRoute roles={['student']}><Settings /></PrivateRoute>} />
                                 <Route path="/classroom-tracking" element={<PrivateRoute><ClassroomTracking /></PrivateRoute>} />
 
                                 <Route path="*" element={<Navigate to="/" />} />

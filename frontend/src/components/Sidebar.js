@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
     Home,
     LayoutDashboard,
-    BookOpen,
     Users,
     School,
     Settings,
@@ -58,60 +57,33 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
         {
             title: 'Home',
             icon: Home,
+            roles: ['admin', 'super_admin'],
             items: [
                 { name: 'Dashboard', path: '/', icon: LayoutDashboard }
             ]
         },
         {
-            title: 'Academic Management',
-            icon: BookOpen,
-            roles: ['admin', 'hod', 'dean', 'principal'],
+            title: 'Classroom Management',
+            icon: School,
+            roles: ['admin', 'super_admin', 'faculty', 'student'],
             items: [
-                { name: 'Departments', path: '/departments' },
-                { name: 'Programs', path: '/programs' },
-                { name: 'Semesters', path: '/semesters' },
-                { name: 'Sections', path: '/sections' },
-                { name: 'Subjects', path: '/subjects' }
+                { name: 'Classroom Module', path: '/classroom-tracking' }
             ]
         },
         {
-            title: 'Faculty Management',
-            icon: Users,
-            roles: ['admin', 'hod', 'dean', 'principal'],
-            items: [
-                { name: 'Faculty Mapping', path: '/mappings' }
-            ]
-        },
-        {
-            title: 'User Management',
+            title: 'User Directory',
             icon: Users,
             roles: ['admin', 'super_admin'],
             items: [
-                { name: 'System User Registry', path: '/users' }
+                { name: 'User Directory', path: '/users' }
             ]
         },
         {
-            title: 'Classroom Management',
-            icon: School,
-            items: [
-                { name: 'Find a Class', path: '/find-class' },
-                { name: 'Infrastructures', path: '/rooms' },
-                { name: 'Live Room Tracking', path: '/classroom-tracking' }
-            ]
-        },
-        {
-            title: 'Curriculum Management',
-            icon: BookOpen,
-            items: [
-                { name: 'Workload Mapping', path: '/curriculum' }
-            ]
-        },
-        {
-            title: 'Administration',
+            title: 'Settings',
             icon: Settings,
-            roles: ['admin'],
+            roles: ['student'],
             items: [
-                { name: 'System User Registry', path: '/users' }
+                { name: 'Settings Module', path: '/settings' }
             ]
         }
     ];

@@ -7,6 +7,7 @@ class User(AbstractUser):
         ('admin', 'Admin'),
         ('hod', 'HOD'),
         ('faculty', 'Faculty'),
+        ('student', 'Student'),
         ('staff', 'Staff'),
     )
     employee_id = models.CharField(max_length=50, unique=True, null=True, blank=True)

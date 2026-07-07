@@ -14,10 +14,12 @@ export const RegistryProvider = ({ children }) => {
 
     const fetchData = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
+        const role = localStorage.getItem('role')?.toLowerCase();
+        const canReadUsers = ['admin', 'super_admin'].includes(role);
         try {
             const results = await Promise.allSettled([
                 API.get('/departments/'), API.get('/programs/'), API.get('/semesters/'),
-                API.get('/sections/'), API.get('/subjects/'), API.get('/users_list/'),
+                API.get('/sections/'), API.get('/subjects/'), canReadUsers ? API.get('/users_list/') : Promise.resolve({ data: [] }),
                 API.get('/faculty-assignments/'), API.get('/curricula/'),
                 API.get('/rooms/'), API.get('/dashboard-stats/'), API.get('/audit-logs/')
             ]);

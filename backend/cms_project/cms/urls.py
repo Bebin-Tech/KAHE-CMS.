@@ -18,6 +18,8 @@ router.register(r'audit-logs', AuditLogViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('login/', login_view),
+    path('register-student/', register_student),
+    path('account/reset-password/', reset_own_password),
     path('logout/', logout_view),
     path('users_list/', users_list),
     path('dashboard-stats/', dashboard_stats),

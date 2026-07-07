@@ -105,11 +105,11 @@ const Dashboard = () => {
 
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate('/find-class')}
+                        onClick={() => navigate('/classroom-tracking')}
                         className="px-6 py-4 bg-indigo-600 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-200 hover:scale-105 transition-all flex items-center gap-2"
                     >
                         <Search size={14} />
-                        Find a Class
+                        Classroom Module
                     </button>
 
                     <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-5">
