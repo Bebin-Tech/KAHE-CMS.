@@ -180,9 +180,13 @@ class RoomViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Room.objects.select_related('block').all().order_by('block__code', 'room_number')
-        block = self.request.query_params.get('block')
+        block = str(self.request.query_params.get('block') or '').strip()
         if block:
-            queryset = queryset.filter(models.Q(block__code=block) | models.Q(building=block))
+            queryset = queryset.filter(
+                models.Q(block__code__iexact=block) |
+                models.Q(block__name__iexact=block) |
+                models.Q(building__iexact=block)
+            )
         return queryset
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -375,10 +379,14 @@ def end_session(request):
 
 @api_view(['GET'])
 def get_live_rooms(request):
-    block = request.query_params.get('block')
+    block = str(request.query_params.get('block') or '').strip()
     rooms = Room.objects.select_related('block').all().order_by('block__code', 'room_number')
     if block:
-        rooms = rooms.filter(models.Q(block__code=block) | models.Q(building=block))
+        rooms = rooms.filter(
+            models.Q(block__code__iexact=block) |
+            models.Q(block__name__iexact=block) |
+            models.Q(building__iexact=block)
+        )
     rooms = list(rooms)
     active_sessions = ClassSession.objects.filter(
         room_id__in=[room.id for room in rooms],
@@ -391,6 +399,9 @@ def get_live_rooms(request):
         room_data = RoomSerializer(r).data
         if active_session:
             room_data['session'] = ClassSessionSerializer(active_session).data
+            room_data['status'] = 'Occupied'
+        elif room_data.get('status') == 'Occupied':
+            room_data['status'] = 'Available'
         res.append(room_data)
     return Response(res)
 

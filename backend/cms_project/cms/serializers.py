@@ -82,18 +82,22 @@ class FacultyAssignmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RoomSerializer(serializers.ModelSerializer):
+    block = serializers.PrimaryKeyRelatedField(queryset=Block.objects.all(), required=False)
     block_code = serializers.CharField(source='block.code', read_only=True)
     block_name = serializers.CharField(source='block.name', read_only=True)
 
     class Meta:
         model = Room
         fields = '__all__'
+        validators = []
 
     def validate(self, attrs):
-        building = attrs.get('building') or getattr(self.instance, 'building', None) or 'S-Block'
+        building = str(attrs.get('building') or getattr(self.instance, 'building', None) or 'S-Block').strip()
         block = attrs.get('block') or getattr(self.instance, 'block', None)
         if not block:
-            block, _ = Block.objects.get_or_create(code=building, defaults={'name': building})
+            block = Block.objects.filter(code__iexact=building).first()
+            if not block:
+                block = Block.objects.create(code=building, name=building)
             attrs['block'] = block
         attrs['building'] = block.name
 

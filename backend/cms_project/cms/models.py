@@ -53,6 +53,11 @@ class Semester(models.Model):
     def __str__(self):
         return f"{self.program.name} - Sem {self.number}"
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['program', 'number'], name='unique_semester_per_program')
+        ]
+
 class Section(models.Model):
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name='sections')
     name = models.CharField(max_length=10)
@@ -61,6 +66,11 @@ class Section(models.Model):
 
     def __str__(self):
         return f"{self.semester} - Section {self.name}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['semester', 'name'], name='unique_section_per_semester')
+        ]
 
 class Subject(models.Model):
     TYPES = (
@@ -89,6 +99,14 @@ class Curriculum(models.Model):
     weekly_hours = models.IntegerField()
     status = models.CharField(max_length=20, default='Active')
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['department', 'program', 'semester', 'subject'],
+                name='unique_curriculum_entry'
+            )
+        ]
+
 class FacultyAssignment(models.Model):
     faculty = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'faculty'})
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -111,14 +129,20 @@ class Room(models.Model):
         ('Seminar Hall', 'Seminar Hall'),
     )
     room_number = models.CharField(max_length=20)
-    block = models.ForeignKey(Block, on_delete=models.PROTECT, null=True, blank=True, related_name='rooms')
+    block = models.ForeignKey(Block, on_delete=models.PROTECT, related_name='rooms')
     building = models.CharField(max_length=100, null=True, blank=True)
     capacity = models.IntegerField()
     type = models.CharField(max_length=20, choices=TYPES, default='Classroom')
     status = models.CharField(max_length=20, default='Available')
 
     class Meta:
-        unique_together = ('block', 'room_number')
+        constraints = [
+            models.UniqueConstraint(fields=['block', 'room_number'], name='unique_room_per_block')
+        ]
+        indexes = [
+            models.Index(fields=['block', 'room_number'], name='room_block_number_idx'),
+            models.Index(fields=['status'], name='room_status_idx'),
+        ]
 
     def __str__(self):
         block_name = self.block.name if self.block else (self.building or 'Main Block')
@@ -137,6 +161,11 @@ class PeriodTiming(models.Model):
     end_time = models.TimeField()
     is_break = models.BooleanField(default=False)
     label = models.CharField(max_length=20, default='CLASS')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['period_number'], name='unique_period_number')
+        ]
 
 class Timetable(models.Model):
     day = models.CharField(max_length=20)
@@ -161,6 +190,19 @@ class ClassSession(models.Model):
     def __str__(self):
         return f"{self.room.room_number} - {self.faculty.get_full_name()} ({self.status})"
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['room'],
+                condition=models.Q(status='Active'),
+                name='unique_active_session_per_room'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['room', 'status'], name='session_room_status_idx'),
+            models.Index(fields=['faculty', 'status'], name='session_faculty_status_idx'),
+        ]
+
 class Booking(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
@@ -168,6 +210,12 @@ class Booking(models.Model):
     end_time = models.DateTimeField()
     purpose = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, default='Approved')
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['room', 'start_time', 'end_time'], name='booking_room_time_idx'),
+            models.Index(fields=['user', 'status'], name='booking_user_status_idx'),
+        ]
 
 class AuditLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)

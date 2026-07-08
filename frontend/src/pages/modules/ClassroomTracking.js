@@ -51,13 +51,20 @@ const ClassroomTracking = () => {
         return `${field}: ${text}`;
     };
 
+    const roomBlockName = (room) => room.block_name || room.block_code || room.building || activeBlock;
+
+    const sortRooms = (items) => [...items].sort((a, b) =>
+        String(a.room_number || '').localeCompare(String(b.room_number || ''), undefined, { numeric: true })
+    );
+
     const fetchLiveRooms = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
             const res = await API.get(`/live-rooms/?block=${encodeURIComponent(activeBlock)}`);
-            setRooms(res.data);
+            setRooms(sortRooms(Array.isArray(res.data) ? res.data : []));
         } catch (err) {
             console.error("Failed to sync classroom telemetry.");
+            setMessage({ text: 'CLASSROOM LIST SYNC FAILED', type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -117,7 +124,7 @@ const ClassroomTracking = () => {
         const block = (roomForm.building || activeBlock).trim();
         const roomNumber = String(roomForm.room_number || '').trim();
         const duplicate = rooms.some(room =>
-            String(room.block_name || room.building || 'S-Block').trim().toLowerCase() === block.trim().toLowerCase() &&
+            String(roomBlockName(room)).trim().toLowerCase() === block.trim().toLowerCase() &&
             String(room.room_number).trim().toLowerCase() === roomNumber.toLowerCase()
         );
 
@@ -133,17 +140,13 @@ const ClassroomTracking = () => {
                 capacity: Number(roomForm.capacity),
                 building: block
             });
-            setRooms(prev => [...prev, res.data].sort((a, b) => {
-                const blockCompare = String(a.block_name || a.building || '').localeCompare(String(b.block_name || b.building || ''));
-                if (blockCompare !== 0) return blockCompare;
-                return String(a.room_number || '').localeCompare(String(b.room_number || ''), undefined, { numeric: true });
-            }));
+            setRooms(prev => sortRooms([...prev, res.data]));
             setSearchTerm('');
             setRoomForm({ room_number: '', building: block, capacity: 60, type: 'Classroom', status: 'Available' });
             setShowRoomModal(false);
             setActiveBlock(block);
             const fresh = await API.get(`/live-rooms/?block=${encodeURIComponent(block)}`);
-            setRooms(fresh.data);
+            setRooms(sortRooms(Array.isArray(fresh.data) ? fresh.data : []));
         } catch (err) {
             setMessage({ text: getApiError(err, 'ROOM CREATION FAILED'), type: 'error' });
         }
@@ -159,19 +162,15 @@ const ClassroomTracking = () => {
         }
     };
 
-    const filteredRooms = rooms.filter(r => {
-        const matchesSearch = r.room_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.block_name || r.building || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const filteredRooms = sortRooms(rooms.filter(r => {
+        const roomNumber = String(r.room_number || '');
+        const matchesSelectedBlock = String(roomBlockName(r)).trim().toLowerCase() === activeBlock.toLowerCase();
+        const matchesSearch = roomNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            roomBlockName(r).toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.session?.faculty_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.session?.subject_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesSearch;
-    });
-    const groupedRooms = filteredRooms.reduce((groups, room) => {
-        const block = room.block_name || room.building || activeBlock;
-        if (!groups[block]) groups[block] = [];
-        groups[block].push(room);
-        return groups;
-    }, {});
+        return matchesSelectedBlock && matchesSearch;
+    }));
 
     if (loading && rooms.length === 0) return (
         <div className="flex items-center justify-center min-h-[50vh]">
@@ -223,14 +222,13 @@ const ClassroomTracking = () => {
             </div>
 
             {/* ROOM GRID */}
-            {Object.entries(groupedRooms).map(([block, blockRooms]) => (
-                <section key={block} className="space-y-5">
+            <section className="space-y-5">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{block}</h2>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{blockRooms.length} Classrooms</span>
+                        <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{activeBlock}</h2>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{filteredRooms.length} Classrooms</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {blockRooms.map(room => (
+                {filteredRooms.map(room => (
                     <motion.div
                         layout
                         key={room.id}
@@ -303,7 +301,6 @@ const ClassroomTracking = () => {
                 ))}
                     </div>
                 </section>
-            ))}
 
             {filteredRooms.length === 0 && (
                 <div className="py-16 text-center bg-white rounded-3xl border border-slate-100">
