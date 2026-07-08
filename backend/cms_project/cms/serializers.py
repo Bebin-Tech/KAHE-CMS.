@@ -82,20 +82,29 @@ class FacultyAssignmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RoomSerializer(serializers.ModelSerializer):
+    block_code = serializers.CharField(source='block.code', read_only=True)
+    block_name = serializers.CharField(source='block.name', read_only=True)
+
     class Meta:
         model = Room
         fields = '__all__'
 
     def validate(self, attrs):
-        building = attrs.get('building') or getattr(self.instance, 'building', None) or 'Main Block'
+        building = attrs.get('building') or getattr(self.instance, 'building', None) or 'S-Block'
+        block = attrs.get('block') or getattr(self.instance, 'block', None)
+        if not block:
+            block, _ = Block.objects.get_or_create(code=building, defaults={'name': building})
+            attrs['block'] = block
+        attrs['building'] = block.name
+
         room_number = attrs.get('room_number') or getattr(self.instance, 'room_number', None)
         if room_number:
-            existing = Room.objects.filter(building=building, room_number=room_number)
+            existing = Room.objects.filter(block=block, room_number=room_number)
             if self.instance:
                 existing = existing.exclude(id=self.instance.id)
             if existing.exists():
                 raise serializers.ValidationError({
-                    "detail": f"Classroom {room_number} already exists in {building}."
+                    "detail": f"Classroom {room_number} already exists in {block.name}."
                 })
         return attrs
 

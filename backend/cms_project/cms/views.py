@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
-from django.db import IntegrityError
+from django.db import IntegrityError, models
 import pandas as pd
 from .models import *
 from .serializers import *
@@ -174,9 +174,16 @@ class FacultyAssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = FacultyAssignmentSerializer
 
 class RoomViewSet(viewsets.ModelViewSet):
-    queryset = Room.objects.all()
+    queryset = Room.objects.select_related('block').all()
     serializer_class = RoomSerializer
     permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = Room.objects.select_related('block').all().order_by('block__code', 'room_number')
+        block = self.request.query_params.get('block')
+        if block:
+            queryset = queryset.filter(models.Q(block__code=block) | models.Q(building=block))
+        return queryset
 
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
@@ -213,13 +220,16 @@ def get_classroom_utilization_report(request, format):
 
 @api_view(['GET'])
 def get_classroom_availability(request):
-    rooms = Room.objects.all()
+    rooms = Room.objects.select_related('block').all()
+    active_room_ids = set(ClassSession.objects.filter(status='Active').values_list('room_id', flat=True))
     res = []
     for r in rooms:
-        active_session = ClassSession.objects.filter(room=r, status='Active').first()
-        is_occupied = active_session is not None or r.status == 'Occupied'
+        is_occupied = r.id in active_room_ids or r.status == 'Occupied'
         res.append({
             "room_number": r.room_number,
+            "building": r.building,
+            "block_code": r.block.code if r.block else None,
+            "block_name": r.block.name if r.block else r.building,
             "type": r.type,
             "occupied_slots": 1 if is_occupied else 0,
             "total_slots": 1,
@@ -229,6 +239,7 @@ def get_classroom_availability(request):
     return Response(res)
 
 @api_view(['POST'])
+@permission_classes([IsAdminRole])
 def start_session(request):
     room_id = request.data.get('room_id')
     faculty_id = request.data.get('faculty_id')
@@ -328,6 +339,7 @@ def start_session(request):
         return Response({"detail": "Room not found"}, status=404)
 
 @api_view(['POST'])
+@permission_classes([IsAdminRole])
 def end_session(request):
     session_id = request.data.get('session_id')
     user_id = request.data.get('user_id') # Identify who is trying to end
@@ -363,10 +375,19 @@ def end_session(request):
 
 @api_view(['GET'])
 def get_live_rooms(request):
-    rooms = Room.objects.all().order_by('room_number')
+    block = request.query_params.get('block')
+    rooms = Room.objects.select_related('block').all().order_by('block__code', 'room_number')
+    if block:
+        rooms = rooms.filter(models.Q(block__code=block) | models.Q(building=block))
+    rooms = list(rooms)
+    active_sessions = ClassSession.objects.filter(
+        room_id__in=[room.id for room in rooms],
+        status='Active'
+    ).select_related('room', 'faculty', 'faculty__department', 'subject', 'section', 'section__semester')
+    sessions_by_room = {session.room_id: session for session in active_sessions}
     res = []
     for r in rooms:
-        active_session = ClassSession.objects.filter(room=r, status='Active').first()
+        active_session = sessions_by_room.get(r.id)
         room_data = RoomSerializer(r).data
         if active_session:
             room_data['session'] = ClassSessionSerializer(active_session).data

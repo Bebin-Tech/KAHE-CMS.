@@ -5,6 +5,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('cms', '0002_add_student_role'),
+        ('cms', '0002_subject_allotted_hours_subject_mne_and_more'),
     ]
 
     operations = [

@@ -13,8 +13,10 @@ import {
 const ClassroomTracking = () => {
     const { datasets } = useRegistry();
     const role = localStorage.getItem('role')?.toLowerCase();
-    const canManageSessions = role !== 'student';
+    const canManageSessions = ['admin', 'super_admin'].includes(role);
     const canManageRooms = ['admin', 'super_admin'].includes(role);
+    const blockOptions = ['S-Block', 'P-Block', 'N-Block', 'E-Block'];
+    const [activeBlock, setActiveBlock] = useState('S-Block');
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -29,7 +31,7 @@ const ClassroomTracking = () => {
     });
     const [roomForm, setRoomForm] = useState({
         room_number: '',
-        building: '',
+        building: 'S-Block',
         capacity: 60,
         type: 'Classroom',
         status: 'Available'
@@ -52,14 +54,14 @@ const ClassroomTracking = () => {
     const fetchLiveRooms = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            const res = await API.get('/live-rooms/');
+            const res = await API.get(`/live-rooms/?block=${encodeURIComponent(activeBlock)}`);
             setRooms(res.data);
         } catch (err) {
             console.error("Failed to sync classroom telemetry.");
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [activeBlock]);
 
     useEffect(() => {
         fetchLiveRooms();
@@ -112,10 +114,10 @@ const ClassroomTracking = () => {
     const handleCreateRoom = async (e) => {
         e.preventDefault();
         setMessage({ text: '', type: '' });
-        const block = (roomForm.building || 'Main Block').trim();
+        const block = (roomForm.building || activeBlock).trim();
         const roomNumber = String(roomForm.room_number || '').trim();
         const duplicate = rooms.some(room =>
-            String(room.building || 'Main Block').trim().toLowerCase() === block.trim().toLowerCase() &&
+            String(room.block_name || room.building || 'S-Block').trim().toLowerCase() === block.trim().toLowerCase() &&
             String(room.room_number).trim().toLowerCase() === roomNumber.toLowerCase()
         );
 
@@ -132,14 +134,16 @@ const ClassroomTracking = () => {
                 building: block
             });
             setRooms(prev => [...prev, res.data].sort((a, b) => {
-                const blockCompare = String(a.building || '').localeCompare(String(b.building || ''));
+                const blockCompare = String(a.block_name || a.building || '').localeCompare(String(b.block_name || b.building || ''));
                 if (blockCompare !== 0) return blockCompare;
                 return String(a.room_number || '').localeCompare(String(b.room_number || ''), undefined, { numeric: true });
             }));
             setSearchTerm('');
-            setRoomForm({ room_number: '', building: '', capacity: 60, type: 'Classroom', status: 'Available' });
+            setRoomForm({ room_number: '', building: block, capacity: 60, type: 'Classroom', status: 'Available' });
             setShowRoomModal(false);
-            await fetchLiveRooms(true);
+            setActiveBlock(block);
+            const fresh = await API.get(`/live-rooms/?block=${encodeURIComponent(block)}`);
+            setRooms(fresh.data);
         } catch (err) {
             setMessage({ text: getApiError(err, 'ROOM CREATION FAILED'), type: 'error' });
         }
@@ -157,13 +161,13 @@ const ClassroomTracking = () => {
 
     const filteredRooms = rooms.filter(r => {
         const matchesSearch = r.room_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.building || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (r.block_name || r.building || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.session?.faculty_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.session?.subject_name || '').toLowerCase().includes(searchTerm.toLowerCase());
         return matchesSearch;
     });
     const groupedRooms = filteredRooms.reduce((groups, room) => {
-        const block = room.building || 'Main Block';
+        const block = room.block_name || room.building || activeBlock;
         if (!groups[block]) groups[block] = [];
         groups[block].push(room);
         return groups;
@@ -199,12 +203,24 @@ const ClassroomTracking = () => {
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    {canManageRooms && <button onClick={() => { setMessage({ text: '', type: '' }); setShowRoomModal(true); }} className="px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-700 hover:text-indigo-600 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                    {canManageRooms && <button onClick={() => { setMessage({ text: '', type: '' }); setRoomForm(prev => ({ ...prev, building: activeBlock })); setShowRoomModal(true); }} className="px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-700 hover:text-indigo-600 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
                         <Plus size={16} />
                         Create Classroom
                     </button>}
                 </div>
             </header>
+
+            <div className="flex flex-wrap gap-3">
+                {blockOptions.map(block => (
+                    <button
+                        key={block}
+                        onClick={() => { setActiveBlock(block); setSearchTerm(''); }}
+                        className={`px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${activeBlock === block ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white text-slate-500 border-slate-100 hover:text-indigo-600'}`}
+                    >
+                        {block}
+                    </button>
+                ))}
+            </div>
 
             {/* ROOM GRID */}
             {Object.entries(groupedRooms).map(([block, blockRooms]) => (
@@ -235,7 +251,7 @@ const ClassroomTracking = () => {
                         <div className="p-5 flex-1 flex flex-col">
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                    <p className="text-sm font-bold text-slate-300 truncate">{room.building || 'Main Block'}</p>
+                                    <p className="text-sm font-bold text-slate-300 truncate">{room.block_name || room.building || 'S-Block'}</p>
                                     <h3 className="text-3xl font-black text-white tracking-tight mt-2 uppercase truncate">{room.room_number}</h3>
                                     <p className="text-sm font-bold text-slate-400 mt-2">{room.type}</p>
                                 </div>
@@ -311,7 +327,9 @@ const ClassroomTracking = () => {
                             <form onSubmit={handleCreateRoom} className="p-8 space-y-5">
                                 {message.text && <div className="p-4 rounded-xl bg-rose-50 text-rose-600 text-[10px] font-black uppercase">{message.text}</div>}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                    <input className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Block Name" value={roomForm.building} onChange={e => setRoomForm({ ...roomForm, building: e.target.value })} required />
+                                    <select className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={roomForm.building} onChange={e => setRoomForm({ ...roomForm, building: e.target.value })} required>
+                                        {blockOptions.map(block => <option key={block} value={block}>{block}</option>)}
+                                    </select>
                                     <input className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Classroom Number" value={roomForm.room_number} onChange={e => setRoomForm({ ...roomForm, room_number: e.target.value })} required />
                                     <input type="number" className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Capacity" value={roomForm.capacity} onChange={e => setRoomForm({ ...roomForm, capacity: e.target.value })} required />
                                     <select className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={roomForm.type} onChange={e => setRoomForm({ ...roomForm, type: e.target.value })}>

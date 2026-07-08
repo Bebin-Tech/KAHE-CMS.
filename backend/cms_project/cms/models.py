@@ -97,6 +97,13 @@ class FacultyAssignment(models.Model):
     class Meta:
         unique_together = ('faculty', 'subject', 'section')
 
+class Block(models.Model):
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
 class Room(models.Model):
     TYPES = (
         ('Classroom', 'Classroom'),
@@ -104,16 +111,18 @@ class Room(models.Model):
         ('Seminar Hall', 'Seminar Hall'),
     )
     room_number = models.CharField(max_length=20)
+    block = models.ForeignKey(Block, on_delete=models.PROTECT, null=True, blank=True, related_name='rooms')
     building = models.CharField(max_length=100, null=True, blank=True)
     capacity = models.IntegerField()
     type = models.CharField(max_length=20, choices=TYPES, default='Classroom')
     status = models.CharField(max_length=20, default='Available')
 
     class Meta:
-        unique_together = ('building', 'room_number')
+        unique_together = ('block', 'room_number')
 
     def __str__(self):
-        return f"{self.building or 'Main Block'} - {self.room_number}"
+        block_name = self.block.name if self.block else (self.building or 'Main Block')
+        return f"{block_name} - {self.room_number}"
 
 class TimetableSetting(models.Model):
     academic_year = models.CharField(max_length=20)
