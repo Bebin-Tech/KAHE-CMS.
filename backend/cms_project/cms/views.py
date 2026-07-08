@@ -28,6 +28,17 @@ class ReadOnlyOrAdminRole(permissions.BasePermission):
             request.user.role in ['admin', 'super_admin']
         )
 
+def is_admin_user(user):
+    return bool(user and user.is_authenticated and user.role in ['admin', 'super_admin'])
+
+def faculty_department(user):
+    if user and user.is_authenticated and user.role == 'faculty':
+        return user.department_id or -1
+    return None
+
+def is_faculty_user(user):
+    return bool(user and user.is_authenticated and user.role == 'faculty')
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -61,7 +72,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def faculty_list(self, request):
-        faculty = User.objects.filter(role='faculty')
+        faculty = User.objects.filter(role='faculty').select_related('department')
+        if is_faculty_user(request.user):
+            dept_id = faculty_department(request.user)
+            faculty = faculty.filter(department_id=dept_id)
         serializer = self.get_serializer(faculty, many=True)
         return Response(serializer.data)
 
@@ -90,7 +104,9 @@ def login_view(request):
             "role": user.role,
             "user_id": user.id,
             "username": user.username,
-            "name": f"{user.first_name} {user.last_name}"
+            "name": f"{user.first_name} {user.last_name}",
+            "department_id": user.department_id,
+            "department_name": user.department.name if user.department else None
         })
     return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -148,30 +164,89 @@ def logout_view(request):
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = Department.objects.all().order_by('name')
+        if is_faculty_user(self.request.user):
+            dept_id = faculty_department(self.request.user)
+            queryset = queryset.filter(id=dept_id)
+        return queryset
 
 class ProgramViewSet(viewsets.ModelViewSet):
     queryset = Program.objects.all()
     serializer_class = ProgramSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = Program.objects.select_related('department').all().order_by('department__name', 'name')
+        if is_faculty_user(self.request.user):
+            dept_id = faculty_department(self.request.user)
+            queryset = queryset.filter(department_id=dept_id)
+        return queryset
 
 class SemesterViewSet(viewsets.ModelViewSet):
     queryset = Semester.objects.all()
     serializer_class = SemesterSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = Semester.objects.select_related('program', 'program__department').all().order_by('program__name', 'number')
+        if is_faculty_user(self.request.user):
+            dept_id = faculty_department(self.request.user)
+            queryset = queryset.filter(program__department_id=dept_id)
+        return queryset
 
 class SectionViewSet(viewsets.ModelViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = Section.objects.select_related('semester', 'semester__program', 'semester__program__department').all().order_by('semester__program__name', 'semester__number', 'name')
+        if is_faculty_user(self.request.user):
+            dept_id = faculty_department(self.request.user)
+            queryset = queryset.filter(semester__program__department_id=dept_id)
+        return queryset
 
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = Subject.objects.select_related('department').all().order_by('department__name', 'name')
+        if is_faculty_user(self.request.user):
+            dept_id = faculty_department(self.request.user)
+            queryset = queryset.filter(department_id=dept_id)
+        return queryset
 
 class CurriculumViewSet(viewsets.ModelViewSet):
     queryset = Curriculum.objects.all()
     serializer_class = CurriculumSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = Curriculum.objects.select_related('department', 'program', 'semester', 'subject').all()
+        if is_faculty_user(self.request.user):
+            dept_id = faculty_department(self.request.user)
+            queryset = queryset.filter(department_id=dept_id)
+        return queryset
 
 class FacultyAssignmentViewSet(viewsets.ModelViewSet):
     queryset = FacultyAssignment.objects.all()
     serializer_class = FacultyAssignmentSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = FacultyAssignment.objects.select_related(
+            'faculty', 'faculty__department', 'subject', 'subject__department',
+            'section', 'section__semester', 'section__semester__program'
+        ).all()
+        if is_faculty_user(self.request.user):
+            dept_id = faculty_department(self.request.user)
+            queryset = queryset.filter(faculty__department_id=dept_id)
+        return queryset
 
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.select_related('block').all()

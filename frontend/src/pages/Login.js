@@ -36,6 +36,8 @@ const Login = () => {
             localStorage.setItem('user_id', response.data.user_id);
             localStorage.setItem('username', response.data.username || email.trim());
             localStorage.setItem('name', response.data.name);
+            localStorage.setItem('department_id', response.data.department_id || '');
+            localStorage.setItem('department_name', response.data.department_name || '');
             localStorage.setItem('session_password', password);
 
             // Redirect to home page using navigate instead of full reload to prevent blinking
@@ -68,6 +70,8 @@ const Login = () => {
             localStorage.setItem('user_id', response.data.user_id);
             localStorage.setItem('username', response.data.username || email.trim());
             localStorage.setItem('name', response.data.name);
+            localStorage.setItem('department_id', response.data.department_id || '');
+            localStorage.setItem('department_name', response.data.department_name || '');
             localStorage.setItem('session_password', password);
             window.location.replace('/classroom-tracking');
         } catch (err) {

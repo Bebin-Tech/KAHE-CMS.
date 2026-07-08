@@ -25,15 +25,19 @@ const UserManagement = () => {
         allowBulkImport: false,
         createLabel: currentPage.createLabel,
         defaultValues: { role: currentPage.role, status: 'Active' },
-        columns: [['username', 'User ID'], ['full_name', 'Name'], ['role', 'Role'], ['status', 'Status']],
+        columns: currentPage.key === 'faculty'
+            ? [['username', 'User ID'], ['full_name', 'Name'], ['department', 'Department'], ['role', 'Role'], ['status', 'Status']]
+            : [['username', 'User ID'], ['full_name', 'Name'], ['role', 'Role'], ['status', 'Status']],
         fields: [
             { key: 'first_name', label: 'Full Name', required: true },
             { key: 'username', label: 'User ID', required: true },
             { key: 'role', label: 'System Role', type: 'select', options: currentPage.key === 'admin' ? [['admin', 'Admin'], ['super_admin', 'Super Admin']] : [[currentPage.role, currentPage.role === 'student' ? 'Student' : 'Faculty']], required: true },
+            ...(currentPage.key === 'faculty' ? [{ key: 'department', label: 'Department', type: 'select', options: (datasets.departments || []).map(d => [d.id, d.name]), required: true }] : []),
             { key: 'password', label: 'Secure Password', type: 'password', required: true },
             { key: 'confirm_password', label: 'Confirm Password', type: 'password', required: true },
             { key: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive'] }
         ],
+        display: { department: lookups.department },
         actions: [
             { label: 'Reset PWD', icon: Lock, color: 'text-amber-500', type: 'RESET_PWD' },
             { label: 'Toggle Status', icon: RefreshCw, color: 'text-blue-500', type: 'TOGGLE_STATUS' }

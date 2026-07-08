@@ -19,6 +19,9 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
+        role = validated_data.get('role', 'staff')
+        if role == 'faculty' and not validated_data.get('department'):
+            raise serializers.ValidationError({"department": "Faculty users must be assigned to a department."})
         password = validated_data.pop('password', None)
         user = User.objects.create(**validated_data)
         if password:
@@ -30,6 +33,10 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
+        role = validated_data.get('role', instance.role)
+        department = validated_data.get('department', instance.department)
+        if role == 'faculty' and not department:
+            raise serializers.ValidationError({"department": "Faculty users must be assigned to a department."})
         password = validated_data.pop('password', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

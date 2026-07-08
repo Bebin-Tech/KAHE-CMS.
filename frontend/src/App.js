@@ -8,6 +8,7 @@ import { RegistryProvider } from './context/RegistryContext';
 import UserManagement from './pages/modules/UserManagement';
 import ClassroomTracking from './pages/modules/ClassroomTracking';
 import Settings from './pages/modules/Settings';
+import Departments from './pages/modules/Departments';
 
 const roleHome = () => {
     const role = localStorage.getItem('role')?.toLowerCase();
@@ -71,6 +72,7 @@ function App() {
                                 <Route path="/" element={<PrivateRoute roles={['admin', 'super_admin']}><Dashboard /></PrivateRoute>} />
 
                                 <Route path="/users" element={<PrivateRoute roles={['admin', 'super_admin']}><UserManagement /></PrivateRoute>} />
+                                <Route path="/departments" element={<PrivateRoute roles={['admin', 'super_admin']}><Departments /></PrivateRoute>} />
                                 <Route path="/settings" element={<PrivateRoute roles={['student']}><Settings /></PrivateRoute>} />
                                 <Route path="/classroom-tracking" element={<PrivateRoute><ClassroomTracking /></PrivateRoute>} />
 

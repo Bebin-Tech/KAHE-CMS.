@@ -6,6 +6,7 @@ import {
     Users,
     School,
     Settings,
+    Building2,
     ChevronDown,
     ChevronRight,
     Search,
@@ -76,6 +77,14 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             roles: ['admin', 'super_admin'],
             items: [
                 { name: 'User Directory', path: '/users' }
+            ]
+        },
+        {
+            title: 'Department',
+            icon: Building2,
+            roles: ['admin', 'super_admin'],
+            items: [
+                { name: 'Department Module', path: '/departments' }
             ]
         },
         {
