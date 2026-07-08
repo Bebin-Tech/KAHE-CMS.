@@ -11,7 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
             'employee_id', 'role', 'phone', 'department', 'department_name',
             'status', 'designation', 'password', 'is_active',
             'max_hours_per_day', 'max_hours_per_week', 'availability_status',
-            'date_joined'
+            'classroom_permission', 'date_joined'
         )
         extra_kwargs = {
             'password': {'write_only': True, 'required': False},
@@ -22,6 +22,8 @@ class UserSerializer(serializers.ModelSerializer):
         role = validated_data.get('role', 'staff')
         if role == 'faculty' and not validated_data.get('department'):
             raise serializers.ValidationError({"department": "Faculty users must be assigned to a department."})
+        if not validated_data.get('classroom_permission'):
+            validated_data['classroom_permission'] = self.default_classroom_permission(role)
         password = validated_data.pop('password', None)
         user = User.objects.create(**validated_data)
         if password:
@@ -44,6 +46,13 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+    def default_classroom_permission(self, role):
+        if role in ['admin', 'super_admin']:
+            return 'manage_classrooms'
+        if role == 'faculty':
+            return 'class_session'
+        return 'view_only'
 
 class DepartmentSerializer(serializers.ModelSerializer):
     hod_name = serializers.CharField(source='hod.get_full_name', read_only=True)

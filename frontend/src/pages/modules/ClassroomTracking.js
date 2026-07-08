@@ -13,8 +13,13 @@ import {
 const ClassroomTracking = () => {
     const { datasets } = useRegistry();
     const role = localStorage.getItem('role')?.toLowerCase();
-    const canManageSessions = ['admin', 'super_admin'].includes(role);
-    const canManageRooms = ['admin', 'super_admin'].includes(role);
+    const userName = localStorage.getItem('name') || '';
+    const storedDepartmentId = localStorage.getItem('department_id') || '';
+    const storedDepartmentName = localStorage.getItem('department_name') || '';
+    const classroomPermission = localStorage.getItem('classroom_permission') || (['admin', 'super_admin'].includes(role) ? 'manage_classrooms' : role === 'faculty' ? 'class_session' : 'view_only');
+    const canManageSessions = ['class_session', 'manage_classrooms'].includes(classroomPermission);
+    const canManageRooms = classroomPermission === 'manage_classrooms';
+    const isFaculty = role === 'faculty';
     const blockOptions = ['S-Block', 'P-Block', 'N-Block', 'E-Block'];
     const [activeBlock, setActiveBlock] = useState('S-Block');
     const [rooms, setRooms] = useState([]);
@@ -25,8 +30,8 @@ const ClassroomTracking = () => {
     const [selectedRoom, setSelectedRoom] = useState(null);
 
     const [formData, setFormData] = useState({
-        faculty_name: '',
-        dept_id: '',
+        faculty_name: isFaculty ? userName : '',
+        dept_id: storedDepartmentId,
         subject_name: ''
     });
     const [roomForm, setRoomForm] = useState({
@@ -64,7 +69,11 @@ const ClassroomTracking = () => {
             setRooms(sortRooms(Array.isArray(res.data) ? res.data : []));
         } catch (err) {
             console.error("Failed to sync classroom telemetry.");
-            setMessage({ text: 'CLASSROOM LIST SYNC FAILED', type: 'error' });
+            if (err.response?.status === 401) {
+                setMessage({ text: 'LOGIN SESSION EXPIRED. PLEASE SIGN IN AGAIN.', type: 'error' });
+            } else {
+                setMessage({ text: getApiError(err, 'CLASSROOM LIST SYNC FAILED'), type: 'error' });
+            }
         } finally {
             setLoading(false);
         }
@@ -75,6 +84,16 @@ const ClassroomTracking = () => {
         const timer = setInterval(() => fetchLiveRooms(true), 15000);
         return () => clearInterval(timer);
     }, [fetchLiveRooms]);
+
+    useEffect(() => {
+        if (!isFaculty) return;
+        const fallbackDepartment = (datasets.departments || []).find(d => String(d.id) === String(storedDepartmentId)) || (datasets.departments || [])[0];
+        setFormData(prev => ({
+            ...prev,
+            faculty_name: prev.faculty_name || userName,
+            dept_id: storedDepartmentId || (fallbackDepartment?.id ? String(fallbackDepartment.id) : '')
+        }));
+    }, [datasets.departments, isFaculty, storedDepartmentId, userName]);
 
     const calculateDuration = (startTime) => {
         const start = new Date(startTime);
@@ -221,6 +240,12 @@ const ClassroomTracking = () => {
                 ))}
             </div>
 
+            {message.text && !showRoomModal && !showStartModal && (
+                <div className={`p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
+                    {message.text}
+                </div>
+            )}
+
             {/* ROOM GRID */}
             <section className="space-y-5">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -274,7 +299,15 @@ const ClassroomTracking = () => {
                                 {canManageSessions ? (
                                     room.status === 'Available' ? (
                                         <button
-                                            onClick={() => { setSelectedRoom(room); setShowModal(true); }}
+                                            onClick={() => {
+                                                setSelectedRoom(room);
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    faculty_name: isFaculty ? userName : prev.faculty_name,
+                                                    dept_id: isFaculty ? (storedDepartmentId || prev.dept_id) : prev.dept_id
+                                                }));
+                                                setShowModal(true);
+                                            }}
                                             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-black uppercase text-xs tracking-wide shadow-lg shadow-emerald-950/20 transition-all"
                                         >
                                             Start Class
@@ -288,7 +321,12 @@ const ClassroomTracking = () => {
                                         </button>
                                     )
                                 ) : (
-                                    <span className="text-slate-400 font-black uppercase text-xs tracking-wide">View Only</span>
+                                    <button
+                                        type="button"
+                                        className="px-4 py-2 bg-slate-700 text-slate-200 rounded-md font-black uppercase text-xs tracking-wide cursor-default"
+                                    >
+                                        View
+                                    </button>
                                 )}
                                 {canManageRooms && (
                                     <button onClick={() => handleDeleteRoom(room)} className="ml-auto text-rose-400 hover:text-rose-300 transition-all">
@@ -370,14 +408,20 @@ const ClassroomTracking = () => {
                                 <div className="space-y-6">
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Faculty Name</label>
-                                        <input className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter faculty name" value={formData.faculty_name} onChange={e => setFormData({ ...formData, faculty_name: e.target.value })} required />
+                                        <input className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-80" placeholder="Enter faculty name" value={formData.faculty_name} onChange={e => setFormData({ ...formData, faculty_name: e.target.value })} disabled={isFaculty} required />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Department</label>
-                                        <select className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.dept_id} onChange={e => setFormData({ ...formData, dept_id: e.target.value })} required>
-                                            <option value="">Select Dept</option>
-                                            {(datasets.departments || []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                        </select>
+                                        {isFaculty ? (
+                                            <div className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white">
+                                                {storedDepartmentName || (datasets.departments || []).find(d => String(d.id) === String(formData.dept_id))?.name || 'Department not assigned'}
+                                            </div>
+                                        ) : (
+                                            <select className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.dept_id} onChange={e => setFormData({ ...formData, dept_id: e.target.value })} required>
+                                                <option value="">Select Dept</option>
+                                                {(datasets.departments || []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                            </select>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Subject</label>

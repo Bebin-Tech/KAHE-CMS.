@@ -36,6 +36,7 @@ const Login = () => {
             localStorage.setItem('user_id', response.data.user_id);
             localStorage.setItem('username', response.data.username || email.trim());
             localStorage.setItem('name', response.data.name);
+            localStorage.setItem('classroom_permission', response.data.classroom_permission || 'view_only');
             localStorage.setItem('department_id', response.data.department_id || '');
             localStorage.setItem('department_name', response.data.department_name || '');
             localStorage.setItem('session_password', password);
@@ -70,6 +71,7 @@ const Login = () => {
             localStorage.setItem('user_id', response.data.user_id);
             localStorage.setItem('username', response.data.username || email.trim());
             localStorage.setItem('name', response.data.name);
+            localStorage.setItem('classroom_permission', response.data.classroom_permission || 'view_only');
             localStorage.setItem('department_id', response.data.department_id || '');
             localStorage.setItem('department_name', response.data.department_name || '');
             localStorage.setItem('session_password', password);

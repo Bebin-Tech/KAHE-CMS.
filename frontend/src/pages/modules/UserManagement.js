@@ -13,6 +13,12 @@ const UserManagement = () => {
         { key: 'student', label: 'Page 3: Newly Registered Students', role: 'student', createLabel: '+ Add Student' }
     ];
     const currentPage = pages.find(p => p.key === activePage) || pages[0];
+    const permissionOptions = currentPage.key === 'faculty'
+        ? [['class_session', 'Start / End Class'], ['view_only', 'View Only']]
+        : currentPage.key === 'admin'
+            ? [['manage_classrooms', 'Create / Edit / Delete / Start / End'], ['class_session', 'Start / End Class'], ['view_only', 'View Only']]
+            : [['view_only', 'View Only']];
+    const defaultPermission = permissionOptions[0][0];
     const filteredUsers = useMemo(() => {
         return (datasets.users || [])
             .filter(user => currentPage.key === 'admin' ? ['admin', 'super_admin'].includes(user.role) : user.role === currentPage.role)
@@ -24,20 +30,28 @@ const UserManagement = () => {
         rows: filteredUsers,
         allowBulkImport: false,
         createLabel: currentPage.createLabel,
-        defaultValues: { role: currentPage.role, status: 'Active' },
+        defaultValues: { role: currentPage.role, status: 'Active', classroom_permission: defaultPermission },
         columns: currentPage.key === 'faculty'
-            ? [['username', 'User ID'], ['full_name', 'Name'], ['department', 'Department'], ['role', 'Role'], ['status', 'Status']]
-            : [['username', 'User ID'], ['full_name', 'Name'], ['role', 'Role'], ['status', 'Status']],
+            ? [['username', 'User ID'], ['full_name', 'Name'], ['department', 'Department'], ['classroom_permission', 'Permission'], ['status', 'Status']]
+            : [['username', 'User ID'], ['full_name', 'Name'], ['role', 'Role'], ['classroom_permission', 'Permission'], ['status', 'Status']],
         fields: [
             { key: 'first_name', label: 'Full Name', required: true },
             { key: 'username', label: 'User ID', required: true },
             { key: 'role', label: 'System Role', type: 'select', options: currentPage.key === 'admin' ? [['admin', 'Admin'], ['super_admin', 'Super Admin']] : [[currentPage.role, currentPage.role === 'student' ? 'Student' : 'Faculty']], required: true },
             ...(currentPage.key === 'faculty' ? [{ key: 'department', label: 'Department', type: 'select', options: (datasets.departments || []).map(d => [d.id, d.name]), required: true }] : []),
+            { key: 'classroom_permission', label: 'Classroom Permission', type: 'select', options: permissionOptions, required: true },
             { key: 'password', label: 'Secure Password', type: 'password', required: true },
             { key: 'confirm_password', label: 'Confirm Password', type: 'password', required: true },
             { key: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive'] }
         ],
-        display: { department: lookups.department },
+        display: {
+            department: (value, row) => row.department_name || lookups.department(value),
+            classroom_permission: value => ({
+                view_only: 'View Only',
+                class_session: 'Start / End Class',
+                manage_classrooms: 'Full Classroom Access'
+            }[value] || 'View Only')
+        },
         actions: [
             { label: 'Reset PWD', icon: Lock, color: 'text-amber-500', type: 'RESET_PWD' },
             { label: 'Toggle Status', icon: RefreshCw, color: 'text-blue-500', type: 'TOGGLE_STATUS' }

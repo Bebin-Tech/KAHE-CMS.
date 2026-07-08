@@ -21,6 +21,15 @@ class User(AbstractUser):
     max_hours_per_day = models.IntegerField(default=6)
     max_hours_per_week = models.IntegerField(default=24)
     availability_status = models.CharField(max_length=20, default='Available')
+    classroom_permission = models.CharField(
+        max_length=30,
+        choices=(
+            ('view_only', 'View Only'),
+            ('class_session', 'Start / End Class'),
+            ('manage_classrooms', 'Create / Edit / Delete Classrooms'),
+        ),
+        default='view_only',
+    )
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.username})"

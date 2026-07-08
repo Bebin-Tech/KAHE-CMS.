@@ -28,8 +28,25 @@ class ReadOnlyOrAdminRole(permissions.BasePermission):
             request.user.role in ['admin', 'super_admin']
         )
 
+class ReadOnlyOrClassroomManager(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return bool(request.user and request.user.is_authenticated)
+        return can_manage_classrooms(request.user)
+
 def is_admin_user(user):
     return bool(user and user.is_authenticated and user.role in ['admin', 'super_admin'])
+
+def classroom_permission(user):
+    if not user or not user.is_authenticated:
+        return 'view_only'
+    return getattr(user, 'classroom_permission', 'view_only') or 'view_only'
+
+def can_manage_classrooms(user):
+    return classroom_permission(user) == 'manage_classrooms'
+
+def can_run_class_sessions(user):
+    return classroom_permission(user) in ['class_session', 'manage_classrooms']
 
 def faculty_department(user):
     if user and user.is_authenticated and user.role == 'faculty':
@@ -97,6 +114,11 @@ def login_view(request):
             pass
 
     if user:
+        if user.role == 'faculty' and not user.department_id:
+            department = Department.objects.filter(status='Active').order_by('id').first() or Department.objects.order_by('id').first()
+            if department:
+                user.department = department
+                user.save(update_fields=['department'])
         token, _ = Token.objects.get_or_create(user=user)
         return Response({
             "access_token": token.key,
@@ -105,6 +127,7 @@ def login_view(request):
             "user_id": user.id,
             "username": user.username,
             "name": f"{user.first_name} {user.last_name}",
+            "classroom_permission": classroom_permission(user),
             "department_id": user.department_id,
             "department_name": user.department.name if user.department else None
         })
@@ -143,7 +166,10 @@ def register_student(request):
         "role": user.role,
         "user_id": user.id,
         "username": user.username,
-        "name": user.get_full_name()
+        "name": user.get_full_name(),
+        "classroom_permission": classroom_permission(user),
+        "department_id": user.department_id,
+        "department_name": user.department.name if user.department else None
     }, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
@@ -251,7 +277,7 @@ class FacultyAssignmentViewSet(viewsets.ModelViewSet):
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.select_related('block').all()
     serializer_class = RoomSerializer
-    permission_classes = [ReadOnlyOrAdminRole]
+    permission_classes = [ReadOnlyOrClassroomManager]
 
     def get_queryset(self):
         queryset = Room.objects.select_related('block').all().order_by('block__code', 'room_number')
@@ -318,8 +344,10 @@ def get_classroom_availability(request):
     return Response(res)
 
 @api_view(['POST'])
-@permission_classes([IsAdminRole])
 def start_session(request):
+    if not can_run_class_sessions(request.user):
+        return Response({"detail": "You do not have permission to start classes."}, status=status.HTTP_403_FORBIDDEN)
+
     room_id = request.data.get('room_id')
     faculty_id = request.data.get('faculty_id')
     subject_id = request.data.get('subject_id')
@@ -345,6 +373,11 @@ def start_session(request):
         department = None
         if department_id:
             department = Department.objects.filter(id=department_id).first()
+
+        if request.user.role == 'faculty':
+            faculty_id = request.user.id
+            if not department:
+                department = request.user.department
 
         if not faculty_id:
             if not faculty_name:
@@ -418,8 +451,10 @@ def start_session(request):
         return Response({"detail": "Room not found"}, status=404)
 
 @api_view(['POST'])
-@permission_classes([IsAdminRole])
 def end_session(request):
+    if not can_run_class_sessions(request.user):
+        return Response({"detail": "You do not have permission to end classes."}, status=status.HTTP_403_FORBIDDEN)
+
     session_id = request.data.get('session_id')
     user_id = request.data.get('user_id') # Identify who is trying to end
     
@@ -428,8 +463,8 @@ def end_session(request):
         
         # Authorization: Only owner can end
         # (Assuming user_id passed from frontend is the one logged in)
-        is_admin = request.user.is_authenticated and request.user.role in ['admin', 'super_admin']
-        if str(session.faculty.id) != str(user_id) and not request.user.is_staff and not is_admin:
+        is_manager = can_manage_classrooms(request.user)
+        if str(session.faculty.id) != str(request.user.id) and not is_manager:
             return Response({"detail": "Access Denied: Only the faculty who started this class can end it."}, status=status.HTTP_403_FORBIDDEN)
 
         session.end_time = timezone.now()
