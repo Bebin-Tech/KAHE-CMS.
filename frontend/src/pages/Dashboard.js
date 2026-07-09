@@ -78,7 +78,7 @@ const Dashboard = () => {
                     </h1>
                     <div className="flex items-center gap-3 mt-2">
                         <div className="h-1 w-1 bg-green-500 rounded-full animate-pulse"></div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Institutional ERP Dashboard • Session Live</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Institutional ERP Dashboard - Session Live</p>
                     </div>
                 </div>
 

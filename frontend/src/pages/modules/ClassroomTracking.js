@@ -205,22 +205,9 @@ const ClassroomTracking = () => {
                     <h1 className="text-4xl font-black text-slate-900 tracking-tightest uppercase italic">
                         Class <span className="text-indigo-600">Rooms</span>
                     </h1>
-                    <div className="flex items-center gap-2 mt-1">
-                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Live Facility Intelligence</p>
-                    </div>
                 </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-72 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
-                        <input
-                            className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-indigo-500 shadow-sm transition-all"
-                            placeholder="Search Classroom / Faculty..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                        />
-                    </div>
                     {canManageRooms && <button onClick={() => { setMessage({ text: '', type: '' }); setRoomForm(prev => ({ ...prev, building: activeBlock })); setShowRoomModal(true); }} className="px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-700 hover:text-indigo-600 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
                         <Plus size={16} />
                         Create Classroom
@@ -248,9 +235,20 @@ const ClassroomTracking = () => {
 
             {/* ROOM GRID */}
             <section className="space-y-5">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{activeBlock}</h2>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{filteredRooms.length} Classrooms</span>
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                        <div className="flex flex-wrap items-center gap-4">
+                            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{activeBlock}</h2>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{filteredRooms.length} Classrooms</span>
+                        </div>
+                        <div className="relative w-full lg:w-80 group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                            <input
+                                className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none focus:border-indigo-500 shadow-sm transition-all"
+                                placeholder="Search classrooms or faculty"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {filteredRooms.map(room => (
@@ -266,9 +264,6 @@ const ClassroomTracking = () => {
                                 className="w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-700"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-[#1e1e1e] via-[#1e1e1e]/25 to-white/10"></div>
-                            <span className={`absolute top-3 right-3 shrink-0 px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest backdrop-blur-sm ${room.status === 'Available' ? 'bg-emerald-500/20 text-emerald-100' : 'bg-rose-500/20 text-rose-100'}`}>
-                                {room.status}
-                            </span>
                         </div>
 
                         <div className="p-5 flex-1 flex flex-col">
