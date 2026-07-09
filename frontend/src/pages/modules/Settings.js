@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import API from '../../api';
-import { KeyRound, UserRound } from 'lucide-react';
+import { KeyRound, User } from 'lucide-react';
 
 const Settings = () => {
     const [password, setPassword] = useState('');
@@ -44,7 +44,7 @@ const Settings = () => {
 
             <section className="bg-white rounded-2xl border border-slate-200 shadow-md p-8 grid gap-6 md:grid-cols-2">
                 <div className="p-6 rounded-xl bg-slate-50 border border-slate-200">
-                    <UserRound className="text-indigo-600 mb-4" size={24} />
+                    <User className="text-indigo-600 mb-4" size={24} />
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Username</p>
                     <p className="text-lg font-black text-slate-900 mt-2 break-all">{username}</p>
                 </div>
