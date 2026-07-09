@@ -208,7 +208,7 @@ const ClassroomTracking = () => {
                 </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    {canManageRooms && <button onClick={() => { setMessage({ text: '', type: '' }); setRoomForm(prev => ({ ...prev, building: activeBlock })); setShowRoomModal(true); }} className="px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-700 hover:text-indigo-600 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                    {canManageRooms && <button onClick={() => { setMessage({ text: '', type: '' }); setRoomForm(prev => ({ ...prev, building: activeBlock })); setShowRoomModal(true); }} className="px-6 py-3.5 bg-white border border-slate-300 rounded-2xl text-slate-800 hover:text-indigo-700 transition-all shadow-md font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
                         <Plus size={16} />
                         Create Classroom
                     </button>}
@@ -220,7 +220,7 @@ const ClassroomTracking = () => {
                     <button
                         key={block}
                         onClick={() => { setActiveBlock(block); setSearchTerm(''); }}
-                        className={`px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${activeBlock === block ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white text-slate-500 border-slate-100 hover:text-indigo-600'}`}
+                        className={`px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${activeBlock === block ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white text-slate-700 border-slate-300 hover:text-indigo-700 hover:border-indigo-300'}`}
                     >
                         {block}
                     </button>
@@ -235,15 +235,15 @@ const ClassroomTracking = () => {
 
             {/* ROOM GRID */}
             <section className="space-y-5">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-3">
                         <div className="flex flex-wrap items-center gap-4">
                             <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{activeBlock}</h2>
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{filteredRooms.length} Classrooms</span>
+                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{filteredRooms.length} Classrooms</span>
                         </div>
                         <div className="relative w-full lg:w-80 group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-indigo-500 transition-colors" size={16} />
                             <input
-                                className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none focus:border-indigo-500 shadow-sm transition-all"
+                                className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-300 rounded-2xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:border-indigo-500 shadow-sm transition-all"
                                 placeholder="Search classrooms or faculty"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
@@ -336,8 +336,8 @@ const ClassroomTracking = () => {
                 </section>
 
             {filteredRooms.length === 0 && (
-                <div className="py-16 text-center bg-white rounded-3xl border border-slate-100">
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">No classrooms found</p>
+                <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-600">No classrooms found</p>
                 </div>
             )}
 
@@ -352,24 +352,24 @@ const ClassroomTracking = () => {
                         >
                             <div className="bg-slate-900 p-8 text-white">
                                 <h3 className="text-2xl font-black uppercase tracking-tight">Create Classroom</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-2 text-slate-400">Organize by block</p>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-2 text-slate-300">Organize by block</p>
                             </div>
                             <form onSubmit={handleCreateRoom} className="p-8 space-y-5">
                                 {message.text && <div className="p-4 rounded-xl bg-rose-50 text-rose-600 text-[10px] font-black uppercase">{message.text}</div>}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                    <select className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={roomForm.building} onChange={e => setRoomForm({ ...roomForm, building: e.target.value })} required>
+                                    <select className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" value={roomForm.building} onChange={e => setRoomForm({ ...roomForm, building: e.target.value })} required>
                                         {blockOptions.map(block => <option key={block} value={block}>{block}</option>)}
                                     </select>
-                                    <input className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Classroom Number" value={roomForm.room_number} onChange={e => setRoomForm({ ...roomForm, room_number: e.target.value })} required />
-                                    <input type="number" className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Capacity" value={roomForm.capacity} onChange={e => setRoomForm({ ...roomForm, capacity: e.target.value })} required />
-                                    <select className="p-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={roomForm.type} onChange={e => setRoomForm({ ...roomForm, type: e.target.value })}>
+                                    <input className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Classroom Number" value={roomForm.room_number} onChange={e => setRoomForm({ ...roomForm, room_number: e.target.value })} required />
+                                    <input type="number" className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Capacity" value={roomForm.capacity} onChange={e => setRoomForm({ ...roomForm, capacity: e.target.value })} required />
+                                    <select className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" value={roomForm.type} onChange={e => setRoomForm({ ...roomForm, type: e.target.value })}>
                                         <option value="Classroom">Classroom</option>
                                         <option value="Lab">Lab</option>
                                         <option value="Seminar Hall">Seminar Hall</option>
                                     </select>
                                 </div>
                                 <div className="flex gap-4 pt-4">
-                                    <button type="button" onClick={() => setShowRoomModal(false)} className="flex-1 py-4 border-2 border-slate-100 text-slate-400 rounded-xl font-black uppercase text-[10px] tracking-widest">Cancel</button>
+                                    <button type="button" onClick={() => setShowRoomModal(false)} className="flex-1 py-4 border-2 border-slate-300 text-slate-700 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-50">Cancel</button>
                                     <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest">Create</button>
                                 </div>
                             </form>
@@ -424,7 +424,7 @@ const ClassroomTracking = () => {
                                     </div>
                                 </div>
                                 <div className="flex gap-4 pt-8">
-                                    <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-white/5 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all">Cancel</button>
+                                    <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-white/20 text-slate-200 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all">Cancel</button>
                                     <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all">Confirm</button>
                                 </div>
                             </form>

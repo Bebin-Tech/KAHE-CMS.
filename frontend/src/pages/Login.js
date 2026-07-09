@@ -85,7 +85,7 @@ const Login = () => {
 
     return (
         <div className="h-screen overflow-hidden flex items-center justify-center bg-[#f0f7ff] font-sans px-4 py-4">
-            <div className="max-w-[430px] w-full max-h-full bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] px-8 py-7 md:px-11 md:py-9 flex flex-col items-center">
+            <div className="max-w-[430px] w-full max-h-full bg-white rounded-2xl border border-slate-200 shadow-[0_12px_45px_rgba(15,23,42,0.14)] px-8 py-7 md:px-11 md:py-9 flex flex-col items-center">
 
                 {/* Institutional Logo */}
                 <div className="mb-4 flex justify-center">
@@ -100,7 +100,7 @@ const Login = () => {
                 <h2 className="text-[28px] font-black text-[#0072bc] tracking-tight mb-1">
                     KAHE CMS
                 </h2>
-                <p className="text-slate-400 font-medium text-sm mb-6">
+                <p className="text-slate-600 font-semibold text-sm mb-6">
                     {mode === 'login' ? 'Sign in to your account' : 'Create your student account'}
                 </p>
 
@@ -114,28 +114,28 @@ const Login = () => {
                     <form onSubmit={handleRegister} className="w-full space-y-4">
                         <input
                             type="text"
-                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-800 placeholder:text-slate-500"
                             placeholder="Full Name"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                         />
                         <input
                             type="text"
-                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-800 placeholder:text-slate-500"
                             placeholder="Create Username"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                         <input
                             type="password"
-                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-800 placeholder:text-slate-500"
                             placeholder="Create Password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
                         <input
                             type="password"
-                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300"
+                            className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-800 placeholder:text-slate-500"
                             placeholder="Confirm Password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -153,14 +153,14 @@ const Login = () => {
                 {mode === 'login' && <form onSubmit={handleLogin} className="w-full space-y-5">
                     {/* Username Field */}
                     <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
                             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
                         <input
                             type="text"
-                            className={`w-full pl-11 pr-4 py-3 bg-white border ${emailError ? 'border-red-400' : 'border-slate-300'} rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300`}
+                            className={`w-full pl-11 pr-4 py-3 bg-white border ${emailError ? 'border-red-400' : 'border-slate-300'} rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-800 placeholder:text-slate-500`}
                             placeholder="Username"
                             value={email}
                             onChange={(e) => { setEmail(e.target.value); setEmailError(false); }}
@@ -170,14 +170,14 @@ const Login = () => {
 
                     {/* Password Field */}
                     <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
                             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                         </div>
                         <input
                             type={showPassword ? "text" : "password"}
-                            className={`w-full pl-11 pr-12 py-3 bg-white border ${passwordError ? 'border-red-400' : 'border-slate-300'} rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-700 placeholder:text-slate-300`}
+                            className={`w-full pl-11 pr-12 py-3 bg-white border ${passwordError ? 'border-red-400' : 'border-slate-300'} rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm text-slate-800 placeholder:text-slate-500`}
                             placeholder="Password"
                             value={password}
                             onChange={(e) => { setPassword(e.target.value); setPasswordError(false); }}
@@ -185,7 +185,7 @@ const Login = () => {
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-blue-600 transition"
+                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-blue-600 transition"
                         >
                             {showPassword ? (
                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
@@ -221,7 +221,7 @@ const Login = () => {
 
                 {/* Footer Version */}
                 <div className="mt-6 text-center">
-                    <p className="text-[11px] text-slate-300 font-medium">
+                    <p className="text-[11px] text-slate-500 font-medium">
                         Beta V 2.5.1
                     </p>
                 </div>

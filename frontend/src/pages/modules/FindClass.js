@@ -33,16 +33,16 @@ const FindClass = () => {
                 <h1 className="text-5xl font-black text-slate-900 tracking-tightest uppercase italic">
                     Find <span className="text-indigo-600">Class</span>
                 </h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">Locate any active session across campus</p>
+                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-[0.4em]">Locate any active session across campus</p>
             </header>
 
             <div className="relative group">
                 <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
-                    <Search className="text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={24} />
+                    <Search className="text-slate-600 group-focus-within:text-indigo-600 transition-colors" size={24} />
                 </div>
                 <input
                     type="text"
-                    className="w-full pl-16 pr-6 py-6 bg-white border-2 border-slate-100 rounded-[2.5rem] text-lg font-bold shadow-xl shadow-slate-200/50 outline-none focus:border-indigo-500 transition-all placeholder:text-slate-300"
+                    className="w-full pl-16 pr-6 py-6 bg-white border-2 border-slate-300 rounded-[2.5rem] text-lg font-bold text-slate-900 shadow-xl shadow-slate-200/50 outline-none focus:border-indigo-500 transition-all placeholder:text-slate-500"
                     placeholder="Search Section, Faculty, or Subject..."
                     value={query}
                     onChange={handleSearch}
@@ -63,7 +63,7 @@ const FindClass = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-lg hover:shadow-2xl hover:border-indigo-100 transition-all group flex flex-col md:flex-row gap-8 items-center"
+                            className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-lg hover:shadow-2xl hover:border-indigo-300 transition-all group flex flex-col md:flex-row gap-8 items-center"
                         >
                             <div className="w-24 h-24 rounded-3xl bg-indigo-50 flex flex-col items-center justify-center text-indigo-600 shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all">
                                 <MapPin size={32} />
@@ -77,13 +77,13 @@ const FindClass = () => {
                                 </div>
 
                                 <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-                                        <User size={14} className="text-slate-400" />
-                                        <span className="text-xs font-bold text-slate-600 uppercase">{session.faculty_name}</span>
+                                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
+                                        <User size={14} className="text-slate-600" />
+                                        <span className="text-xs font-bold text-slate-800 uppercase">{session.faculty_name}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-                                        <Clock size={14} className="text-slate-400" />
-                                        <span className="text-xs font-bold text-slate-600 uppercase">Started {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
+                                        <Clock size={14} className="text-slate-600" />
+                                        <span className="text-xs font-bold text-slate-800 uppercase">Started {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
                                 </div>
                             </div>
@@ -97,7 +97,7 @@ const FindClass = () => {
                 </AnimatePresence>
 
                 {query.length >= 2 && results.length === 0 && !loading && (
-                    <div className="text-center py-20 opacity-30">
+                    <div className="text-center py-20 text-slate-600">
                         <BookOpen size={64} className="mx-auto mb-4" />
                         <p className="text-lg font-black uppercase tracking-widest">No Active Sessions Found</p>
                     </div>

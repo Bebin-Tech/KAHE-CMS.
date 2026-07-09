@@ -62,7 +62,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-center min-h-screen bg-white">
             <div className="flex flex-col items-center">
                 <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="mt-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] animate-pulse">Institutional Telemetry Booting...</p>
+                <p className="mt-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] animate-pulse">Institutional Telemetry Booting...</p>
             </div>
         </div>
     );
@@ -78,7 +78,7 @@ const Dashboard = () => {
                     </h1>
                     <div className="flex items-center gap-3 mt-2">
                         <div className="h-1 w-1 bg-green-500 rounded-full animate-pulse"></div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Institutional ERP Dashboard - Session Live</p>
+                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-none">Institutional ERP Dashboard - Session Live</p>
                     </div>
                 </div>
 
@@ -93,7 +93,7 @@ const Dashboard = () => {
 
                     <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-5">
                         <div className="text-right">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Welcome back,</p>
+                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest leading-none">Welcome back,</p>
                             <p className="text-sm font-black text-slate-800 mt-1">{userName}</p>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-lg shadow-indigo-100">
@@ -106,15 +106,15 @@ const Dashboard = () => {
             {/* ANALYTICS GRID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                 {metrics.map((m) => (
-                    <div key={m.label} className={`bg-white p-8 rounded-[2.5rem] border ${m.border} shadow-sm group hover:shadow-xl transition-all duration-500 hover:-translate-y-1`}>
+                    <div key={m.label} className={`bg-white p-8 rounded-[2rem] border ${m.border} shadow-md group hover:shadow-xl transition-all duration-500 hover:-translate-y-1`}>
                         <div className="flex items-center justify-between mb-6">
                             <div className={`p-4 rounded-2xl ${m.bg} ${m.color} group-hover:scale-110 transition-transform`}>
                                 <m.icon size={24} />
                             </div>
-                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">Real-time</span>
+                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">Real-time</span>
                         </div>
                         <p className={`text-4xl font-black text-slate-900 tracking-tighter`}>{m.value}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mt-2 group-hover:text-slate-600 transition-colors">{m.label}</p>
+                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.25em] mt-2 group-hover:text-slate-800 transition-colors">{m.label}</p>
                     </div>
                 ))}
             </div>
