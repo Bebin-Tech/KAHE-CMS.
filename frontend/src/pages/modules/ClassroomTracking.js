@@ -203,7 +203,7 @@ const ClassroomTracking = () => {
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tightest uppercase italic">
-                        Classroom <span className="text-indigo-600">Module</span>
+                        Class <span className="text-indigo-600">Rooms</span>
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
                         <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
@@ -323,9 +323,9 @@ const ClassroomTracking = () => {
                                 ) : (
                                     <button
                                         type="button"
-                                        className="px-4 py-2 bg-slate-700 text-slate-200 rounded-md font-black uppercase text-xs tracking-wide cursor-default"
+                                        className={`px-4 py-2 rounded-md font-black uppercase text-xs tracking-wide cursor-default shadow-lg ${room.status === 'Available' ? 'bg-emerald-600 text-white shadow-emerald-950/20' : 'bg-rose-600 text-white shadow-rose-950/20'}`}
                                     >
-                                        View
+                                        {room.status === 'Available' ? 'Available' : 'Occupied'}
                                     </button>
                                 )}
                                 {canManageRooms && (

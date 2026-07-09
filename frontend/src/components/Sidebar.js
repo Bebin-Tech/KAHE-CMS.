@@ -64,11 +64,11 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             ]
         },
         {
-            title: 'Classroom Management',
+            title: 'Class Rooms',
             icon: School,
             roles: ['admin', 'super_admin', 'faculty', 'student'],
             items: [
-                { name: 'Classroom Module', path: '/classroom-tracking' }
+                { name: 'Class Rooms', path: '/classroom-tracking' }
             ]
         },
         {
