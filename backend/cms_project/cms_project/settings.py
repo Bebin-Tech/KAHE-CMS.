@@ -94,17 +94,21 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Frontend build directory
 FRONTEND_DIR = os.path.join(ROOT_DIR, 'frontend', 'build')
+FRONTEND_STATIC_DIR = os.path.join(FRONTEND_DIR, 'static')
 
-# Only add STATICFILES_DIRS if the directory exists
-if os.path.exists(FRONTEND_DIR):
+# Serve React public assets such as /logo.svg and /classroom-card-bg.png.
+WHITENOISE_ROOT = FRONTEND_DIR
+
+# Only collect the React static directory so /static/js/... resolves correctly.
+if os.path.exists(FRONTEND_STATIC_DIR):
     STATICFILES_DIRS = [
-        FRONTEND_DIR,
+        FRONTEND_STATIC_DIR,
     ]
 else:
     STATICFILES_DIRS = []
