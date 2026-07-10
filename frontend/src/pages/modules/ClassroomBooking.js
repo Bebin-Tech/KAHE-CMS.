@@ -23,6 +23,7 @@ const formatDateTime = (value) => {
 const ClassroomBooking = () => {
     const role = authGet('role')?.toLowerCase();
     const isAdmin = ['admin', 'super_admin'].includes(role);
+    const currentUserId = authGet('user_id');
     const [activeBlock, setActiveBlock] = useState('S-Block');
     const [rooms, setRooms] = useState([]);
     const [bookings, setBookings] = useState([]);
@@ -109,15 +110,18 @@ const ClassroomBooking = () => {
         }
     };
 
+    const canManageBooking = (booking) => isAdmin || String(booking.user) === String(currentUserId);
+
     const handleDeleteBooking = async (booking) => {
-        if (!window.confirm(`Delete booking for ${booking.room_number}?`)) return;
+        const actionLabel = isAdmin ? 'delete' : 'cancel';
+        if (!window.confirm(`Do you want to ${actionLabel} the booking for ${booking.room_number}?`)) return;
         setMessage({ text: '', type: '' });
         try {
             await API.delete(`/bookings/${booking.id}/`);
-            setMessage({ text: 'Booking deleted successfully.', type: 'success' });
+            setMessage({ text: isAdmin ? 'Booking deleted successfully.' : 'Booking cancelled successfully.', type: 'success' });
             await fetchData();
         } catch (err) {
-            setMessage({ text: getApiError(err, 'Booking delete failed.'), type: 'error' });
+            setMessage({ text: getApiError(err, isAdmin ? 'Booking delete failed.' : 'Booking cancel failed.'), type: 'error' });
         }
     };
 
@@ -226,14 +230,14 @@ const ClassroomBooking = () => {
                                             <Clock size={14} />
                                             {formatDateTime(booking.start_time)} - {formatDateTime(booking.end_time)}
                                         </div>
-                                        {isAdmin && (
+                                        {canManageBooking(booking) && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleDeleteBooking(booking)}
                                                 className="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-100"
                                             >
                                                 <Trash2 size={14} />
-                                                Delete
+                                                {isAdmin ? 'Delete' : 'Cancel'}
                                             </button>
                                         )}
                                     </div>
