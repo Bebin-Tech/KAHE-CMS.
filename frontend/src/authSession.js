@@ -32,13 +32,20 @@ export const authClear = () => {
 
 export const saveAuthSession = (data, password, usernameFallback) => {
     sessionStorage.removeItem(LOGGED_OUT_KEY);
-    authSet('token', data.access_token);
-    authSet('role', data.role);
-    authSet('user_id', data.user_id);
-    authSet('username', data.username || usernameFallback);
-    authSet('name', data.name);
-    authSet('classroom_permission', data.classroom_permission || 'view_only');
-    authSet('department_id', data.department_id || '');
-    authSet('department_name', data.department_name || '');
-    authSet('session_password', password);
+    const values = {
+        token: data.access_token,
+        role: data.role,
+        user_id: data.user_id,
+        username: data.username || usernameFallback,
+        name: data.name,
+        classroom_permission: data.classroom_permission || 'view_only',
+        department_id: data.department_id || '',
+        department_name: data.department_name || '',
+        session_password: password
+    };
+
+    Object.entries(values).forEach(([key, value]) => {
+        authSet(key, value);
+        localStorage.setItem(key, value ?? '');
+    });
 };

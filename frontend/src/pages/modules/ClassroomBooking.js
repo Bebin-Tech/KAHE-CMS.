@@ -45,7 +45,10 @@ const ClassroomBooking = () => {
     const getApiError = (err, fallback) => {
         const data = err.response?.data;
         if (!data) return fallback;
-        if (typeof data === 'string') return data;
+        if (typeof data === 'string') {
+            if (data.trim().startsWith('<!DOCTYPE') || data.trim().startsWith('<html')) return fallback;
+            return data;
+        }
         if (data.detail) return data.detail;
         const firstError = Object.entries(data)[0];
         if (!firstError) return fallback;
@@ -56,8 +59,13 @@ const ClassroomBooking = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
+            const roomRequest = API.get(`/live-rooms/?block=${encodeURIComponent(activeBlock)}`)
+                .catch(err => {
+                    if (err.response?.status !== 404) throw err;
+                    return API.get(`/rooms/?block=${encodeURIComponent(activeBlock)}`);
+                });
             const [roomRes, bookingRes] = await Promise.all([
-                API.get(`/live-rooms/?block=${encodeURIComponent(activeBlock)}`),
+                roomRequest,
                 API.get(`/bookings/?block=${encodeURIComponent(activeBlock)}`)
             ]);
             const nextRooms = Array.isArray(roomRes.data) ? roomRes.data : [];

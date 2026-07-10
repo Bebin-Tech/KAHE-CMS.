@@ -74,7 +74,10 @@ const ClassroomTracking = () => {
     const getApiError = (err, fallback) => {
         const data = err.response?.data;
         if (!data) return fallback;
-        if (typeof data === 'string') return data;
+        if (typeof data === 'string') {
+            if (data.trim().startsWith('<!DOCTYPE') || data.trim().startsWith('<html')) return fallback;
+            return data;
+        }
         if (data.detail) return data.detail;
         const firstError = Object.entries(data)[0];
         if (!firstError) return fallback;
@@ -92,7 +95,13 @@ const ClassroomTracking = () => {
     const fetchLiveRooms = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            const res = await API.get(`/live-rooms/?block=${encodeURIComponent(activeBlock)}`);
+            let res;
+            try {
+                res = await API.get(`/live-rooms/?block=${encodeURIComponent(activeBlock)}`);
+            } catch (err) {
+                if (err.response?.status !== 404) throw err;
+                res = await API.get(`/rooms/?block=${encodeURIComponent(activeBlock)}`);
+            }
             setRooms(sortRooms(Array.isArray(res.data) ? res.data : []));
         } catch (err) {
             console.error("Failed to sync classroom telemetry.");
