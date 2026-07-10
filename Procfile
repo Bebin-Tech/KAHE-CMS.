@@ -1,1 +1,1 @@
-web: gunicorn backend.cms_project.cms_project.wsgi:application
+web: gunicorn --chdir backend/cms_project cms_project.wsgi:application
