@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
@@ -192,7 +193,7 @@ class ClassSession(models.Model):
     section = models.ForeignKey(Section, on_delete=models.CASCADE, null=True, blank=True)
     topic = models.CharField(max_length=255, null=True, blank=True)
     remarks = models.TextField(null=True, blank=True)
-    start_time = models.DateTimeField(auto_now_add=True)
+    start_time = models.DateTimeField(default=timezone.now)
     end_time = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, default='Active')
 

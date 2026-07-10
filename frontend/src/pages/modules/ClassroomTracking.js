@@ -10,6 +10,31 @@ import {
     Plus
 } from 'lucide-react';
 
+const toDateTimeLocal = (date) => {
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const defaultClassTimes = () => {
+    const start = new Date();
+    start.setSeconds(0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    return {
+        class_start_time: toDateTimeLocal(start),
+        class_end_time: toDateTimeLocal(end)
+    };
+};
+
+const formatDateTime = (value) => {
+    if (!value) return '-';
+    return new Date(value).toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
 const ClassroomTracking = () => {
     const { datasets } = useRegistry();
     const role = localStorage.getItem('role')?.toLowerCase();
@@ -32,7 +57,8 @@ const ClassroomTracking = () => {
     const [formData, setFormData] = useState({
         faculty_name: isFaculty ? userName : '',
         dept_id: storedDepartmentId,
-        subject_name: ''
+        subject_name: '',
+        ...defaultClassTimes()
     });
     const [roomForm, setRoomForm] = useState({
         room_number: '',
@@ -112,7 +138,9 @@ const ClassroomTracking = () => {
                 room_id: selectedRoom.id,
                 faculty_name: formData.faculty_name,
                 department_id: Number(formData.dept_id),
-                subject_name: formData.subject_name
+                subject_name: formData.subject_name,
+                class_start_time: formData.class_start_time,
+                class_end_time: formData.class_end_time
             });
             setMessage({ text: 'CLASS STARTED SUCCESSFULLY', type: 'success' });
             setTimeout(() => {
@@ -187,7 +215,8 @@ const ClassroomTracking = () => {
         const matchesSearch = roomNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
             roomBlockName(r).toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.session?.faculty_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.session?.subject_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+            (r.session?.subject_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (r.booking?.user_name || '').toLowerCase().includes(searchTerm.toLowerCase());
         return matchesSelectedBlock && matchesSearch;
     }));
 
@@ -251,7 +280,11 @@ const ClassroomTracking = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filteredRooms.map(room => (
+                {filteredRooms.map(room => {
+                    const isOccupied = room.status === 'Occupied';
+                    const isBooked = room.status === 'Booked';
+                    const isOwnBooking = isBooked && String(room.booking?.user) === String(localStorage.getItem('user_id'));
+                    return (
                     <motion.div
                         layout
                         key={room.id}
@@ -276,12 +309,23 @@ const ClassroomTracking = () => {
                             </div>
 
                             <div className="mt-5 min-w-0">
-                                {room.status === 'Occupied' ? (
+                                {isOccupied ? (
                                     <div className="space-y-1.5">
                                         <p className="text-sm font-black text-white truncate">{room.session?.faculty_name || 'Faculty'}</p>
                                         <p className="text-sm font-bold text-slate-300 truncate">{room.session?.subject_name || 'Subject'}</p>
                                         <p className="text-xs font-bold text-slate-500 uppercase truncate">{room.session?.department_name || 'Department'}</p>
-                                        <p className="text-[10px] font-black text-rose-300 uppercase tracking-widest pt-1">{calculateDuration(room.session?.start_time)}</p>
+                                        <p className="text-[10px] font-black text-rose-300 uppercase tracking-widest pt-1">
+                                            {formatDateTime(room.session?.start_time)} - {formatDateTime(room.session?.end_time)}
+                                        </p>
+                                        <p className="text-[10px] font-black text-rose-200 uppercase tracking-widest">{calculateDuration(room.session?.start_time)} elapsed</p>
+                                    </div>
+                                ) : isBooked ? (
+                                    <div className="space-y-1.5">
+                                        <p className="text-sm font-black text-amber-200 truncate">Booked</p>
+                                        <p className="text-sm font-bold text-slate-300 truncate">By {room.booking?.user_name || 'Faculty'}</p>
+                                        <p className="text-[10px] font-black text-amber-300 uppercase tracking-widest pt-1">
+                                            {formatDateTime(room.booking?.start_time)} - {formatDateTime(room.booking?.end_time)}
+                                        </p>
                                     </div>
                                 ) : (
                                     <p className="text-sm font-bold text-slate-300 leading-relaxed">
@@ -292,14 +336,17 @@ const ClassroomTracking = () => {
 
                             <div className="mt-auto flex items-center gap-3 pt-6">
                                 {canManageSessions ? (
-                                    room.status === 'Available' ? (
+                                    !isOccupied && (!isBooked || isOwnBooking || canManageRooms) ? (
                                         <button
                                             onClick={() => {
+                                                const nextTimes = defaultClassTimes();
                                                 setSelectedRoom(room);
                                                 setFormData(prev => ({
                                                     ...prev,
                                                     faculty_name: isFaculty ? userName : prev.faculty_name,
-                                                    dept_id: isFaculty ? (storedDepartmentId || prev.dept_id) : prev.dept_id
+                                                    dept_id: isFaculty ? (storedDepartmentId || prev.dept_id) : prev.dept_id,
+                                                    class_start_time: room.booking?.start_time ? toDateTimeLocal(new Date(room.booking.start_time)) : nextTimes.class_start_time,
+                                                    class_end_time: room.booking?.end_time ? toDateTimeLocal(new Date(room.booking.end_time)) : nextTimes.class_end_time
                                                 }));
                                                 setShowModal(true);
                                             }}
@@ -307,20 +354,27 @@ const ClassroomTracking = () => {
                                         >
                                             Start Class
                                         </button>
-                                    ) : (
+                                    ) : isOccupied ? (
                                         <button
                                             onClick={() => handleEndClass(room)}
                                             className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-md font-black uppercase text-xs tracking-wide shadow-lg shadow-rose-950/20 transition-all"
                                         >
                                             End Class
                                         </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            className="px-4 py-2 bg-amber-600 text-white rounded-md font-black uppercase text-xs tracking-wide cursor-default shadow-lg shadow-amber-950/20"
+                                        >
+                                            Booked
+                                        </button>
                                     )
                                 ) : (
                                     <button
                                         type="button"
-                                        className={`px-4 py-2 rounded-md font-black uppercase text-xs tracking-wide cursor-default shadow-lg ${room.status === 'Available' ? 'bg-emerald-600 text-white shadow-emerald-950/20' : 'bg-rose-600 text-white shadow-rose-950/20'}`}
+                                        className={`px-4 py-2 rounded-md font-black uppercase text-xs tracking-wide cursor-default shadow-lg ${room.status === 'Available' ? 'bg-emerald-600 text-white shadow-emerald-950/20' : room.status === 'Booked' ? 'bg-amber-600 text-white shadow-amber-950/20' : 'bg-rose-600 text-white shadow-rose-950/20'}`}
                                     >
-                                        {room.status === 'Available' ? 'Available' : 'Occupied'}
+                                        {room.status}
                                     </button>
                                 )}
                                 {canManageRooms && (
@@ -331,7 +385,7 @@ const ClassroomTracking = () => {
                             </div>
                         </div>
                     </motion.div>
-                ))}
+                );})}
                     </div>
                 </section>
 
@@ -421,6 +475,16 @@ const ClassroomTracking = () => {
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Subject</label>
                                         <input className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter subject" value={formData.subject_name} onChange={e => setFormData({ ...formData, subject_name: e.target.value })} required />
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class Start Time</label>
+                                            <input type="datetime-local" className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_start_time} onChange={e => setFormData({ ...formData, class_start_time: e.target.value })} required />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class End Time</label>
+                                            <input type="datetime-local" className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_end_time} onChange={e => setFormData({ ...formData, class_end_time: e.target.value })} required />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex gap-4 pt-8">

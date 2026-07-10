@@ -5,7 +5,9 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.db import IntegrityError, models
+from datetime import timedelta
 import pandas as pd
 from .models import *
 from .serializers import *
@@ -34,6 +36,16 @@ class ReadOnlyOrClassroomManager(permissions.BasePermission):
             return bool(request.user and request.user.is_authenticated)
         return can_manage_classrooms(request.user)
 
+class ReadOnlyOrFacultyBooking(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return bool(request.user and request.user.is_authenticated)
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.role == 'faculty'
+        )
+
 def is_admin_user(user):
     return bool(user and user.is_authenticated and user.role in ['admin', 'super_admin'])
 
@@ -55,6 +67,16 @@ def faculty_department(user):
 
 def is_faculty_user(user):
     return bool(user and user.is_authenticated and user.role == 'faculty')
+
+def parse_client_datetime(value, fallback=None):
+    if not value:
+        return fallback
+    parsed = parse_datetime(str(value))
+    if parsed is None:
+        return fallback
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+    return parsed
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -291,8 +313,47 @@ class RoomViewSet(viewsets.ModelViewSet):
         return queryset
 
 class BookingViewSet(viewsets.ModelViewSet):
-    queryset = Booking.objects.all()
+    queryset = Booking.objects.select_related('user', 'room', 'room__block').all()
     serializer_class = BookingSerializer
+    permission_classes = [ReadOnlyOrFacultyBooking]
+
+    def get_queryset(self):
+        queryset = Booking.objects.select_related('user', 'room', 'room__block').all().order_by('start_time')
+        room = self.request.query_params.get('room')
+        block = str(self.request.query_params.get('block') or '').strip()
+        include_past = str(self.request.query_params.get('include_past') or '').lower() == 'true'
+        if room:
+            queryset = queryset.filter(room_id=room)
+        if block:
+            queryset = queryset.filter(
+                models.Q(room__block__code__iexact=block) |
+                models.Q(room__block__name__iexact=block) |
+                models.Q(room__building__iexact=block)
+            )
+        if not include_past:
+            queryset = queryset.filter(end_time__gte=timezone.now())
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user, status='Approved')
+
+    def update(self, request, *args, **kwargs):
+        booking = self.get_object()
+        if booking.user_id != request.user.id:
+            return Response({"detail": "You can only update your own bookings."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        booking = self.get_object()
+        if booking.user_id != request.user.id:
+            return Response({"detail": "You can only update your own bookings."}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        booking = self.get_object()
+        if booking.user_id != request.user.id:
+            return Response({"detail": "You can only delete your own bookings."}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AuditLog.objects.all()
@@ -327,9 +388,16 @@ def get_classroom_utilization_report(request, format):
 def get_classroom_availability(request):
     rooms = Room.objects.select_related('block').all()
     active_room_ids = set(ClassSession.objects.filter(status='Active').values_list('room_id', flat=True))
+    now = timezone.now()
+    bookings = Booking.objects.filter(status='Approved', end_time__gte=now).select_related('user')
+    bookings_by_room = {}
+    for booking in bookings.order_by('start_time'):
+        bookings_by_room.setdefault(booking.room_id, booking)
     res = []
     for r in rooms:
         is_occupied = r.id in active_room_ids or r.status == 'Occupied'
+        booking = bookings_by_room.get(r.id)
+        status_label = "Occupied" if is_occupied else ("Booked" if booking else "Available")
         res.append({
             "room_number": r.room_number,
             "building": r.building,
@@ -339,7 +407,8 @@ def get_classroom_availability(request):
             "occupied_slots": 1 if is_occupied else 0,
             "total_slots": 1,
             "utilization_percentage": 100 if is_occupied else 0,
-            "status": "Occupied" if is_occupied else "Available"
+            "status": status_label,
+            "booking": BookingSerializer(booking).data if booking else None
         })
     return Response(res)
 
@@ -357,6 +426,19 @@ def start_session(request):
     department_id = request.data.get('department_id') or request.data.get('dept_id')
     topic = request.data.get('topic')
     remarks = request.data.get('remarks')
+    requested_start_time = parse_client_datetime(
+        request.data.get('class_start_time') or request.data.get('start_time'),
+        timezone.now()
+    )
+    requested_end_time = parse_client_datetime(
+        request.data.get('class_end_time') or request.data.get('end_time'),
+        None
+    )
+
+    if not requested_end_time:
+        requested_end_time = requested_start_time + timedelta(hours=1)
+    if requested_end_time <= requested_start_time:
+        return Response({"detail": "Class end time must be after class start time."}, status=400)
     
     try:
         room = Room.objects.get(id=room_id)
@@ -425,6 +507,17 @@ def start_session(request):
             )
             subject_id = subject.id
 
+        conflicting_booking = Booking.objects.filter(
+            room=room,
+            status='Approved',
+            start_time__lt=requested_end_time,
+            end_time__gt=requested_start_time
+        ).exclude(user_id=faculty_id).select_related('user').first()
+        if conflicting_booking:
+            return Response({
+                "detail": f"Classroom booked by {conflicting_booking.user.get_full_name()} until {conflicting_booking.end_time}."
+            }, status=400)
+
         room.status = 'Occupied'
         room.save()
         
@@ -435,6 +528,8 @@ def start_session(request):
             section_id=section_id or None,
             topic=topic,
             remarks=remarks,
+            start_time=requested_start_time,
+            end_time=requested_end_time,
             status='Active'
         )
         
@@ -503,13 +598,26 @@ def get_live_rooms(request):
         status='Active'
     ).select_related('room', 'faculty', 'faculty__department', 'subject', 'section', 'section__semester')
     sessions_by_room = {session.room_id: session for session in active_sessions}
+    now = timezone.now()
+    bookings = Booking.objects.filter(
+        room_id__in=[room.id for room in rooms],
+        status='Approved',
+        end_time__gte=now
+    ).select_related('user', 'room', 'room__block').order_by('start_time')
+    bookings_by_room = {}
+    for booking in bookings:
+        bookings_by_room.setdefault(booking.room_id, booking)
     res = []
     for r in rooms:
         active_session = sessions_by_room.get(r.id)
+        booking = bookings_by_room.get(r.id)
         room_data = RoomSerializer(r).data
         if active_session:
             room_data['session'] = ClassSessionSerializer(active_session).data
             room_data['status'] = 'Occupied'
+        elif booking:
+            room_data['booking'] = BookingSerializer(booking).data
+            room_data['status'] = 'Booked'
         elif room_data.get('status') == 'Occupied':
             room_data['status'] = 'Available'
         res.append(room_data)

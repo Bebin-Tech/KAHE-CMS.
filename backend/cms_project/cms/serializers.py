@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from django.db import models
+from django.utils import timezone
 from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
@@ -131,9 +133,53 @@ class RoomSerializer(serializers.ModelSerializer):
 class BookingSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
     room_number = serializers.CharField(source='room.room_number', read_only=True)
+    block_name = serializers.CharField(source='room.block.name', read_only=True)
+    block_code = serializers.CharField(source='room.block.code', read_only=True)
     class Meta:
         model = Booking
         fields = '__all__'
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        user = request.user if request else None
+        room = attrs.get('room') or getattr(self.instance, 'room', None)
+        start_time = attrs.get('start_time') or getattr(self.instance, 'start_time', None)
+        end_time = attrs.get('end_time') or getattr(self.instance, 'end_time', None)
+
+        if not start_time or not end_time:
+            raise serializers.ValidationError({"detail": "Start time and end time are required."})
+        if end_time <= start_time:
+            raise serializers.ValidationError({"detail": "End time must be after start time."})
+        if start_time < timezone.now():
+            raise serializers.ValidationError({"detail": "Booking start time cannot be in the past."})
+
+        overlaps = Booking.objects.filter(
+            room=room,
+            status='Approved',
+            start_time__lt=end_time,
+            end_time__gt=start_time
+        )
+        if self.instance:
+            overlaps = overlaps.exclude(id=self.instance.id)
+        if overlaps.exists():
+            existing = overlaps.select_related('user').first()
+            raise serializers.ValidationError({
+                "detail": f"Classroom already booked by {existing.user.get_full_name()} for this time."
+            })
+
+        active_session = ClassSession.objects.filter(
+            room=room,
+            status='Active',
+            start_time__lt=end_time
+        ).filter(models.Q(end_time__isnull=True) | models.Q(end_time__gt=start_time)).first()
+        if active_session:
+            raise serializers.ValidationError({
+                "detail": f"Classroom is occupied by {active_session.faculty.get_full_name()} during this time."
+            })
+
+        if user and user.is_authenticated and not attrs.get('user'):
+            attrs['user'] = user
+        return attrs
 
 class AuditLogSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)

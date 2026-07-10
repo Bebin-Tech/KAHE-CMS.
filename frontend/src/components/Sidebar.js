@@ -7,6 +7,7 @@ import {
     School,
     Settings,
     Building2,
+    Calendar,
     ChevronDown,
     ChevronRight,
     LogOut,
@@ -67,6 +68,14 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             roles: ['admin', 'super_admin', 'faculty', 'student'],
             items: [
                 { name: 'Class Rooms', path: '/classroom-tracking' }
+            ]
+        },
+        {
+            title: 'Classroom Booking',
+            icon: Calendar,
+            roles: ['faculty'],
+            items: [
+                { name: 'Classroom Booking', path: '/classroom-booking' }
             ]
         },
         {
