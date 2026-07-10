@@ -10,15 +10,16 @@ import ClassroomTracking from './pages/modules/ClassroomTracking';
 import ClassroomBooking from './pages/modules/ClassroomBooking';
 import Settings from './pages/modules/Settings';
 import Departments from './pages/modules/Departments';
+import { authGet } from './authSession';
 
 const roleHome = () => {
-    const role = localStorage.getItem('role')?.toLowerCase();
+    const role = authGet('role')?.toLowerCase();
     return role === 'admin' || role === 'super_admin' ? '/' : '/classroom-tracking';
 };
 
 const PrivateRoute = ({ children, roles }) => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role')?.toLowerCase();
+    const token = authGet('token');
+    const role = authGet('role')?.toLowerCase();
     // Ensure we replace history to prevent blinking loops
     if (!token) return <Navigate to="/login" replace />;
     if (roles && !roles.includes(role)) return <Navigate to={roleHome()} replace />;
@@ -26,13 +27,13 @@ const PrivateRoute = ({ children, roles }) => {
 };
 
 const PublicRoute = ({ children }) => {
-    const token = localStorage.getItem('token');
+    const token = authGet('token');
     // If logged in, don't allow access to login page
     return token ? <Navigate to="/" replace /> : children;
 };
 
 function App() {
-    const token = localStorage.getItem('token');
+    const token = authGet('token');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -75,7 +76,7 @@ function App() {
                                 <Route path="/users" element={<PrivateRoute roles={['admin', 'super_admin']}><UserManagement /></PrivateRoute>} />
                                 <Route path="/departments" element={<PrivateRoute roles={['admin', 'super_admin']}><Departments /></PrivateRoute>} />
                                 <Route path="/settings" element={<PrivateRoute roles={['student', 'faculty']}><Settings /></PrivateRoute>} />
-                                <Route path="/classroom-booking" element={<PrivateRoute roles={['faculty']}><ClassroomBooking /></PrivateRoute>} />
+                                <Route path="/classroom-booking" element={<PrivateRoute roles={['admin', 'super_admin', 'faculty']}><ClassroomBooking /></PrivateRoute>} />
                                 <Route path="/classroom-tracking" element={<PrivateRoute><ClassroomTracking /></PrivateRoute>} />
 
                                 <Route path="*" element={<Navigate to="/" />} />

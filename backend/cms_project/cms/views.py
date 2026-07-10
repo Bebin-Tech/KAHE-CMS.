@@ -36,14 +36,14 @@ class ReadOnlyOrClassroomManager(permissions.BasePermission):
             return bool(request.user and request.user.is_authenticated)
         return can_manage_classrooms(request.user)
 
-class ReadOnlyOrFacultyBooking(permissions.BasePermission):
+class ReadOnlyOrBookingManager(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return bool(request.user and request.user.is_authenticated)
         return bool(
             request.user and
             request.user.is_authenticated and
-            request.user.role == 'faculty'
+            request.user.role in ['faculty', 'admin', 'super_admin']
         )
 
 def is_admin_user(user):
@@ -315,7 +315,7 @@ class RoomViewSet(viewsets.ModelViewSet):
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.select_related('user', 'room', 'room__block').all()
     serializer_class = BookingSerializer
-    permission_classes = [ReadOnlyOrFacultyBooking]
+    permission_classes = [ReadOnlyOrBookingManager]
 
     def get_queryset(self):
         queryset = Booking.objects.select_related('user', 'room', 'room__block').all().order_by('start_time')
@@ -339,19 +339,19 @@ class BookingViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         booking = self.get_object()
-        if booking.user_id != request.user.id:
+        if booking.user_id != request.user.id and not is_admin_user(request.user):
             return Response({"detail": "You can only update your own bookings."}, status=status.HTTP_403_FORBIDDEN)
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         booking = self.get_object()
-        if booking.user_id != request.user.id:
+        if booking.user_id != request.user.id and not is_admin_user(request.user):
             return Response({"detail": "You can only update your own bookings."}, status=status.HTTP_403_FORBIDDEN)
         return super().partial_update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         booking = self.get_object()
-        if booking.user_id != request.user.id:
+        if booking.user_id != request.user.id and not is_admin_user(request.user):
             return Response({"detail": "You can only delete your own bookings."}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
 

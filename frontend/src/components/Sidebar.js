@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import API from '../api';
+import { authClear, authGet } from '../authSession';
 
 function cn(...inputs) {
     return twMerge(clsx(inputs));
@@ -25,8 +26,8 @@ function cn(...inputs) {
 const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const role = localStorage.getItem('role')?.toLowerCase();
-    const userName = localStorage.getItem('name') || 'Administrator';
+    const role = authGet('role')?.toLowerCase();
+    const userName = authGet('name') || 'Administrator';
 
     const [expandedGroups, setExpandedGroups] = useState(['Academic Management']);
 
@@ -36,7 +37,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
         } catch (e) {
             console.error("Logout audit failed:", e);
         }
-        localStorage.clear();
+        authClear();
         navigate('/login');
         window.location.reload();
     };
@@ -73,7 +74,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
         {
             title: 'Classroom Booking',
             icon: Calendar,
-            roles: ['faculty'],
+            roles: ['admin', 'super_admin', 'faculty'],
             items: [
                 { name: 'Classroom Booking', path: '/classroom-booking' }
             ]

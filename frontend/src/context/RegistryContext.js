@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import API from '../api';
+import { authGet } from '../authSession';
 
 const RegistryContext = createContext();
 
@@ -14,7 +15,7 @@ export const RegistryProvider = ({ children }) => {
 
     const fetchData = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
-        const role = localStorage.getItem('role')?.toLowerCase();
+        const role = authGet('role')?.toLowerCase();
         const canReadUsers = ['admin', 'super_admin'].includes(role);
         try {
             const results = await Promise.allSettled([

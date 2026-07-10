@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../api';
-import { Calendar, Clock, RefreshCw } from 'lucide-react';
+import { authGet } from '../../authSession';
+import { Calendar, Clock, RefreshCw, Trash2 } from 'lucide-react';
 
 const blockOptions = ['S-Block', 'P-Block', 'N-Block', 'E-Block'];
 
@@ -20,6 +21,8 @@ const formatDateTime = (value) => {
 };
 
 const ClassroomBooking = () => {
+    const role = authGet('role')?.toLowerCase();
+    const isAdmin = ['admin', 'super_admin'].includes(role);
     const [activeBlock, setActiveBlock] = useState('S-Block');
     const [rooms, setRooms] = useState([]);
     const [bookings, setBookings] = useState([]);
@@ -98,6 +101,18 @@ const ClassroomBooking = () => {
         }
     };
 
+    const handleDeleteBooking = async (booking) => {
+        if (!window.confirm(`Delete booking for ${booking.room_number}?`)) return;
+        setMessage({ text: '', type: '' });
+        try {
+            await API.delete(`/bookings/${booking.id}/`);
+            setMessage({ text: 'Booking deleted successfully.', type: 'success' });
+            await fetchData();
+        } catch (err) {
+            setMessage({ text: getApiError(err, 'Booking delete failed.'), type: 'error' });
+        }
+    };
+
     return (
         <div className="min-h-screen -m-4 md:-m-8 p-4 md:p-8 space-y-8 bg-slate-50">
             <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
@@ -105,7 +120,9 @@ const ClassroomBooking = () => {
                     <h1 className="text-4xl font-black text-slate-900 tracking-tightest uppercase italic">
                         Classroom <span className="text-indigo-600">Booking</span>
                     </h1>
-                    <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-2">Reserve classrooms by date and time</p>
+                        <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-2">
+                            {isAdmin ? 'View and manage all classroom bookings' : 'Reserve classrooms by date and time'}
+                        </p>
                 </div>
                 <button onClick={fetchData} className="px-5 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-sm">
                     <RefreshCw size={15} />
@@ -196,9 +213,21 @@ const ClassroomBooking = () => {
                                         <p className="text-xs font-bold text-slate-600 mt-1">Booked by {booking.user_name}</p>
                                         {booking.purpose && <p className="text-xs font-semibold text-slate-500 mt-1">{booking.purpose}</p>}
                                     </div>
-                                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-black uppercase tracking-widest">
-                                        <Clock size={14} />
-                                        {formatDateTime(booking.start_time)} - {formatDateTime(booking.end_time)}
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-black uppercase tracking-widest">
+                                            <Clock size={14} />
+                                            {formatDateTime(booking.start_time)} - {formatDateTime(booking.end_time)}
+                                        </div>
+                                        {isAdmin && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteBooking(booking)}
+                                                className="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-100"
+                                            >
+                                                <Trash2 size={14} />
+                                                Delete
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}

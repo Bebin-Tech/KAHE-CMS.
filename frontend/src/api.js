@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { authClear, authGet } from './authSession';
 
 // Comprehensive URL detection for development and production
 const getBaseURL = () => {
@@ -19,7 +20,7 @@ const API = axios.create({
 });
 
 API.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+    const token = authGet('token') || authGet('access_token');
     if (token) {
         // Django REST Framework TokenAuthentication expects 'Token' prefix
         config.headers.Authorization = `Token ${token}`;
@@ -42,7 +43,7 @@ API.interceptors.response.use(
         if (error.response && error.response.status === 401 && !isLoginRequest) {
             // Only redirect if we're not already on the login page to prevent loops
             if (window.location.pathname !== '/login') {
-                localStorage.clear();
+                authClear();
                 window.location.replace('/login');
             }
         }

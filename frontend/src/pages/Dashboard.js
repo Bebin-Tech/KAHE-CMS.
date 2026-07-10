@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
+import { authGet } from '../authSession';
 import {
     DoorOpen,
     School,
@@ -25,7 +26,7 @@ const Dashboard = () => {
     });
     const [loading, setLoading] = useState(true);
 
-    const userName = localStorage.getItem('name') || 'Institutional User';
+    const userName = authGet('name') || 'Institutional User';
 
     // --- REFRESH ENGINE ---
     const fetchAll = async () => {

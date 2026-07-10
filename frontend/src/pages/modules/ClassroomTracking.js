@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import API from '../../api';
+import { authGet } from '../../authSession';
 import { useRegistry } from '../../context/RegistryContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -37,11 +38,11 @@ const formatDateTime = (value) => {
 
 const ClassroomTracking = () => {
     const { datasets } = useRegistry();
-    const role = localStorage.getItem('role')?.toLowerCase();
-    const userName = localStorage.getItem('name') || '';
-    const storedDepartmentId = localStorage.getItem('department_id') || '';
-    const storedDepartmentName = localStorage.getItem('department_name') || '';
-    const classroomPermission = localStorage.getItem('classroom_permission') || (['admin', 'super_admin'].includes(role) ? 'manage_classrooms' : role === 'faculty' ? 'class_session' : 'view_only');
+    const role = authGet('role')?.toLowerCase();
+    const userName = authGet('name') || '';
+    const storedDepartmentId = authGet('department_id') || '';
+    const storedDepartmentName = authGet('department_name') || '';
+    const classroomPermission = authGet('classroom_permission') || (['admin', 'super_admin'].includes(role) ? 'manage_classrooms' : role === 'faculty' ? 'class_session' : 'view_only');
     const canManageSessions = ['class_session', 'manage_classrooms'].includes(classroomPermission);
     const canManageRooms = classroomPermission === 'manage_classrooms';
     const isFaculty = role === 'faculty';
@@ -157,7 +158,7 @@ const ClassroomTracking = () => {
         try {
             await API.post('/end-session/', {
                 session_id: room.session.id,
-                user_id: localStorage.getItem('user_id')
+                user_id: authGet('user_id')
             });
             fetchLiveRooms(true);
         } catch (err) {
@@ -283,7 +284,7 @@ const ClassroomTracking = () => {
                 {filteredRooms.map(room => {
                     const isOccupied = room.status === 'Occupied';
                     const isBooked = room.status === 'Booked';
-                    const isOwnBooking = isBooked && String(room.booking?.user) === String(localStorage.getItem('user_id'));
+                    const isOwnBooking = isBooked && String(room.booking?.user) === String(authGet('user_id'));
                     return (
                     <motion.div
                         layout

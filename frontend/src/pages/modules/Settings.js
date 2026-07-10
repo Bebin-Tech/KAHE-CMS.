@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import API from '../../api';
+import { authGet, authSet } from '../../authSession';
 import { KeyRound, User } from 'lucide-react';
 
 const Settings = () => {
@@ -8,10 +9,10 @@ const Settings = () => {
     const [message, setMessage] = useState('');
     const [saving, setSaving] = useState(false);
 
-    const username = localStorage.getItem('username') || '';
-    const role = localStorage.getItem('role')?.toLowerCase() || 'user';
+    const username = authGet('username') || '';
+    const role = authGet('role')?.toLowerCase() || 'user';
     const accountLabel = role === 'faculty' ? 'Faculty' : role === 'student' ? 'Student' : 'User';
-    const sessionPassword = localStorage.getItem('session_password') || 'Password is hidden until your next login or reset.';
+    const sessionPassword = authGet('session_password') || 'Password is hidden until your next login or reset.';
 
     const handleReset = async (e) => {
         e.preventDefault();
@@ -24,7 +25,7 @@ const Settings = () => {
         setSaving(true);
         try {
             await API.post('/account/reset-password/', { password });
-            localStorage.setItem('session_password', password);
+            authSet('session_password', password);
             setPassword('');
             setConfirmPassword('');
             setMessage('Password updated successfully.');

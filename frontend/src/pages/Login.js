@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import API from '../api';
+import { saveAuthSession } from '../authSession';
 
 const Login = () => {
     const [mode, setMode] = useState('login');
@@ -31,15 +32,7 @@ const Login = () => {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             });
 
-            localStorage.setItem('token', response.data.access_token);
-            localStorage.setItem('role', response.data.role);
-            localStorage.setItem('user_id', response.data.user_id);
-            localStorage.setItem('username', response.data.username || email.trim());
-            localStorage.setItem('name', response.data.name);
-            localStorage.setItem('classroom_permission', response.data.classroom_permission || 'view_only');
-            localStorage.setItem('department_id', response.data.department_id || '');
-            localStorage.setItem('department_name', response.data.department_name || '');
-            localStorage.setItem('session_password', password);
+            saveAuthSession(response.data, password, email.trim());
 
             // Redirect to home page using navigate instead of full reload to prevent blinking
             window.location.replace('/');
@@ -66,15 +59,7 @@ const Login = () => {
                 password
             });
 
-            localStorage.setItem('token', response.data.access_token);
-            localStorage.setItem('role', response.data.role);
-            localStorage.setItem('user_id', response.data.user_id);
-            localStorage.setItem('username', response.data.username || email.trim());
-            localStorage.setItem('name', response.data.name);
-            localStorage.setItem('classroom_permission', response.data.classroom_permission || 'view_only');
-            localStorage.setItem('department_id', response.data.department_id || '');
-            localStorage.setItem('department_name', response.data.department_name || '');
-            localStorage.setItem('session_password', password);
+            saveAuthSession(response.data, password, email.trim());
             window.location.replace('/classroom-tracking');
         } catch (err) {
             setError(err.response?.data?.detail || 'Registration failed');
