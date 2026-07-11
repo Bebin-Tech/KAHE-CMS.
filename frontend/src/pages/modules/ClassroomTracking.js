@@ -51,6 +51,7 @@ const ClassroomTracking = () => {
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [availabilityFilter, setAvailabilityFilter] = useState('all');
     const [showStartModal, setShowModal] = useState(false);
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState(null);
@@ -91,6 +92,16 @@ const ClassroomTracking = () => {
     const sortRooms = (items) => [...items].sort((a, b) =>
         String(a.room_number || '').localeCompare(String(b.room_number || ''), undefined, { numeric: true })
     );
+
+    const roomStatus = (room) => String(room.status || 'Available').toLowerCase();
+
+    const matchesAvailabilityFilter = (room) => {
+        const status = roomStatus(room);
+        if (availabilityFilter === 'available') return status === 'available';
+        if (availabilityFilter === 'booked') return status === 'booked';
+        if (availabilityFilter === 'non_available') return status !== 'available' && status !== 'booked';
+        return true;
+    };
 
     const fetchLiveRooms = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -227,8 +238,14 @@ const ClassroomTracking = () => {
             (r.session?.faculty_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.session?.subject_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (r.booking?.user_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesSelectedBlock && matchesSearch;
+        return matchesSelectedBlock && matchesSearch && matchesAvailabilityFilter(r);
     }));
+
+    const availabilityFilters = [
+        { key: 'available', label: 'Available', activeClass: 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-100', idleClass: 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50' },
+        { key: 'non_available', label: 'Non-Available', activeClass: 'bg-rose-600 text-white border-rose-600 shadow-rose-100', idleClass: 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50' },
+        { key: 'booked', label: 'Booked', activeClass: 'bg-amber-600 text-white border-amber-600 shadow-amber-100', idleClass: 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50' }
+    ];
 
     if (loading && rooms.length === 0) return (
         <div className="flex items-center justify-center min-h-[50vh]">
@@ -279,14 +296,31 @@ const ClassroomTracking = () => {
                             <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{activeBlock}</h2>
                             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{filteredRooms.length} Classrooms</span>
                         </div>
-                        <div className="relative w-full lg:w-80 group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-indigo-500 transition-colors" size={16} />
-                            <input
-                                className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-300 rounded-2xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:border-indigo-500 shadow-sm transition-all"
-                                placeholder="Search classrooms or faculty"
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                            />
+                        <div className="w-full lg:w-[30rem] space-y-3">
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                                <input
+                                    className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-300 rounded-2xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:border-indigo-500 shadow-sm transition-all"
+                                    placeholder="Search classrooms or faculty"
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                {availabilityFilters.map(filter => {
+                                    const isActive = availabilityFilter === filter.key;
+                                    return (
+                                        <button
+                                            key={filter.key}
+                                            type="button"
+                                            onClick={() => setAvailabilityFilter(isActive ? 'all' : filter.key)}
+                                            className={`px-3 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${isActive ? filter.activeClass : filter.idleClass}`}
+                                        >
+                                            {filter.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
