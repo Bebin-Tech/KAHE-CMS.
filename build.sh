@@ -2,13 +2,6 @@
 # exit on error
 set -o errexit
 
-if [ "$RENDER" = "true" ] && { [ -z "$DATABASE_URL" ] || [[ "$DATABASE_URL" != *"://"* ]]; }; then
-  echo "ERROR: DATABASE_URL is required on Render."
-  echo "Create/connect a Render PostgreSQL database, then add its Internal Database URL as DATABASE_URL in this web service."
-  echo "The app will not deploy with temporary SQLite because student accounts would disappear after restarts."
-  exit 1
-fi
-
 # Install dependencies (requirements.txt is in the root)
 pip install -r requirements.txt
 
