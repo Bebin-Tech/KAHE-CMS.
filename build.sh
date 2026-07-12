@@ -20,6 +20,12 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)
 # Collect static files
 python manage.py collectstatic --noinput
 
+if [ "$RENDER" = "true" ] && { [ -z "$DATABASE_URL" ] || [[ "$DATABASE_URL" != *"://"* ]]; }; then
+  echo "ERROR: DATABASE_URL is required on Render before running migrations."
+  echo "Connect a Render PostgreSQL database or add DATABASE_URL in the service environment variables."
+  exit 1
+fi
+
 # Run migrations
 python manage.py migrate
 
