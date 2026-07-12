@@ -2,6 +2,9 @@
   "name": "kahe-cms-frontend",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "18.17.0"
+  },
   "dependencies": {
     "axios": "^1.6.0",
     "clsx": "^2.0.0",
