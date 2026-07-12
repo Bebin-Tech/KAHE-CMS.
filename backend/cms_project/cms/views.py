@@ -6,7 +6,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.db import IntegrityError, models
+from django.db import IntegrityError, models, transaction
 from datetime import timedelta
 import pandas as pd
 from .models import *
@@ -205,20 +205,30 @@ def register_student(request):
     if not username or not password or not full_name:
         return Response({"detail": "Full name, username, and password are required."}, status=status.HTTP_400_BAD_REQUEST)
 
+    email = email or (username if '@' in username else f"{username}@kahe.edu.in")
+    if User.objects.filter(
+        models.Q(username__iexact=username) |
+        models.Q(email__iexact=email) |
+        models.Q(employee_id__iexact=username)
+    ).exists():
+        return Response({"detail": "Student account already exists. Please sign in with your username and password."}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
-        user = User.objects.create_user(
-            username=username,
-            password=password,
-            first_name=full_name,
-            last_name='-',
-            email=email or f"{username}@kahe.edu.in",
-            employee_id=username,
-            role='student',
-            status='Active',
-            is_active=True
-        )
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                first_name=full_name,
+                last_name='-',
+                email=email,
+                employee_id=username,
+                role='student',
+                status='Active',
+                classroom_permission='view_only',
+                is_active=True
+            )
     except IntegrityError:
-        return Response({"detail": "Username already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Student account already exists. Please sign in with your username and password."}, status=status.HTTP_400_BAD_REQUEST)
 
     token, _ = Token.objects.get_or_create(user=user)
     return Response({
@@ -401,7 +411,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 @api_view(['GET'])
 @permission_classes([IsAdminRole])
 def users_list(request):
-    users = User.objects.all()
+    users = User.objects.select_related('department').all().order_by('-date_joined', 'role', 'username')
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
 

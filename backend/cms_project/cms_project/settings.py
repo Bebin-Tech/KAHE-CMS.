@@ -1,6 +1,7 @@
 import os
 import dj_database_url
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 # Path to settings.py is: ROOT/backend/cms_project/cms_project/settings.py
 # BASE_DIR reaches ROOT/backend/cms_project (where manage.py is)
@@ -71,6 +72,10 @@ if DATABASE_URL and '://' in DATABASE_URL:
         'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=True)
     }
 else:
+    if os.environ.get('RENDER') == 'true':
+        raise ImproperlyConfigured(
+            "DATABASE_URL is required on Render. Refusing to use temporary SQLite storage in production."
+        )
     # Fallback to local SQLite if no valid database URL is provided
     DATABASES = {
         'default': {
