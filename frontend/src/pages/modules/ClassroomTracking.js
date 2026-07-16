@@ -254,7 +254,7 @@ const ClassroomTracking = () => {
     );
 
     return (
-        <div className="min-h-screen -m-4 md:-m-8 p-4 md:p-8 space-y-10 bg-slate-50">
+        <div className="min-h-screen -m-4 md:-m-8 p-2 md:p-8 space-y-6 md:space-y-10 bg-slate-50">
             {/* HEADER */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
@@ -323,7 +323,7 @@ const ClassroomTracking = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-3 md:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 xl:gap-5">
                 {filteredRooms.map(room => {
                     const isOccupied = room.status === 'Occupied';
                     const isBooked = room.status === 'Booked';
@@ -332,9 +332,9 @@ const ClassroomTracking = () => {
                     <motion.div
                         layout
                         key={room.id}
-                        className="bg-[#1e1e1e] rounded-md shadow-lg overflow-hidden min-h-[285px] flex flex-col group border border-white/5"
+                        className="bg-[#1e1e1e] rounded-md shadow-lg overflow-hidden min-h-[158px] sm:min-h-[235px] lg:min-h-[285px] flex flex-col group border border-white/5"
                     >
-                        <div className="h-24 relative overflow-hidden">
+                        <div className="h-12 sm:h-20 lg:h-24 relative overflow-hidden">
                             <img
                                 src="/classroom-card-bg.png"
                                 alt="Classroom"
@@ -343,42 +343,43 @@ const ClassroomTracking = () => {
                             <div className="absolute inset-0 bg-gradient-to-t from-[#1e1e1e] via-[#1e1e1e]/25 to-white/10"></div>
                         </div>
 
-                        <div className="p-5 flex-1 flex flex-col">
-                            <div className="flex items-start justify-between gap-3">
+                        <div className="p-2 sm:p-4 lg:p-5 flex-1 flex flex-col">
+                            <div className="flex items-start justify-between gap-2 sm:gap-3">
                                 <div className="min-w-0">
-                                    <p className="text-sm font-bold text-slate-300 truncate">{room.block_name || room.building || 'S-Block'}</p>
-                                    <h3 className="text-3xl font-black text-white tracking-tight mt-2 uppercase truncate">{room.room_number}</h3>
-                                    <p className="text-sm font-bold text-slate-400 mt-2">{room.type}</p>
+                                    <p className="text-[9px] sm:text-sm font-bold text-slate-300 truncate">{room.block_name || room.building || 'S-Block'}</p>
+                                    <h3 className="text-lg sm:text-2xl lg:text-3xl font-black text-white tracking-tight mt-1 sm:mt-2 uppercase truncate">{room.room_number}</h3>
+                                    <p className="text-[9px] sm:text-sm font-bold text-slate-400 mt-1 sm:mt-2 truncate">{room.type}</p>
                                 </div>
                             </div>
 
-                            <div className="mt-5 min-w-0">
+                            <div className="mt-2 sm:mt-4 lg:mt-5 min-w-0">
                                 {isOccupied ? (
-                                    <div className="space-y-1.5">
-                                        <p className="text-sm font-black text-white truncate">{room.session?.faculty_name || 'Faculty'}</p>
-                                        <p className="text-sm font-bold text-slate-300 truncate">{room.session?.subject_name || 'Subject'}</p>
-                                        <p className="text-xs font-bold text-slate-500 uppercase truncate">{room.session?.department_name || 'Department'}</p>
-                                        <p className="text-[10px] font-black text-rose-300 uppercase tracking-widest pt-1">
+                                    <div className="space-y-1 sm:space-y-1.5">
+                                        <p className="text-[9px] sm:text-sm font-black text-white truncate">{room.session?.faculty_name || 'Faculty'}</p>
+                                        <p className="hidden sm:block text-sm font-bold text-slate-300 truncate">{room.session?.subject_name || 'Subject'}</p>
+                                        <p className="hidden sm:block text-xs font-bold text-slate-500 uppercase truncate">{room.session?.department_name || 'Department'}</p>
+                                        <p className="hidden sm:block text-[10px] font-black text-rose-300 uppercase tracking-widest pt-1">
                                             {formatDateTime(room.session?.start_time)} - {formatDateTime(room.session?.end_time)}
                                         </p>
-                                        <p className="text-[10px] font-black text-rose-200 uppercase tracking-widest">{calculateDuration(room.session?.start_time)} elapsed</p>
+                                        <p className="text-[8px] sm:text-[10px] font-black text-rose-200 uppercase tracking-widest">{calculateDuration(room.session?.start_time)} elapsed</p>
                                     </div>
                                 ) : isBooked ? (
-                                    <div className="space-y-1.5">
-                                        <p className="text-sm font-black text-amber-200 truncate">Booked</p>
-                                        <p className="text-sm font-bold text-slate-300 truncate">By {room.booking?.user_name || 'Faculty'}</p>
-                                        <p className="text-[10px] font-black text-amber-300 uppercase tracking-widest pt-1">
+                                    <div className="space-y-1 sm:space-y-1.5">
+                                        <p className="text-[9px] sm:text-sm font-black text-amber-200 truncate">Booked</p>
+                                        <p className="text-[9px] sm:text-sm font-bold text-slate-300 truncate">By {room.booking?.user_name || 'Faculty'}</p>
+                                        <p className="hidden sm:block text-[10px] font-black text-amber-300 uppercase tracking-widest pt-1">
                                             {formatDateTime(room.booking?.start_time)} - {formatDateTime(room.booking?.end_time)}
                                         </p>
                                     </div>
                                 ) : (
-                                    <p className="text-sm font-bold text-slate-300 leading-relaxed">
-                                        Available for {room.capacity} students.
+                                    <p className="text-[9px] sm:text-sm font-bold text-slate-300 leading-snug sm:leading-relaxed">
+                                        <span className="sm:hidden">{room.capacity} Seats</span>
+                                        <span className="hidden sm:inline">Available for {room.capacity} students.</span>
                                     </p>
                                 )}
                             </div>
 
-                            <div className="mt-auto flex items-center gap-3 pt-6">
+                            <div className="mt-auto flex items-center gap-1.5 sm:gap-3 pt-2 sm:pt-5 lg:pt-6">
                                 {canManageSessions ? (
                                     !isOccupied && (!isBooked || isOwnBooking || canManageRooms) ? (
                                         <button
@@ -394,21 +395,23 @@ const ClassroomTracking = () => {
                                                 }));
                                                 setShowModal(true);
                                             }}
-                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-black uppercase text-xs tracking-wide shadow-lg shadow-emerald-950/20 transition-all"
+                                            className="px-2 sm:px-4 py-1.5 sm:py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-black uppercase text-[8px] sm:text-xs tracking-wide shadow-lg shadow-emerald-950/20 transition-all"
                                         >
-                                            Start Class
+                                            <span className="sm:hidden">Start</span>
+                                            <span className="hidden sm:inline">Start Class</span>
                                         </button>
                                     ) : isOccupied ? (
                                         <button
                                             onClick={() => handleEndClass(room)}
-                                            className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-md font-black uppercase text-xs tracking-wide shadow-lg shadow-rose-950/20 transition-all"
+                                            className="px-2 sm:px-4 py-1.5 sm:py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-md font-black uppercase text-[8px] sm:text-xs tracking-wide shadow-lg shadow-rose-950/20 transition-all"
                                         >
-                                            End Class
+                                            <span className="sm:hidden">End</span>
+                                            <span className="hidden sm:inline">End Class</span>
                                         </button>
                                     ) : (
                                         <button
                                             type="button"
-                                            className="px-4 py-2 bg-amber-600 text-white rounded-md font-black uppercase text-xs tracking-wide cursor-default shadow-lg shadow-amber-950/20"
+                                            className="px-2 sm:px-4 py-1.5 sm:py-2 bg-amber-600 text-white rounded-md font-black uppercase text-[8px] sm:text-xs tracking-wide cursor-default shadow-lg shadow-amber-950/20"
                                         >
                                             Booked
                                         </button>
@@ -416,14 +419,14 @@ const ClassroomTracking = () => {
                                 ) : (
                                     <button
                                         type="button"
-                                        className={`px-4 py-2 rounded-md font-black uppercase text-xs tracking-wide cursor-default shadow-lg ${room.status === 'Available' ? 'bg-emerald-600 text-white shadow-emerald-950/20' : room.status === 'Booked' ? 'bg-amber-600 text-white shadow-amber-950/20' : 'bg-rose-600 text-white shadow-rose-950/20'}`}
+                                        className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md font-black uppercase text-[8px] sm:text-xs tracking-wide cursor-default shadow-lg ${room.status === 'Available' ? 'bg-emerald-600 text-white shadow-emerald-950/20' : room.status === 'Booked' ? 'bg-amber-600 text-white shadow-amber-950/20' : 'bg-rose-600 text-white shadow-rose-950/20'}`}
                                     >
                                         {room.status}
                                     </button>
                                 )}
                                 {canManageRooms && (
                                     <button onClick={() => handleDeleteRoom(room)} className="ml-auto text-rose-400 hover:text-rose-300 transition-all">
-                                        <Trash2 size={15} />
+                                        <Trash2 className="w-3.5 h-3.5 sm:w-[15px] sm:h-[15px]" />
                                     </button>
                                 )}
                             </div>
