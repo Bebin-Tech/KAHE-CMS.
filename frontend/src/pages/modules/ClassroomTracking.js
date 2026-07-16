@@ -481,62 +481,62 @@ const ClassroomTracking = () => {
 
             <AnimatePresence>
                 {showStartModal && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-[#1e1e1e] w-full max-w-lg rounded-[3rem] overflow-hidden shadow-2xl border border-white/10"
+                            className="bg-[#1e1e1e] w-full max-w-lg max-h-[96vh] rounded-2xl sm:rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 flex flex-col"
                         >
-                            <div className="bg-indigo-600 p-10 text-white">
-                                <h3 className="text-3xl font-black uppercase tracking-tighter italic">Start Session</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-2 text-indigo-200">Activating {selectedRoom?.room_number}</p>
+                            <div className="bg-indigo-600 p-5 sm:p-10 text-white shrink-0">
+                                <h3 className="text-xl sm:text-3xl font-black uppercase tracking-tight sm:tracking-tighter italic">Start Session</h3>
+                                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.18em] sm:tracking-[0.3em] mt-1.5 sm:mt-2 text-indigo-200">Activating {selectedRoom?.room_number}</p>
                             </div>
 
-                            <form onSubmit={handleStartClass} className="p-10 space-y-6">
+                            <form onSubmit={handleStartClass} className="p-5 sm:p-10 space-y-4 sm:space-y-6 overflow-y-auto">
                                 {message.text && (
-                                    <div className={`p-5 rounded-2xl flex items-center gap-3 ${message.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'}`}>
-                                        <CheckCircle size={18}/>
-                                        <span className="text-[10px] font-black uppercase tracking-widest">{message.text}</span>
+                                    <div className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 ${message.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'}`}>
+                                        <CheckCircle size={16}/>
+                                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">{message.text}</span>
                                     </div>
                                 )}
 
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
+                                <div className="space-y-3 sm:space-y-6">
+                                    <div className="space-y-1.5 sm:space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Faculty Name</label>
-                                        <input className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-80" placeholder="Enter faculty name" value={formData.faculty_name} onChange={e => setFormData({ ...formData, faculty_name: e.target.value })} disabled={isFaculty} required />
+                                        <input className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-80" placeholder="Enter faculty name" value={formData.faculty_name} onChange={e => setFormData({ ...formData, faculty_name: e.target.value })} disabled={isFaculty} required />
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5 sm:space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Department</label>
                                         {isFaculty ? (
-                                            <div className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white">
+                                            <div className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white">
                                                 {storedDepartmentName || (datasets.departments || []).find(d => String(d.id) === String(formData.dept_id))?.name || 'Department not assigned'}
                                             </div>
                                         ) : (
-                                            <select className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.dept_id} onChange={e => setFormData({ ...formData, dept_id: e.target.value })} required>
+                                            <select className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.dept_id} onChange={e => setFormData({ ...formData, dept_id: e.target.value })} required>
                                                 <option value="">Select Dept</option>
                                                 {(datasets.departments || []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                                             </select>
                                         )}
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5 sm:space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Subject</label>
-                                        <input className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter subject" value={formData.subject_name} onChange={e => setFormData({ ...formData, subject_name: e.target.value })} required />
+                                        <input className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter subject" value={formData.subject_name} onChange={e => setFormData({ ...formData, subject_name: e.target.value })} required />
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
+                                        <div className="space-y-1.5 sm:space-y-2">
                                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class Start Time</label>
-                                            <input type="datetime-local" className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_start_time} onChange={e => setFormData({ ...formData, class_start_time: e.target.value })} required />
+                                            <input type="datetime-local" className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_start_time} onChange={e => setFormData({ ...formData, class_start_time: e.target.value })} required />
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-1.5 sm:space-y-2">
                                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class End Time</label>
-                                            <input type="datetime-local" className="w-full p-4 bg-[#2a2a2a] border-none rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_end_time} onChange={e => setFormData({ ...formData, class_end_time: e.target.value })} required />
+                                            <input type="datetime-local" className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_end_time} onChange={e => setFormData({ ...formData, class_end_time: e.target.value })} required />
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-4 pt-8">
-                                    <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-white/20 text-slate-200 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all">Cancel</button>
-                                    <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all">Confirm</button>
+                                <div className="flex gap-3 sm:gap-4 pt-3 sm:pt-8">
+                                    <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 sm:py-4 border-2 border-white/20 text-slate-200 rounded-xl sm:rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all">Cancel</button>
+                                    <button type="submit" className="flex-1 py-3 sm:py-4 bg-indigo-600 text-white rounded-xl sm:rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all">Confirm</button>
                                 </div>
                             </form>
                         </motion.div>
