@@ -20,7 +20,11 @@ def create_identities():
 
         print(f"Initializing identity for: {username}...")
 
-        user = User.objects.filter(username__iexact=username).first() or User.objects.filter(email__iexact=email).first()
+        user = User.objects.filter(role__in=['admin', 'super_admin']).filter(username__iexact=username).first()
+        if not user:
+            user = User.objects.filter(role__in=['admin', 'super_admin']).filter(email__iexact=email).order_by('id').first()
+        if not user:
+            user = User.objects.filter(username__iexact=username).first() or User.objects.filter(email__iexact=email).first()
         if not user:
             user = User.objects.create_superuser(
                 username=username,
@@ -33,12 +37,18 @@ def create_identities():
             )
             print(f"SUCCESS: Account created for {email}")
         else:
-            user.username = username
-            user.email = email
+            username_taken = User.objects.filter(username__iexact=username).exclude(id=user.id).exists()
+            email_taken = User.objects.filter(email__iexact=email).exclude(id=user.id).exists()
+            if not username_taken:
+                user.username = username
+            if not email_taken:
+                user.email = email
             user.first_name = identity['first']
             user.last_name = identity['last']
             user.role = identity['role']
             user.status = 'Active'
+            user.is_staff = True
+            user.is_superuser = True
             user.is_active = True
             user.set_password(password)
             user.save()

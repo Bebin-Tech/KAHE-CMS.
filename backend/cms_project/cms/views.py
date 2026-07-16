@@ -68,6 +68,51 @@ def faculty_department(user):
 def is_faculty_user(user):
     return bool(user and user.is_authenticated and user.role == 'faculty')
 
+def default_admin_identity(username_input, password):
+    if password != 'admin123':
+        return None
+    default_admins = {
+        'admin': ('admin', 'System', 'Admin', 'admin@kahe.edu'),
+        'admin@kahe.edu': ('admin', 'System', 'Admin', 'admin@kahe.edu'),
+        'bebin': ('bebin', 'Bebin', 'R', 'bebin@kahe.edu'),
+        'bebin@kahe.edu': ('bebin', 'Bebin', 'R', 'bebin@kahe.edu'),
+    }
+    return default_admins.get(str(username_input).lower())
+
+def sync_default_admin_login(username_input, password):
+    identity = default_admin_identity(username_input, password)
+    if not identity:
+        return None
+
+    canonical_username, first_name, last_name, email = identity
+    candidates = User.objects.filter(
+        models.Q(username__iexact=canonical_username) |
+        models.Q(username__iexact=username_input) |
+        models.Q(email__iexact=email)
+    ).order_by('id')
+
+    admin_user = candidates.filter(role__in=['admin', 'super_admin']).first() or candidates.first()
+    if not admin_user:
+        admin_user = User.objects.create_user(username=canonical_username, email=email)
+
+    username_taken = User.objects.filter(username__iexact=canonical_username).exclude(id=admin_user.id).exists()
+    email_taken = User.objects.filter(email__iexact=email).exclude(id=admin_user.id).exists()
+
+    if not username_taken:
+        admin_user.username = canonical_username
+    if not email_taken:
+        admin_user.email = email
+    admin_user.first_name = first_name
+    admin_user.last_name = last_name
+    admin_user.role = 'super_admin'
+    admin_user.status = 'Active'
+    admin_user.is_staff = True
+    admin_user.is_superuser = True
+    admin_user.is_active = True
+    admin_user.set_password(password)
+    admin_user.save()
+    return authenticate(username=admin_user.username, password=password)
+
 def parse_client_datetime(value, fallback=None):
     if not value:
         return fallback
@@ -147,32 +192,8 @@ def login_view(request):
         if user_obj:
             user = authenticate(username=user_obj.username, password=password)
 
-    if not user and password == 'admin123':
-        default_admins = {
-            'admin': ('System', 'Admin', 'admin@kahe.edu'),
-            'admin@kahe.edu': ('System', 'Admin', 'admin@kahe.edu'),
-            'bebin': ('Bebin', 'R', 'bebin@kahe.edu'),
-            'bebin@kahe.edu': ('Bebin', 'R', 'bebin@kahe.edu'),
-        }
-        default_identity = default_admins.get(username_input.lower())
-        if default_identity:
-            first_name, last_name, email = default_identity
-            admin_user = User.objects.filter(
-                models.Q(username__iexact=username_input) |
-                models.Q(email__iexact=email)
-            ).first()
-            if admin_user and admin_user.role in ['admin', 'super_admin']:
-                canonical_username = 'admin' if email == 'admin@kahe.edu' else 'bebin'
-                admin_user.username = canonical_username
-                admin_user.email = email
-                admin_user.first_name = first_name
-                admin_user.last_name = last_name
-                admin_user.role = 'super_admin'
-                admin_user.status = 'Active'
-                admin_user.is_active = True
-                admin_user.set_password(password)
-                admin_user.save()
-                user = authenticate(username=admin_user.username, password=password)
+    if not user:
+        user = sync_default_admin_login(username_input, password)
 
     if user:
         if user.role == 'faculty' and not user.department_id:
