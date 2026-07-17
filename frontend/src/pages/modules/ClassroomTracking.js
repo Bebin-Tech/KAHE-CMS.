@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useDeferredValue, useMemo } from 'react';
 import API from '../../api';
 import { authGet } from '../../authSession';
 import { useRegistry } from '../../context/RegistryContext';
@@ -51,6 +51,7 @@ const ClassroomTracking = () => {
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const deferredSearchTerm = useDeferredValue(searchTerm);
     const [availabilityFilter, setAvailabilityFilter] = useState('all');
     const [showStartModal, setShowModal] = useState(false);
     const [showRoomModal, setShowRoomModal] = useState(false);
@@ -95,14 +96,6 @@ const ClassroomTracking = () => {
 
     const roomStatus = (room) => String(room.status || 'Available').toLowerCase();
 
-    const matchesAvailabilityFilter = (room) => {
-        const status = roomStatus(room);
-        if (availabilityFilter === 'available') return status === 'available';
-        if (availabilityFilter === 'booked') return status === 'booked';
-        if (availabilityFilter === 'non_available') return status !== 'available' && status !== 'booked';
-        return true;
-    };
-
     const fetchLiveRooms = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
@@ -128,8 +121,17 @@ const ClassroomTracking = () => {
 
     useEffect(() => {
         fetchLiveRooms();
-        const timer = setInterval(() => fetchLiveRooms(true), 15000);
-        return () => clearInterval(timer);
+        const refreshIfVisible = () => {
+            if (!document.hidden) fetchLiveRooms(true);
+        };
+        const timer = setInterval(refreshIfVisible, 30000);
+        document.addEventListener('visibilitychange', refreshIfVisible);
+        window.addEventListener('focus', refreshIfVisible);
+        return () => {
+            clearInterval(timer);
+            document.removeEventListener('visibilitychange', refreshIfVisible);
+            window.removeEventListener('focus', refreshIfVisible);
+        };
     }, [fetchLiveRooms]);
 
     useEffect(() => {
@@ -230,16 +232,27 @@ const ClassroomTracking = () => {
         }
     };
 
-    const filteredRooms = sortRooms(rooms.filter(r => {
-        const roomNumber = String(r.room_number || '');
-        const matchesSelectedBlock = String(roomBlockName(r)).trim().toLowerCase() === activeBlock.toLowerCase();
-        const matchesSearch = roomNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            roomBlockName(r).toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.session?.faculty_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.session?.subject_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.booking?.user_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesSelectedBlock && matchesSearch && matchesAvailabilityFilter(r);
-    }));
+    const filteredRooms = useMemo(() => {
+        const normalizedSearch = deferredSearchTerm.trim().toLowerCase();
+        return sortRooms(rooms.filter(r => {
+            const status = roomStatus(r);
+            const roomNumber = String(r.room_number || '');
+            const blockName = r.block_name || r.block_code || r.building || activeBlock;
+            const matchesSelectedBlock = String(blockName).trim().toLowerCase() === activeBlock.toLowerCase();
+            const matchesSearch = !normalizedSearch ||
+                roomNumber.toLowerCase().includes(normalizedSearch) ||
+                blockName.toLowerCase().includes(normalizedSearch) ||
+                (r.session?.faculty_name || '').toLowerCase().includes(normalizedSearch) ||
+                (r.session?.subject_name || '').toLowerCase().includes(normalizedSearch) ||
+                (r.booking?.user_name || '').toLowerCase().includes(normalizedSearch);
+            const matchesAvailability =
+                availabilityFilter === 'available' ? status === 'available' :
+                availabilityFilter === 'booked' ? status === 'booked' :
+                availabilityFilter === 'non_available' ? status !== 'available' && status !== 'booked' :
+                true;
+            return matchesSelectedBlock && matchesSearch && matchesAvailability;
+        }));
+    }, [rooms, activeBlock, deferredSearchTerm, availabilityFilter]);
 
     const availabilityFilters = [
         { key: 'available', label: 'Available', activeClass: 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-100', idleClass: 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50' },
@@ -333,6 +346,7 @@ const ClassroomTracking = () => {
                         layout
                         key={room.id}
                         className="bg-[#1e1e1e] rounded-md shadow-lg overflow-hidden min-h-[158px] sm:min-h-[235px] lg:min-h-[285px] flex flex-col group border border-white/5"
+                        style={{ contentVisibility: 'auto', containIntrinsicSize: '285px' }}
                     >
                         <div className="h-12 sm:h-20 lg:h-24 relative overflow-hidden">
                             <img

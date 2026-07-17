@@ -676,7 +676,8 @@ def get_live_rooms(request):
     ).select_related('user', 'room', 'room__block').order_by('start_time')
     bookings_by_room = {}
     for booking in bookings:
-        bookings_by_room.setdefault(booking.room_id, booking)
+        if booking.start_time <= now or booking.room_id not in bookings_by_room:
+            bookings_by_room[booking.room_id] = booking
     res = []
     for r in rooms:
         active_session = sessions_by_room.get(r.id)
