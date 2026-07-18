@@ -75,12 +75,8 @@ const Dashboard = () => {
             <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tightest uppercase italic">
-                        Institutional <span className="text-indigo-600">Intelligence</span>
+                        Welcome Back <span className="text-indigo-600">Admin</span>
                     </h1>
-                    <div className="flex items-center gap-3 mt-2">
-                        <div className="h-1 w-1 bg-green-500 rounded-full animate-pulse"></div>
-                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-none">Institutional ERP Dashboard - Session Live</p>
-                    </div>
                 </div>
 
                 <div className="flex items-center gap-4">
