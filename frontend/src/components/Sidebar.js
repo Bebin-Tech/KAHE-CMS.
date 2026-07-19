@@ -28,6 +28,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
     const location = useLocation();
     const role = authGet('role')?.toLowerCase();
     const userName = authGet('name') || 'Administrator';
+    const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 1024;
 
     const [expandedGroups, setExpandedGroups] = useState(['Academic Management']);
 
@@ -132,7 +133,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
                 initial={false}
                 animate={{
                     width: isCollapsed ? 72 : 260,
-                    x: isOpen ? 0 : (window.innerWidth < 1024 ? -260 : 0)
+                    x: isOpen ? 0 : (isMobileViewport ? -260 : 0)
                 }}
                 className={cn(
                     "fixed lg:relative inset-y-0 left-0 z-50 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 ease-in-out shadow-xl lg:shadow-none h-screen",

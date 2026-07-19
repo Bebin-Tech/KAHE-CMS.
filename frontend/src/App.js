@@ -29,7 +29,7 @@ const PrivateRoute = ({ children, roles }) => {
 const PublicRoute = ({ children }) => {
     const token = authGet('token');
     // If logged in, don't allow access to login page
-    return token ? <Navigate to="/" replace /> : children;
+    return token ? <Navigate to={roleHome()} replace /> : children;
 };
 
 function App() {

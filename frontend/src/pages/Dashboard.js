@@ -34,15 +34,24 @@ const Dashboard = () => {
             if (d(0)) setStats(prev => ({ ...prev, ...d(0) }));
             setLoading(false);
         } catch (err) {
-            console.error("Institutional Telemetry failure.");
+            console.error("Dashboard sync failed.");
             setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchAll();
-        const timer = setInterval(fetchAll, 8000);
-        return () => clearInterval(timer);
+        const refreshIfVisible = () => {
+            if (!document.hidden) fetchAll();
+        };
+        const timer = setInterval(refreshIfVisible, 30000);
+        document.addEventListener('visibilitychange', refreshIfVisible);
+        window.addEventListener('focus', refreshIfVisible);
+        return () => {
+            clearInterval(timer);
+            document.removeEventListener('visibilitychange', refreshIfVisible);
+            window.removeEventListener('focus', refreshIfVisible);
+        };
     }, []);
 
     // --- DERIVED METRICS ---
@@ -57,7 +66,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-center min-h-screen bg-white">
             <div className="flex flex-col items-center">
                 <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="mt-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] animate-pulse">Institutional Telemetry Booting...</p>
+                <p className="mt-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] animate-pulse">Dashboard Loading...</p>
             </div>
         </div>
     );
