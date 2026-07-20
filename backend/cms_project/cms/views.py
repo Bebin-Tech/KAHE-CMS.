@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.db import IntegrityError, models, transaction
+from django.core.paginator import Paginator
 from datetime import timedelta
 import pandas as pd
 from .models import *
@@ -432,8 +433,51 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 @api_view(['GET'])
 @permission_classes([IsAdminRole])
 def users_list(request):
-    users = User.objects.select_related('department').all().order_by('-date_joined', 'role', 'username')
-    serializer = UserSerializer(users, many=True)
+    def positive_int(value, default, max_value=None):
+        try:
+            number = int(value or default)
+        except (TypeError, ValueError):
+            number = default
+        number = max(number, 1)
+        return min(number, max_value) if max_value else number
+
+    users = User.objects.select_related('department').all()
+    role = str(request.query_params.get('role') or '').strip().lower()
+    search = str(request.query_params.get('search') or '').strip()
+
+    if role == 'admin':
+        users = users.filter(role__in=['admin', 'super_admin'])
+    elif role:
+        users = users.filter(role=role)
+
+    if search:
+        users = users.filter(
+            models.Q(username__icontains=search) |
+            models.Q(email__icontains=search) |
+            models.Q(employee_id__icontains=search) |
+            models.Q(first_name__icontains=search) |
+            models.Q(last_name__icontains=search)
+        )
+
+    users = users.order_by('-date_joined', 'id')
+
+    if 'page' in request.query_params or 'page_size' in request.query_params:
+        page_number = positive_int(request.query_params.get('page'), 1)
+        page_size = positive_int(request.query_params.get('page_size'), 25, 100)
+        paginator = Paginator(users, page_size)
+        page = paginator.get_page(page_number)
+        serializer = UserSerializer(page.object_list, many=True)
+        return Response({
+            "results": serializer.data,
+            "count": paginator.count,
+            "page": page.number,
+            "page_size": page_size,
+            "total_pages": paginator.num_pages,
+            "has_next": page.has_next(),
+            "has_previous": page.has_previous(),
+        })
+
+    serializer = UserSerializer(users[:500], many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])

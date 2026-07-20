@@ -21,9 +21,17 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
     const [message, setMessage] = useState({ text: '', type: '' });
 
     const rows = config.rows || datasets[moduleKey] || [];
-    const filteredRows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(searchTerm.toLowerCase()));
-    const pagedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-    const totalPages = Math.ceil(filteredRows.length / pageSize) || 1;
+    const serverPagination = config.serverPagination;
+    const activeSearchTerm = serverPagination ? (config.searchTerm || '') : searchTerm;
+    const activePage = serverPagination ? (config.currentPage || 1) : currentPage;
+    const filteredRows = serverPagination ? rows : rows.filter(r => JSON.stringify(r).toLowerCase().includes(searchTerm.toLowerCase()));
+    const pagedRows = serverPagination ? rows : filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const totalPages = serverPagination ? (config.totalPages || 1) : (Math.ceil(filteredRows.length / pageSize) || 1);
+    const totalRecords = serverPagination ? (config.totalRecords || rows.length) : filteredRows.length;
+    const refreshData = async () => {
+        if (config.onSaved) await config.onSaved();
+        else fetchData(true);
+    };
 
     const handleAction = async (type, row) => {
         try {
@@ -36,7 +44,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
             } else if (type === 'TOGGLE_STATUS') {
                 if (row.is_active) await API.post(`/users/${row.id}/deactivate/`);
                 else await API.post(`/users/${row.id}/activate/`);
-                fetchData(true);
+                refreshData();
             }
         } catch (err) {
             alert('Operation failed.');
@@ -85,7 +93,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
             else await API.post(`${endpoint}`, p);
 
             setMessage({ text: 'Registry synchronized successfully.', type: 'success' });
-            setTimeout(() => { setShowModal(false); setEditingRecord(null); setFormData({}); fetchData(true); }, 800);
+            setTimeout(() => { setShowModal(false); setEditingRecord(null); setFormData({}); refreshData(); }, 800);
         } catch (err) {
             let errorMsg = 'Registry rejection.';
             if (err.response?.data) {
@@ -124,7 +132,18 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
                 <div className="flex items-center gap-4 w-full md:w-auto">
                     <div className="relative flex-1 md:w-64 group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors" size={16} />
-                        <input className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:border-indigo-500 shadow-sm" placeholder="Search records..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}/>
+                        <input
+                            className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:border-indigo-500 shadow-sm"
+                            placeholder="Search records..."
+                            value={activeSearchTerm}
+                            onChange={e => {
+                                if (serverPagination && config.onSearchChange) config.onSearchChange(e.target.value);
+                                else {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }
+                            }}
+                        />
                     </div>
                     {moduleKey === 'users' && config.allowBulkImport !== false && (
                         <label className="px-6 py-3 bg-slate-100 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest cursor-pointer hover:bg-slate-200 transition-all border border-slate-200 flex items-center gap-2 shadow-sm">
@@ -169,7 +188,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
                                         {config.fields && config.fields.length > 0 && (
                                             <>
                                                 <button onClick={() => { setEditingRecord(row); setFormData(row); setShowModal(true); setMessage({text:'', type:''}); }} className="p-2 bg-white border border-slate-300 rounded-lg text-indigo-600 shadow-sm hover:bg-indigo-50"><Edit3 size={14} /></button>
-                                                <button onClick={async () => { if(window.confirm('Delete?')) { await API.delete(`${config.endpoint}${row.id}/`); fetchData(true); } }} className="p-2 bg-white border border-slate-300 rounded-lg text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={14} /></button>
+                                                <button onClick={async () => { if(window.confirm('Delete?')) { await API.delete(`${config.endpoint}${row.id}/`); refreshData(); } }} className="p-2 bg-white border border-slate-300 rounded-lg text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={14} /></button>
                                             </>
                                         )}
                                     </div>
@@ -181,10 +200,22 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
             </div>
 
             <div className="p-8 border-t border-slate-200 flex justify-between items-center bg-slate-100/60">
-                <span className="text-[10px] font-black text-slate-700 uppercase">Page {currentPage} / {totalPages}</span>
+                <span className="text-[10px] font-black text-slate-700 uppercase">Page {activePage} / {totalPages} · {totalRecords} Records</span>
                 <div className="flex gap-2">
-                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-2 bg-white border border-slate-300 rounded-lg disabled:opacity-40 transition-all hover:bg-slate-50 text-slate-700"><ChevronLeft size={16}/></button>
-                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="p-2 bg-white border border-slate-300 rounded-lg disabled:opacity-40 transition-all hover:bg-slate-50 text-slate-700"><ChevronRight size={16}/></button>
+                    <button
+                        disabled={activePage === 1}
+                        onClick={() => serverPagination && config.onPageChange ? config.onPageChange(activePage - 1) : setCurrentPage(prev => prev - 1)}
+                        className="p-2 bg-white border border-slate-300 rounded-lg disabled:opacity-40 transition-all hover:bg-slate-50 text-slate-700"
+                    >
+                        <ChevronLeft size={16}/>
+                    </button>
+                    <button
+                        disabled={activePage === totalPages}
+                        onClick={() => serverPagination && config.onPageChange ? config.onPageChange(activePage + 1) : setCurrentPage(prev => prev + 1)}
+                        className="p-2 bg-white border border-slate-300 rounded-lg disabled:opacity-40 transition-all hover:bg-slate-50 text-slate-700"
+                    >
+                        <ChevronRight size={16}/>
+                    </button>
                 </div>
             </div>
             </div>

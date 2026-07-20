@@ -35,6 +35,14 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.username})"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['role', '-date_joined'], name='user_role_joined_idx'),
+            models.Index(fields=['role', 'status'], name='user_role_status_idx'),
+            models.Index(fields=['email'], name='user_email_idx'),
+            models.Index(fields=['is_active'], name='user_active_idx'),
+        ]
+
 class Department(models.Model):
     code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=100)

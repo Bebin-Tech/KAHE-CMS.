@@ -1,11 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import RegistryPage from '../../components/RegistryPage';
 import { useRegistry } from '../../context/RegistryContext';
 import { Lock, RefreshCw } from 'lucide-react';
+import API from '../../api';
 
 const UserManagement = () => {
     const { datasets, lookups, fetchData, saving, setSaving } = useRegistry();
     const [activePage, setActivePage] = useState('faculty');
+    const [users, setUsers] = useState([]);
+    const [userPage, setUserPage] = useState(1);
+    const [userSearch, setUserSearch] = useState('');
+    const [userMeta, setUserMeta] = useState({ count: 0, total_pages: 1 });
 
     const pages = [
         { key: 'faculty', label: 'Page 1: Faculty', role: 'faculty', createLabel: '+ Create Faculty Login' },
@@ -19,16 +24,50 @@ const UserManagement = () => {
             ? [['manage_classrooms', 'Create / Edit / Delete / Start / End'], ['class_session', 'Start / End Class'], ['view_only', 'View Only']]
             : [['view_only', 'View Only']];
     const defaultPermission = permissionOptions[0][0];
-    const filteredUsers = useMemo(() => {
-        return (datasets.users || [])
-            .filter(user => currentPage.key === 'admin' ? ['admin', 'super_admin'].includes(user.role) : user.role === currentPage.role)
-            .sort((a, b) => new Date(b.date_joined || 0) - new Date(a.date_joined || 0));
-    }, [datasets.users, currentPage]);
+    const fetchUsers = useCallback(async (page = userPage, search = userSearch) => {
+        const res = await API.get('/users_list/', {
+            params: {
+                role: currentPage.role,
+                page,
+                page_size: 25,
+                search
+            }
+        });
+        setUsers(res.data.results || []);
+        setUserMeta({
+            count: res.data.count || 0,
+            total_pages: res.data.total_pages || 1
+        });
+        setUserPage(res.data.page || page);
+    }, [currentPage.role, userPage, userSearch]);
+
+    useEffect(() => {
+        setUserPage(1);
+        setUserSearch('');
+    }, [activePage]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchUsers(userPage, userSearch);
+        }, 250);
+        return () => clearTimeout(timer);
+    }, [fetchUsers, userPage, userSearch]);
 
     const config = {
         title: currentPage.label, endpoint: '/users/',
-        rows: filteredUsers,
+        rows: users,
         allowBulkImport: false,
+        serverPagination: true,
+        currentPage: userPage,
+        totalPages: userMeta.total_pages,
+        totalRecords: userMeta.count,
+        searchTerm: userSearch,
+        onSearchChange: value => {
+            setUserSearch(value);
+            setUserPage(1);
+        },
+        onPageChange: page => setUserPage(page),
+        onSaved: () => fetchUsers(userPage, userSearch),
         createLabel: currentPage.createLabel,
         defaultValues: { role: currentPage.role, status: 'Active', classroom_permission: defaultPermission },
         columns: currentPage.key === 'faculty'
@@ -63,7 +102,11 @@ const UserManagement = () => {
                 {pages.map(page => (
                     <button
                         key={page.key}
-                        onClick={() => setActivePage(page.key)}
+                        onClick={() => {
+                            setActivePage(page.key);
+                            setUserPage(1);
+                            setUserSearch('');
+                        }}
                         className={`px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${activePage === page.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white text-slate-700 border-slate-300 hover:text-indigo-700 hover:border-indigo-300'}`}
                     >
                         {page.label}
