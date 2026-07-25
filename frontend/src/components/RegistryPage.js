@@ -200,7 +200,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
             </div>
 
             <div className="p-8 border-t border-slate-200 flex justify-between items-center bg-slate-100/60">
-                <span className="text-[10px] font-black text-slate-700 uppercase">Page {activePage} / {totalPages} · {totalRecords} Records</span>
+                <span className="text-[10px] font-black text-slate-700 uppercase">Page {activePage} / {totalPages} | {totalRecords} Records</span>
                 <div className="flex gap-2">
                     <button
                         disabled={activePage === 1}
