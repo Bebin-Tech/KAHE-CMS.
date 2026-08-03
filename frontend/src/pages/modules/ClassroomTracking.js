@@ -36,6 +36,8 @@ const formatDateTime = (value) => {
     });
 };
 
+const BLOCK_OPTIONS = ['S-Block', 'P-Block', 'N-Block', 'E-Block'];
+
 const ClassroomTracking = () => {
     const { datasets } = useRegistry();
     const role = authGet('role')?.toLowerCase();
@@ -46,9 +48,8 @@ const ClassroomTracking = () => {
     const canManageSessions = ['class_session', 'manage_classrooms'].includes(classroomPermission);
     const canManageRooms = classroomPermission === 'manage_classrooms';
     const isFaculty = role === 'faculty';
-    const blockOptions = ['S-Block', 'P-Block', 'N-Block', 'E-Block'];
     const [activeBlock, setActiveBlock] = useState('S-Block');
-    const [rooms, setRooms] = useState([]);
+    const [roomsByBlock, setRoomsByBlock] = useState({});
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const deferredSearchTerm = useDeferredValue(searchTerm);
@@ -73,6 +74,8 @@ const ClassroomTracking = () => {
 
     const [message, setMessage] = useState({ text: '', type: '' });
 
+    const rooms = useMemo(() => roomsByBlock[activeBlock] || [], [roomsByBlock, activeBlock]);
+
     const getApiError = (err, fallback) => {
         const data = err.response?.data;
         if (!data) return fallback;
@@ -96,17 +99,20 @@ const ClassroomTracking = () => {
 
     const roomStatus = (room) => String(room.status || 'Available').toLowerCase();
 
-    const fetchLiveRooms = useCallback(async (silent = false) => {
-        if (!silent) setLoading(true);
+    const fetchLiveRooms = useCallback(async (block = activeBlock, silent = false, force = false) => {
+        const hasCachedRooms = Array.isArray(roomsByBlock[block]);
+        if (hasCachedRooms && !force) return;
+        if (!silent && !hasCachedRooms) setLoading(true);
         try {
             let res;
             try {
-                res = await API.get(`/live-rooms/?block=${encodeURIComponent(activeBlock)}`);
+                res = await API.get(`/live-rooms/?block=${encodeURIComponent(block)}`);
             } catch (err) {
                 if (err.response?.status !== 404) throw err;
-                res = await API.get(`/rooms/?block=${encodeURIComponent(activeBlock)}`);
+                res = await API.get(`/rooms/?block=${encodeURIComponent(block)}`);
             }
-            setRooms(sortRooms(Array.isArray(res.data) ? res.data : []));
+            const sortedRooms = sortRooms(Array.isArray(res.data) ? res.data : []);
+            setRoomsByBlock(prev => ({ ...prev, [block]: sortedRooms }));
         } catch (err) {
             console.error("Failed to sync classroom telemetry.");
             if (err.response?.status === 401) {
@@ -115,14 +121,14 @@ const ClassroomTracking = () => {
                 setMessage({ text: getApiError(err, 'CLASSROOM LIST SYNC FAILED'), type: 'error' });
             }
         } finally {
-            setLoading(false);
+            if (block === activeBlock) setLoading(false);
         }
-    }, [activeBlock]);
+    }, [activeBlock, roomsByBlock]);
 
     useEffect(() => {
-        fetchLiveRooms();
+        fetchLiveRooms(activeBlock, Boolean(roomsByBlock[activeBlock]));
         const refreshIfVisible = () => {
-            if (!document.hidden) fetchLiveRooms(true);
+            if (!document.hidden) fetchLiveRooms(activeBlock, true, true);
         };
         const timer = setInterval(refreshIfVisible, 30000);
         document.addEventListener('visibilitychange', refreshIfVisible);
@@ -132,7 +138,13 @@ const ClassroomTracking = () => {
             document.removeEventListener('visibilitychange', refreshIfVisible);
             window.removeEventListener('focus', refreshIfVisible);
         };
-    }, [fetchLiveRooms]);
+    }, [activeBlock, fetchLiveRooms, roomsByBlock]);
+
+    useEffect(() => {
+        BLOCK_OPTIONS
+            .filter(block => block !== activeBlock)
+            .forEach(block => fetchLiveRooms(block, true));
+    }, [activeBlock, fetchLiveRooms]);
 
     useEffect(() => {
         if (!isFaculty) return;
@@ -168,7 +180,7 @@ const ClassroomTracking = () => {
             setMessage({ text: 'CLASS STARTED SUCCESSFULLY', type: 'success' });
             setTimeout(() => {
                 setShowModal(false);
-                fetchLiveRooms(true);
+                fetchLiveRooms(activeBlock, true, true);
             }, 1500);
         } catch (err) {
             setMessage({ text: getApiError(err, 'SESSION INITIATION FAILED'), type: 'error' });
@@ -182,7 +194,7 @@ const ClassroomTracking = () => {
                 session_id: room.session.id,
                 user_id: authGet('user_id')
             });
-            fetchLiveRooms(true);
+            fetchLiveRooms(activeBlock, true, true);
         } catch (err) {
             alert(err.response?.data?.detail || "END SESSION REJECTED");
         }
@@ -210,13 +222,15 @@ const ClassroomTracking = () => {
                 capacity: Number(roomForm.capacity),
                 building: block
             });
-            setRooms(prev => sortRooms([...prev, res.data]));
+            setRoomsByBlock(prev => ({
+                ...prev,
+                [block]: sortRooms([...(prev[block] || []), res.data])
+            }));
             setSearchTerm('');
             setRoomForm({ room_number: '', building: block, capacity: 60, type: 'Classroom', status: 'Available' });
             setShowRoomModal(false);
             setActiveBlock(block);
-            const fresh = await API.get(`/live-rooms/?block=${encodeURIComponent(block)}`);
-            setRooms(sortRooms(Array.isArray(fresh.data) ? fresh.data : []));
+            fetchLiveRooms(block, true, true);
         } catch (err) {
             setMessage({ text: getApiError(err, 'ROOM CREATION FAILED'), type: 'error' });
         }
@@ -226,7 +240,11 @@ const ClassroomTracking = () => {
         if (!window.confirm(`Delete classroom ${room.room_number}?`)) return;
         try {
             await API.delete(`/rooms/${room.id}/`);
-            fetchLiveRooms(true);
+            setRoomsByBlock(prev => ({
+                ...prev,
+                [activeBlock]: (prev[activeBlock] || []).filter(item => item.id !== room.id)
+            }));
+            fetchLiveRooms(activeBlock, true, true);
         } catch (err) {
             alert(err.response?.data?.detail || "DELETE REJECTED");
         }
@@ -234,11 +252,10 @@ const ClassroomTracking = () => {
 
     const filteredRooms = useMemo(() => {
         const normalizedSearch = deferredSearchTerm.trim().toLowerCase();
-        return sortRooms(rooms.filter(r => {
+        return rooms.filter(r => {
             const status = roomStatus(r);
             const roomNumber = String(r.room_number || '');
             const blockName = r.block_name || r.block_code || r.building || activeBlock;
-            const matchesSelectedBlock = String(blockName).trim().toLowerCase() === activeBlock.toLowerCase();
             const matchesSearch = !normalizedSearch ||
                 roomNumber.toLowerCase().includes(normalizedSearch) ||
                 blockName.toLowerCase().includes(normalizedSearch) ||
@@ -250,8 +267,8 @@ const ClassroomTracking = () => {
                 availabilityFilter === 'booked' ? status === 'booked' :
                 availabilityFilter === 'non_available' ? status !== 'available' && status !== 'booked' :
                 true;
-            return matchesSelectedBlock && matchesSearch && matchesAvailability;
-        }));
+            return matchesSearch && matchesAvailability;
+        });
     }, [rooms, activeBlock, deferredSearchTerm, availabilityFilter]);
 
     const availabilityFilters = [
@@ -285,10 +302,14 @@ const ClassroomTracking = () => {
             </header>
 
             <div className="flex flex-wrap gap-3">
-                {blockOptions.map(block => (
+                {BLOCK_OPTIONS.map(block => (
                     <button
                         key={block}
-                        onClick={() => { setActiveBlock(block); setSearchTerm(''); }}
+                        onClick={() => {
+                            setActiveBlock(block);
+                            setSearchTerm('');
+                            setLoading(!roomsByBlock[block]);
+                        }}
                         className={`px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${activeBlock === block ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white text-slate-700 border-slate-300 hover:text-indigo-700 hover:border-indigo-300'}`}
                     >
                         {block}
@@ -342,8 +363,7 @@ const ClassroomTracking = () => {
                     const isBooked = room.status === 'Booked';
                     const isOwnBooking = isBooked && String(room.booking?.user) === String(authGet('user_id'));
                     return (
-                    <motion.div
-                        layout
+                    <div
                         key={room.id}
                         className="bg-[#1e1e1e] rounded-md shadow-lg overflow-hidden min-h-[158px] sm:min-h-[235px] lg:min-h-[285px] flex flex-col group border border-white/5"
                         style={{ contentVisibility: 'auto', containIntrinsicSize: '285px' }}
@@ -445,7 +465,7 @@ const ClassroomTracking = () => {
                                 )}
                             </div>
                         </div>
-                    </motion.div>
+                    </div>
                 );})}
                     </div>
                 </section>
@@ -473,7 +493,7 @@ const ClassroomTracking = () => {
                                 {message.text && <div className="p-4 rounded-xl bg-rose-50 text-rose-600 text-[10px] font-black uppercase">{message.text}</div>}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <select className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" value={roomForm.building} onChange={e => setRoomForm({ ...roomForm, building: e.target.value })} required>
-                                        {blockOptions.map(block => <option key={block} value={block}>{block}</option>)}
+                                        {BLOCK_OPTIONS.map(block => <option key={block} value={block}>{block}</option>)}
                                     </select>
                                     <input className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Classroom Number" value={roomForm.room_number} onChange={e => setRoomForm({ ...roomForm, room_number: e.target.value })} required />
                                     <input type="number" className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Capacity" value={roomForm.capacity} onChange={e => setRoomForm({ ...roomForm, capacity: e.target.value })} required />

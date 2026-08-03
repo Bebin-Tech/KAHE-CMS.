@@ -699,7 +699,10 @@ def end_session(request):
 @api_view(['GET'])
 def get_live_rooms(request):
     block = str(request.query_params.get('block') or '').strip()
-    rooms = Room.objects.select_related('block').all().order_by('block__code', 'room_number')
+    rooms = Room.objects.select_related('block').only(
+        'id', 'room_number', 'block_id', 'building', 'capacity', 'type', 'status',
+        'block__id', 'block__code', 'block__name'
+    ).order_by('block__code', 'room_number')
     if block:
         rooms = rooms.filter(
             models.Q(block__code__iexact=block) |
@@ -707,17 +710,18 @@ def get_live_rooms(request):
             models.Q(building__iexact=block)
         )
     rooms = list(rooms)
+    room_ids = [room.id for room in rooms]
     active_sessions = ClassSession.objects.filter(
-        room_id__in=[room.id for room in rooms],
+        room_id__in=room_ids,
         status='Active'
-    ).select_related('room', 'faculty', 'faculty__department', 'subject', 'section', 'section__semester')
+    ).select_related('faculty', 'faculty__department', 'subject')
     sessions_by_room = {session.room_id: session for session in active_sessions}
     now = timezone.now()
     bookings = Booking.objects.filter(
-        room_id__in=[room.id for room in rooms],
+        room_id__in=room_ids,
         status='Approved',
         end_time__gte=now
-    ).select_related('user', 'room', 'room__block').order_by('start_time')
+    ).select_related('user').order_by('start_time')
     bookings_by_room = {}
     for booking in bookings:
         if booking.start_time <= now or booking.room_id not in bookings_by_room:
@@ -726,12 +730,43 @@ def get_live_rooms(request):
     for r in rooms:
         active_session = sessions_by_room.get(r.id)
         booking = bookings_by_room.get(r.id)
-        room_data = RoomSerializer(r).data
+        room_status = r.status or 'Available'
+        room_data = {
+            'id': r.id,
+            'room_number': r.room_number,
+            'block': r.block_id,
+            'block_code': r.block.code if r.block else None,
+            'block_name': r.block.name if r.block else r.building,
+            'building': r.building,
+            'capacity': r.capacity,
+            'type': r.type,
+            'status': room_status,
+        }
         if active_session:
-            room_data['session'] = ClassSessionSerializer(active_session).data
+            room_data['session'] = {
+                'id': active_session.id,
+                'room': active_session.room_id,
+                'faculty': active_session.faculty_id,
+                'faculty_name': active_session.faculty.get_full_name(),
+                'subject': active_session.subject_id,
+                'subject_name': active_session.subject.name if active_session.subject else None,
+                'department_name': active_session.faculty.department.name if active_session.faculty.department else None,
+                'start_time': active_session.start_time,
+                'end_time': active_session.end_time,
+                'status': active_session.status,
+            }
             room_data['status'] = 'Occupied'
         elif booking:
-            room_data['booking'] = BookingSerializer(booking).data
+            room_data['booking'] = {
+                'id': booking.id,
+                'user': booking.user_id,
+                'user_name': booking.user.get_full_name(),
+                'room': booking.room_id,
+                'start_time': booking.start_time,
+                'end_time': booking.end_time,
+                'purpose': booking.purpose,
+                'status': booking.status,
+            }
             room_data['status'] = 'Booked'
         elif room_data.get('status') == 'Occupied':
             room_data['status'] = 'Available'
