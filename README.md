@@ -55,14 +55,16 @@ The current deploy commands are:
 - **Build Command**: `./build.sh`
 - **Start Command**: `gunicorn --chdir backend/cms_project cms_project.wsgi:application`
 
-If `DATABASE_URL` is missing, the app falls back to SQLite so the service can still deploy. For reliable student accounts and production data, use PostgreSQL.
+If `DATABASE_URL` is missing on Render, deployment stops. This prevents the app from using temporary SQLite storage in production.
 
 ## 🔄 Data Migration
 
 To move data from your local SQLite database to your live Render environment:
 ```bash
-$env:DATABASE_URL="YOUR_EXTERNAL_POSTGRES_URL"; python migrate_to_render.py
+$env:DATABASE_URL="YOUR_RENDER_EXTERNAL_POSTGRES_URL_WITH_SSLMODE_REQUIRE"; python migrate_to_render.py
 ```
+
+Use the PostgreSQL **External Database URL** when running this command from your computer. Use `--replace-target` only when you intentionally want to clear the target database before loading local data.
 
 ## 🔒 Security
 
