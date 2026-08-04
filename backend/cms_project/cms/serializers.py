@@ -110,7 +110,26 @@ class RoomSerializer(serializers.ModelSerializer):
         validators = []
 
     def validate(self, attrs):
-        building = str(attrs.get('building') or getattr(self.instance, 'building', None) or 'S-Block').strip()
+        def canonical_block_name(value):
+            raw = str(value or '').strip()
+            normalized = raw.lower()
+            aliases = {
+                's': 'S-Block',
+                's block': 'S-Block',
+                's-block': 'S-Block',
+                'p': 'P-Block',
+                'p block': 'P-Block',
+                'p-block': 'P-Block',
+                'n': 'N-Block',
+                'n block': 'N-Block',
+                'n-block': 'N-Block',
+                'e': 'E-Block',
+                'e block': 'E-Block',
+                'e-block': 'E-Block',
+            }
+            return aliases.get(normalized, raw or 'S-Block')
+
+        building = canonical_block_name(attrs.get('building') or getattr(self.instance, 'building', None) or 'S-Block')
         block = attrs.get('block') or getattr(self.instance, 'block', None)
         if not block:
             block = Block.objects.filter(code__iexact=building).first()
