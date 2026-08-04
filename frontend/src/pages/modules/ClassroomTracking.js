@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useDeferredValue, useMemo } fr
 import API from '../../api';
 import { authGet } from '../../authSession';
 import { useRegistry } from '../../context/RegistryContext';
+import { formatISTDateTime, istNow, toISTDateTimeLocal } from '../../timeUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     CheckCircle,
@@ -11,29 +12,18 @@ import {
     Plus
 } from 'lucide-react';
 
-const toDateTimeLocal = (date) => {
-    const pad = (value) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
-
 const defaultClassTimes = () => {
-    const start = new Date();
+    const start = istNow();
     start.setSeconds(0, 0);
     const end = new Date(start.getTime() + 60 * 60 * 1000);
     return {
-        class_start_time: toDateTimeLocal(start),
-        class_end_time: toDateTimeLocal(end)
+        class_start_time: toISTDateTimeLocal(start),
+        class_end_time: toISTDateTimeLocal(end)
     };
 };
 
 const formatDateTime = (value) => {
-    if (!value) return '-';
-    return new Date(value).toLocaleString([], {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    return formatISTDateTime(value);
 };
 
 const DEFAULT_BLOCK_OPTIONS = ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block'];
@@ -424,7 +414,7 @@ const ClassroomTracking = () => {
                                         <p className="hidden sm:block text-sm font-bold text-slate-300 truncate">{room.session?.subject_name || 'Subject'}</p>
                                         <p className="hidden sm:block text-xs font-bold text-slate-500 uppercase truncate">{room.session?.department_name || 'Department'}</p>
                                         <p className="hidden sm:block text-[10px] font-black text-rose-300 uppercase tracking-widest pt-1">
-                                            {formatDateTime(room.session?.start_time)} - {formatDateTime(room.session?.end_time)}
+                                            {formatDateTime(room.session?.start_time)} - {formatDateTime(room.session?.end_time)} IST
                                         </p>
                                         <p className="text-[8px] sm:text-[10px] font-black text-rose-200 uppercase tracking-widest">{calculateDuration(room.session?.start_time)} elapsed</p>
                                     </div>
@@ -433,7 +423,7 @@ const ClassroomTracking = () => {
                                         <p className="text-[9px] sm:text-sm font-black text-amber-200 truncate">Booked</p>
                                         <p className="text-[9px] sm:text-sm font-bold text-slate-300 truncate">By {room.booking?.user_name || 'Faculty'}</p>
                                         <p className="hidden sm:block text-[10px] font-black text-amber-300 uppercase tracking-widest pt-1">
-                                            {formatDateTime(room.booking?.start_time)} - {formatDateTime(room.booking?.end_time)}
+                                            {formatDateTime(room.booking?.start_time)} - {formatDateTime(room.booking?.end_time)} IST
                                         </p>
                                     </div>
                                 ) : (
@@ -455,8 +445,8 @@ const ClassroomTracking = () => {
                                                     ...prev,
                                                     faculty_name: isFaculty ? userName : prev.faculty_name,
                                                     dept_id: isFaculty ? (storedDepartmentId || prev.dept_id) : prev.dept_id,
-                                                    class_start_time: room.booking?.start_time ? toDateTimeLocal(new Date(room.booking.start_time)) : nextTimes.class_start_time,
-                                                    class_end_time: room.booking?.end_time ? toDateTimeLocal(new Date(room.booking.end_time)) : nextTimes.class_end_time
+                                                    class_start_time: room.booking?.start_time ? toISTDateTimeLocal(new Date(room.booking.start_time)) : nextTimes.class_start_time,
+                                                    class_end_time: room.booking?.end_time ? toISTDateTimeLocal(new Date(room.booking.end_time)) : nextTimes.class_end_time
                                                 }));
                                                 setShowModal(true);
                                             }}
@@ -590,11 +580,11 @@ const ClassroomTracking = () => {
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1.5 sm:space-y-2">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class Start Time</label>
+                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class Start Time (IST)</label>
                                             <input type="datetime-local" className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_start_time} onChange={e => setFormData({ ...formData, class_start_time: e.target.value })} required />
                                         </div>
                                         <div className="space-y-1.5 sm:space-y-2">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class End Time</label>
+                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class End Time (IST)</label>
                                             <input type="datetime-local" className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_end_time} onChange={e => setFormData({ ...formData, class_end_time: e.target.value })} required />
                                         </div>
                                     </div>

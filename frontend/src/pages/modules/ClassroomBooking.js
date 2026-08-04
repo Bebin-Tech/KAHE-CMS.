@@ -1,23 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../api';
 import { authGet } from '../../authSession';
+import { formatISTDateTime, istNow, toISTDateTimeLocal } from '../../timeUtils';
 import { Calendar, Clock, RefreshCw, Trash2 } from 'lucide-react';
 
 const blockOptions = ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block'];
 
-const toDateTimeLocal = (date) => {
-    const pad = (value) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
-
 const formatDateTime = (value) => {
-    if (!value) return '-';
-    return new Date(value).toLocaleString([], {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    return formatISTDateTime(value);
 };
 
 const ClassroomBooking = () => {
@@ -31,15 +21,15 @@ const ClassroomBooking = () => {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
 
-    const startDefault = new Date();
+    const startDefault = istNow();
     startDefault.setMinutes(0, 0, 0);
     startDefault.setHours(startDefault.getHours() + 1);
     const endDefault = new Date(startDefault.getTime() + 60 * 60 * 1000);
 
     const [formData, setFormData] = useState({
         room: '',
-        start_time: toDateTimeLocal(startDefault),
-        end_time: toDateTimeLocal(endDefault),
+        start_time: toISTDateTimeLocal(startDefault),
+        end_time: toISTDateTimeLocal(endDefault),
         purpose: ''
     });
 
@@ -180,11 +170,11 @@ const ClassroomBooking = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <label className="space-y-2 block">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Start Time</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Start Time (IST)</span>
                             <input type="datetime-local" className="w-full p-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.start_time} onChange={e => setFormData({ ...formData, start_time: e.target.value })} required />
                         </label>
                         <label className="space-y-2 block">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">End Time</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">End Time (IST)</span>
                             <input type="datetime-local" className="w-full p-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.end_time} onChange={e => setFormData({ ...formData, end_time: e.target.value })} required />
                         </label>
                     </div>
@@ -228,7 +218,7 @@ const ClassroomBooking = () => {
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                         <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-black uppercase tracking-widest">
                                             <Clock size={14} />
-                                            {formatDateTime(booking.start_time)} - {formatDateTime(booking.end_time)}
+                                            {formatDateTime(booking.start_time)} - {formatDateTime(booking.end_time)} IST
                                         </div>
                                         {canManageBooking(booking) && (
                                             <button

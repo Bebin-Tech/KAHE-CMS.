@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import API from '../../api';
+import { formatISTTime } from '../../timeUtils';
 import { Search, MapPin, Clock, User, BookOpen, Navigation } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -83,7 +84,7 @@ const FindClass = () => {
                                     </div>
                                     <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
                                         <Clock size={14} className="text-slate-600" />
-                                        <span className="text-xs font-bold text-slate-800 uppercase">Started {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        <span className="text-xs font-bold text-slate-800 uppercase">Started {formatISTTime(session.start_time)} IST</span>
                                     </div>
                                 </div>
                             </div>
