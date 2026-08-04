@@ -1,7 +1,6 @@
 import os
 import dj_database_url
 from pathlib import Path
-from django.core.exceptions import ImproperlyConfigured
 
 # Path to settings.py is: ROOT/backend/cms_project/cms_project/settings.py
 # BASE_DIR reaches ROOT/backend/cms_project (where manage.py is)
@@ -76,14 +75,26 @@ if DATABASE_URL and '://' in DATABASE_URL:
             ssl_require=IS_RENDER,
         )
     }
+    if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
+        DATABASES['default'].setdefault('OPTIONS', {})
+        DATABASES['default']['OPTIONS'].setdefault('charset', 'utf8mb4')
+elif os.environ.get('MYSQL_DATABASE'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('MYSQL_DATABASE'),
+            'USER': os.environ.get('MYSQL_USER', 'root'),
+            'PASSWORD': os.environ.get('MYSQL_PASSWORD', ''),
+            'HOST': os.environ.get('MYSQL_HOST', '127.0.0.1'),
+            'PORT': os.environ.get('MYSQL_PORT', '3306'),
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+            },
+        }
+    }
 else:
-    if IS_RENDER:
-        raise ImproperlyConfigured(
-            'DATABASE_URL is required on Render. Connect a persistent PostgreSQL '
-            'database so classrooms and user accounts are not lost after deployment.'
-        )
-
-    # Fallback to local SQLite only for local development.
+    # Fallback to SQLite when no external database is configured.
+    # For permanent production data, configure DATABASE_URL or MYSQL_* values.
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

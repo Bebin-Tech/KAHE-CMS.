@@ -44,27 +44,46 @@ This project is configured for a **unified deployment** on Render. The backend a
 
 ### Render Configuration
 
-Use the included `render.yaml` blueprint when creating the Render service. It provisions the web service and attaches the PostgreSQL database as `DATABASE_URL`.
+Use the included `render.yaml` blueprint when creating the Render service. For production, connect a persistent database through `DATABASE_URL` or the `MYSQL_*` environment variables.
 
-If the web service is created manually in Render, create or connect a PostgreSQL database and add this environment variable for persistent data:
+If the web service is created manually in Render, create or connect a persistent database and add one of these configurations:
 
-- `DATABASE_URL`: the internal PostgreSQL connection string from Render.
+- `DATABASE_URL`: a database URL such as `mysql://USER:PASSWORD@HOST:3306/DBNAME` or a Render database URL.
+- MySQL variables: `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_HOST`, `MYSQL_PORT`.
 
 The current deploy commands are:
 
 - **Build Command**: `./build.sh`
 - **Start Command**: `gunicorn --chdir backend/cms_project cms_project.wsgi:application`
 
-If `DATABASE_URL` is missing on Render, deployment stops. This prevents the app from using temporary SQLite storage in production.
+If no persistent database is configured on Render, the app falls back to SQLite so deployment can complete. For permanent classroom and user data, configure `DATABASE_URL` or the `MYSQL_*` variables.
+
+### Local MySQL From VS Code
+
+Create a `.env` or set these in your VS Code terminal before running Django:
+
+```powershell
+$env:MYSQL_DATABASE="kahe_cms"
+$env:MYSQL_USER="root"
+$env:MYSQL_PASSWORD="your_mysql_password"
+$env:MYSQL_HOST="127.0.0.1"
+$env:MYSQL_PORT="3306"
+cd backend/cms_project
+python manage.py migrate
+python init_db.py
+python manage.py runserver
+```
+
+All classrooms and users will then be stored in your MySQL database.
 
 ## 🔄 Data Migration
 
-To move data from your local SQLite database to your live Render environment:
+To move data from your local SQLite database to another configured database:
 ```bash
-$env:DATABASE_URL="YOUR_RENDER_EXTERNAL_POSTGRES_URL_WITH_SSLMODE_REQUIRE"; python migrate_to_render.py
+$env:DATABASE_URL="mysql://USER:PASSWORD@HOST:3306/DBNAME"; python migrate_to_render.py
 ```
 
-Use the PostgreSQL **External Database URL** when running this command from your computer. Use `--replace-target` only when you intentionally want to clear the target database before loading local data.
+Use `--replace-target` only when you intentionally want to clear the target database before loading local data.
 
 ## 🔒 Security
 

@@ -47,7 +47,7 @@ def render_env(database_url):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Move KAHE CMS essential data from local SQLite to Render PostgreSQL.'
+        description='Move KAHE CMS essential data from local SQLite to a configured persistent database.'
     )
     parser.add_argument(
         '--replace-target',
@@ -61,7 +61,7 @@ def main():
         raise SystemExit(
             'DATABASE_URL is required. Use the Render PostgreSQL External Database URL.\n'
             'PowerShell example:\n'
-            '$env:DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DB?sslmode=require"; '
+            '$env:DATABASE_URL="mysql://USER:PASSWORD@HOST:3306/DBNAME"; '
             'python migrate_to_render.py'
         )
 
@@ -82,16 +82,16 @@ def main():
             '--output', str(fixture_path),
         ], local_env())
 
-        print('Applying migrations to Render PostgreSQL...')
+        print('Applying migrations to the target database...')
         target_env = render_env(database_url)
         run_manage(['migrate'], target_env)
 
         if args.replace_target:
-            print('Flushing target PostgreSQL database...')
+            print('Flushing target database...')
             run_manage(['flush', '--noinput'], target_env)
             run_manage(['migrate'], target_env)
 
-        print('Loading local data into Render PostgreSQL...')
+        print('Loading local data into the target database...')
         run_manage(['loaddata', str(fixture_path)], target_env)
 
         print('Synchronizing default admin accounts...')
@@ -103,7 +103,7 @@ def main():
         )
 
     print('Migration completed successfully.')
-    print('Redeploy the Render web service after confirming DATABASE_URL is set.')
+    print('Restart or redeploy the app after confirming the database environment variables are set.')
 
 
 if __name__ == '__main__':

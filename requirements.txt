@@ -11,3 +11,4 @@ python-multipart
 gunicorn
 whitenoise
 dj-database-url
+pymysql
