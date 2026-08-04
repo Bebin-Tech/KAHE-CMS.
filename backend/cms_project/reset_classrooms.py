@@ -19,6 +19,10 @@ ROOMS_BY_BLOCK = {
         'labs': ['203'],
         'classrooms': ['105', '107', '108', '201', '202', '204', '205', '401', '404', '405'],
     },
+    'T-Block': {
+        'labs': [],
+        'classrooms': ['201', '203', '204', '205', '301', '303'],
+    },
 }
 
 DEFAULT_BLOCKS = ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']
