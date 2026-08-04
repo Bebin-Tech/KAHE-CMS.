@@ -1,14 +1,21 @@
 from django.db import migrations
 
 
-LABS = ['103', '104', 'S3', 'S4', 'S5', 'S6']
-
-CLASSROOMS = [
-    '107', '108', '109', '110',
-    '207', '208', '209', '210', '211',
-    '301', '302', '303', '304', '305', '307', '309', '310', '311',
-    '401', '402', '403', '404', '405', '407', '408', '409', '411', '412', '413',
-]
+ROOMS_BY_BLOCK = {
+    'S-Block': {
+        'labs': ['103', '104', 'S3', 'S4', 'S5', 'S6'],
+        'classrooms': [
+            '107', '108', '109', '110',
+            '207', '208', '209', '210', '211',
+            '301', '302', '303', '304', '305', '307', '309', '310', '311',
+            '401', '402', '403', '404', '405', '407', '408', '409', '411', '412', '413',
+        ],
+    },
+    'P-Block': {
+        'labs': ['203'],
+        'classrooms': ['105', '107', '108', '201', '202', '204', '205', '401', '404', '405'],
+    },
+}
 
 
 def reset_s_block_classrooms(apps, schema_editor):
@@ -23,32 +30,37 @@ def reset_s_block_classrooms(apps, schema_editor):
     Timetable.objects.all().delete()
     Room.objects.all().delete()
 
-    block, _ = Block.objects.get_or_create(code='S-Block', defaults={'name': 'S-Block'})
-    if block.name != 'S-Block':
-        block.name = 'S-Block'
-        block.save(update_fields=['name'])
+    rooms = []
+    for block_name, room_groups in ROOMS_BY_BLOCK.items():
+        block, _ = Block.objects.get_or_create(code=block_name, defaults={'name': block_name})
+        if block.name != block_name:
+            block.name = block_name
+            block.save(update_fields=['name'])
 
-    Room.objects.bulk_create([
-        Room(
-            room_number=room_number,
-            block=block,
-            building='S-Block',
-            capacity=60,
-            type='Lab',
-            status='Available',
-        )
-        for room_number in LABS
-    ] + [
-        Room(
-            room_number=room_number,
-            block=block,
-            building='S-Block',
-            capacity=60,
-            type='Classroom',
-            status='Available',
-        )
-        for room_number in CLASSROOMS
-    ])
+        rooms.extend([
+            Room(
+                room_number=room_number,
+                block=block,
+                building=block_name,
+                capacity=60,
+                type='Lab',
+                status='Available',
+            )
+            for room_number in room_groups['labs']
+        ])
+        rooms.extend([
+            Room(
+                room_number=room_number,
+                block=block,
+                building=block_name,
+                capacity=60,
+                type='Classroom',
+                status='Available',
+            )
+            for room_number in room_groups['classrooms']
+        ])
+
+    Room.objects.bulk_create(rooms)
 
     Block.objects.exclude(code__in=['S-Block', 'P-Block', 'N-Block', 'E-Block']).filter(rooms__isnull=True).delete()
 
