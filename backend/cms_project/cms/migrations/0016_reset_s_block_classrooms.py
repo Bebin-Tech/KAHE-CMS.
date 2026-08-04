@@ -62,7 +62,13 @@ def reset_s_block_classrooms(apps, schema_editor):
 
     Room.objects.bulk_create(rooms)
 
-    Block.objects.exclude(code__in=['S-Block', 'P-Block', 'N-Block', 'E-Block']).filter(rooms__isnull=True).delete()
+    for block_name in ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']:
+        block, _ = Block.objects.get_or_create(code=block_name, defaults={'name': block_name})
+        if block.name != block_name:
+            block.name = block_name
+            block.save(update_fields=['name'])
+
+    Block.objects.exclude(code__in=['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']).filter(rooms__isnull=True).delete()
 
 
 class Migration(migrations.Migration):

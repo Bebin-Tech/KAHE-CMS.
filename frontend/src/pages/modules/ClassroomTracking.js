@@ -36,7 +36,7 @@ const formatDateTime = (value) => {
     });
 };
 
-const DEFAULT_BLOCK_OPTIONS = ['S-Block', 'P-Block', 'N-Block', 'E-Block'];
+const DEFAULT_BLOCK_OPTIONS = ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block'];
 
 const ClassroomTracking = () => {
     const { datasets } = useRegistry();

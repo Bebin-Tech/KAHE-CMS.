@@ -3,7 +3,7 @@ import API from '../../api';
 import { authGet } from '../../authSession';
 import { Calendar, Clock, RefreshCw, Trash2 } from 'lucide-react';
 
-const blockOptions = ['S-Block', 'P-Block', 'N-Block', 'E-Block'];
+const blockOptions = ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block'];
 
 const toDateTimeLocal = (date) => {
     const pad = (value) => String(value).padStart(2, '0');

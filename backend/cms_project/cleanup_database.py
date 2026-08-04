@@ -89,7 +89,7 @@ def main():
         """
         DELETE FROM cms_block
         WHERE id NOT IN (SELECT DISTINCT block_id FROM cms_room)
-        AND code NOT IN ('S-Block', 'P-Block', 'N-Block', 'E-Block')
+        AND code NOT IN ('S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block')
         """
     )
 

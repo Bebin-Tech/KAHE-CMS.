@@ -64,7 +64,7 @@ def cleanup_nonessential_data(apps, schema_editor):
         id__in=ClassSession.objects.exclude(subject_id=None).values('subject_id')
     ).delete()
     Block.objects.exclude(
-        code__in=['S-Block', 'P-Block', 'N-Block', 'E-Block']
+        code__in=['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']
     ).filter(rooms__isnull=True).delete()
 
 

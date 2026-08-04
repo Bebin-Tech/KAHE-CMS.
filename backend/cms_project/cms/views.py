@@ -698,7 +698,7 @@ def end_session(request):
 
 @api_view(['GET'])
 def get_room_blocks(request):
-    default_blocks = ['S-Block', 'P-Block', 'N-Block', 'E-Block']
+    default_blocks = ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']
     default_order = models.Case(
         *[
             models.When(code__iexact=block, then=models.Value(index))

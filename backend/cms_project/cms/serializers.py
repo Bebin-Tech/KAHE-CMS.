@@ -126,6 +126,9 @@ class RoomSerializer(serializers.ModelSerializer):
                 'e': 'E-Block',
                 'e block': 'E-Block',
                 'e-block': 'E-Block',
+                't': 'T-Block',
+                't block': 'T-Block',
+                't-block': 'T-Block',
             }
             return aliases.get(normalized, raw or 'S-Block')
 

@@ -14,6 +14,9 @@ BLOCK_ALIASES = {
     'e': 'E-Block',
     'e block': 'E-Block',
     'e-block': 'E-Block',
+    't': 'T-Block',
+    't block': 'T-Block',
+    't-block': 'T-Block',
 }
 
 

@@ -21,7 +21,7 @@ ROOMS_BY_BLOCK = {
     },
 }
 
-DEFAULT_BLOCKS = ['S-Block', 'P-Block', 'N-Block', 'E-Block']
+DEFAULT_BLOCKS = ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']
 
 
 def table_exists(cursor, table_name):
@@ -44,6 +44,23 @@ def main():
             cursor.execute(f'DELETE FROM "{table}"')
 
     cursor.execute('DELETE FROM "cms_room"')
+
+    for default_block in DEFAULT_BLOCKS:
+        cursor.execute(
+            'SELECT id FROM "cms_block" WHERE code=? OR name=? ORDER BY id LIMIT 1',
+            (default_block, default_block),
+        )
+        row = cursor.fetchone()
+        if row:
+            cursor.execute(
+                'UPDATE "cms_block" SET code=?, name=? WHERE id=?',
+                (default_block, default_block, row[0]),
+            )
+        else:
+            cursor.execute(
+                'INSERT INTO "cms_block" (code, name) VALUES (?, ?)',
+                (default_block, default_block),
+            )
 
     totals = {}
     for block_name, room_groups in ROOMS_BY_BLOCK.items():
@@ -89,7 +106,7 @@ def main():
         """
         DELETE FROM "cms_block"
         WHERE id NOT IN (SELECT DISTINCT block_id FROM "cms_room")
-        AND code NOT IN ('S-Block', 'P-Block', 'N-Block', 'E-Block')
+        AND code NOT IN ('S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block')
         """
     )
 
