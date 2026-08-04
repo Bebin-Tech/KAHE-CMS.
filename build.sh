@@ -2,7 +2,9 @@
 # exit on error
 set -o errexit
 
-if [ -n "$RENDER" ] && [ -z "$DATABASE_URL" ]; then
+DATABASE_URL_TRIMMED="$(printf '%s' "${DATABASE_URL:-}" | tr -d '[:space:]')"
+
+if [ -n "$RENDER" ] && { [ -z "$DATABASE_URL_TRIMMED" ] || ! printf '%s' "$DATABASE_URL_TRIMMED" | grep -q '://'; }; then
   echo "ERROR: DATABASE_URL is required on Render."
   echo "Connect a Render PostgreSQL database so classrooms and user accounts are stored permanently."
   exit 1
