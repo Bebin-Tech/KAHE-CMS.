@@ -49,46 +49,9 @@ def normalize_status(value):
 
 
 def import_legacy_rooms(apps, schema_editor):
-    connection = schema_editor.connection
-    with connection.cursor() as cursor:
-        existing_table = connection.introspection.table_names(cursor)
-        if 'rooms' not in existing_table:
-            return
-
-        Block = apps.get_model('cms', 'Block')
-        Room = apps.get_model('cms', 'Room')
-
-        cursor.execute(
-            """
-            SELECT room_number, type, capacity, status, building, is_deleted
-            FROM rooms
-            WHERE room_number IS NOT NULL
-            """
-        )
-        legacy_rooms = cursor.fetchall()
-
-    for room_number, room_type, capacity, status, building, is_deleted in legacy_rooms:
-        if is_deleted:
-            continue
-
-        clean_room_number = str(room_number or '').strip()
-        if not clean_room_number:
-            continue
-
-        block_name = normalize_block(building, clean_room_number)
-        block, _ = Block.objects.get_or_create(code=block_name, defaults={'name': block_name})
-
-        if Room.objects.filter(block=block, room_number=clean_room_number).exists():
-            continue
-
-        Room.objects.create(
-            room_number=clean_room_number,
-            block=block,
-            building=block.name,
-            capacity=capacity or 60,
-            type=normalize_room_type(room_type),
-            status=normalize_status(status),
-        )
+    # Legacy room imports are intentionally disabled. The current system should
+    # preserve only classrooms created in the normalized cms_room table.
+    return
 
 
 class Migration(migrations.Migration):

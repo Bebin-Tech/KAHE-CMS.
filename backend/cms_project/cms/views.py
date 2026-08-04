@@ -697,6 +697,36 @@ def end_session(request):
         return Response({"detail": "Session not found"}, status=404)
 
 @api_view(['GET'])
+def get_room_blocks(request):
+    default_blocks = ['S-Block', 'P-Block', 'N-Block', 'E-Block']
+    default_order = models.Case(
+        *[
+            models.When(code__iexact=block, then=models.Value(index))
+            for index, block in enumerate(default_blocks)
+        ],
+        default=models.Value(len(default_blocks)),
+        output_field=models.IntegerField(),
+    )
+    blocks = Block.objects.annotate(
+        room_count=models.Count('rooms'),
+        sort_order=default_order,
+    ).filter(
+        models.Q(room_count__gt=0) |
+        models.Q(code__in=default_blocks) |
+        models.Q(name__in=default_blocks)
+    ).order_by('sort_order', 'name', 'code')
+
+    return Response([
+        {
+            'code': block.code,
+            'name': block.name,
+            'room_count': block.room_count,
+        }
+        for block in blocks
+    ])
+
+
+@api_view(['GET'])
 def get_live_rooms(request):
     block = str(request.query_params.get('block') or '').strip()
     rooms = Room.objects.select_related('block').only(

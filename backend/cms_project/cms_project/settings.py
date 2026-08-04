@@ -1,6 +1,7 @@
 import os
 import dj_database_url
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 # Path to settings.py is: ROOT/backend/cms_project/cms_project/settings.py
 # BASE_DIR reaches ROOT/backend/cms_project (where manage.py is)
@@ -61,6 +62,7 @@ WSGI_APPLICATION = 'cms_project.wsgi.application'
 
 # Robust Database Configuration
 DATABASE_URL = os.environ.get('DATABASE_URL')
+IS_RENDER = 'RENDER' in os.environ
 
 if DATABASE_URL:
     # Clean the URL to avoid "Scheme ://" error caused by empty or malformed strings
@@ -68,10 +70,20 @@ if DATABASE_URL:
 
 if DATABASE_URL and '://' in DATABASE_URL:
     DATABASES = {
-        'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=True)
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=IS_RENDER,
+        )
     }
 else:
-    # Fallback to local SQLite if no valid database URL is provided
+    if IS_RENDER:
+        raise ImproperlyConfigured(
+            'DATABASE_URL is required on Render. Connect a persistent PostgreSQL '
+            'database so classrooms and user accounts are not lost after deployment.'
+        )
+
+    # Fallback to local SQLite only for local development.
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

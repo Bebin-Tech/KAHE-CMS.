@@ -2,6 +2,12 @@
 # exit on error
 set -o errexit
 
+if [ -n "$RENDER" ] && [ -z "$DATABASE_URL" ]; then
+  echo "ERROR: DATABASE_URL is required on Render."
+  echo "Connect a Render PostgreSQL database so classrooms and user accounts are stored permanently."
+  exit 1
+fi
+
 # Install dependencies (requirements.txt is in the root)
 pip install -r requirements.txt
 

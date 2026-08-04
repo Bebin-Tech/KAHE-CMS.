@@ -25,6 +25,7 @@ urlpatterns = [
     path('dashboard-stats/', dashboard_stats),
     path('class-history/', class_history),
     path('bulk-import-faculty/', bulk_import_faculty),
+    path('room-blocks/', get_room_blocks),
     path('live-rooms/', get_live_rooms),
     path('find-class/', find_class),
     path('start-session/', start_session),

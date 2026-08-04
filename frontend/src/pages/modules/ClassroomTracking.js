@@ -36,7 +36,7 @@ const formatDateTime = (value) => {
     });
 };
 
-const BLOCK_OPTIONS = ['S-Block', 'P-Block', 'N-Block', 'E-Block'];
+const DEFAULT_BLOCK_OPTIONS = ['S-Block', 'P-Block', 'N-Block', 'E-Block'];
 
 const ClassroomTracking = () => {
     const { datasets } = useRegistry();
@@ -49,6 +49,7 @@ const ClassroomTracking = () => {
     const canManageRooms = classroomPermission === 'manage_classrooms';
     const isFaculty = role === 'faculty';
     const [activeBlock, setActiveBlock] = useState('S-Block');
+    const [blockOptions, setBlockOptions] = useState(DEFAULT_BLOCK_OPTIONS);
     const [roomsByBlock, setRoomsByBlock] = useState({});
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -99,6 +100,30 @@ const ClassroomTracking = () => {
 
     const roomStatus = (room) => String(room.status || 'Available').toLowerCase();
 
+    const mergeBlockOptions = useCallback((blocks) => {
+        const merged = [...DEFAULT_BLOCK_OPTIONS];
+        blocks.forEach(block => {
+            const blockName = String(block?.name || block?.code || block || '').trim();
+            if (blockName && !merged.some(item => item.toLowerCase() === blockName.toLowerCase())) {
+                merged.push(blockName);
+            }
+        });
+        return merged;
+    }, []);
+
+    const fetchBlockOptions = useCallback(async () => {
+        try {
+            const res = await API.get('/room-blocks/');
+            const nextBlocks = mergeBlockOptions(Array.isArray(res.data) ? res.data : []);
+            setBlockOptions(nextBlocks);
+            if (!nextBlocks.some(block => block.toLowerCase() === activeBlock.toLowerCase())) {
+                setActiveBlock(nextBlocks[0] || 'S-Block');
+            }
+        } catch (err) {
+            console.error('Failed to load classroom blocks.');
+        }
+    }, [activeBlock, mergeBlockOptions]);
+
     const fetchLiveRooms = useCallback(async (block = activeBlock, silent = false, force = false) => {
         const hasCachedRooms = Array.isArray(roomsByBlock[block]);
         if (hasCachedRooms && !force) return;
@@ -141,10 +166,14 @@ const ClassroomTracking = () => {
     }, [activeBlock, fetchLiveRooms, roomsByBlock]);
 
     useEffect(() => {
-        BLOCK_OPTIONS
+        fetchBlockOptions();
+    }, [fetchBlockOptions]);
+
+    useEffect(() => {
+        blockOptions
             .filter(block => block !== activeBlock)
             .forEach(block => fetchLiveRooms(block, true));
-    }, [activeBlock, fetchLiveRooms]);
+    }, [activeBlock, blockOptions, fetchLiveRooms]);
 
     useEffect(() => {
         if (!isFaculty) return;
@@ -230,6 +259,8 @@ const ClassroomTracking = () => {
             setRoomForm({ room_number: '', building: block, capacity: 60, type: 'Classroom', status: 'Available' });
             setShowRoomModal(false);
             setActiveBlock(block);
+            setBlockOptions(prev => mergeBlockOptions([...prev, block]));
+            fetchBlockOptions();
             fetchLiveRooms(block, true, true);
         } catch (err) {
             setMessage({ text: getApiError(err, 'ROOM CREATION FAILED'), type: 'error' });
@@ -302,7 +333,7 @@ const ClassroomTracking = () => {
             </header>
 
             <div className="flex flex-wrap gap-3">
-                {BLOCK_OPTIONS.map(block => (
+                {blockOptions.map(block => (
                     <button
                         key={block}
                         onClick={() => {
@@ -493,7 +524,7 @@ const ClassroomTracking = () => {
                                 {message.text && <div className="p-4 rounded-xl bg-rose-50 text-rose-600 text-[10px] font-black uppercase">{message.text}</div>}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <select className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" value={roomForm.building} onChange={e => setRoomForm({ ...roomForm, building: e.target.value })} required>
-                                        {BLOCK_OPTIONS.map(block => <option key={block} value={block}>{block}</option>)}
+                                        {blockOptions.map(block => <option key={block} value={block}>{block}</option>)}
                                     </select>
                                     <input className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Classroom Number" value={roomForm.room_number} onChange={e => setRoomForm({ ...roomForm, room_number: e.target.value })} required />
                                     <input type="number" className="p-4 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Capacity" value={roomForm.capacity} onChange={e => setRoomForm({ ...roomForm, capacity: e.target.value })} required />
