@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import API from '../api';
 import {
+    ArrowUpRight,
     DoorOpen,
+    GraduationCap,
     School,
-    Zap,
-    GraduationCap
+    Zap
 } from 'lucide-react';
 
 const Dashboard = () => {
-    // --- DYNAMIC DATA STATE ---
     const [stats, setStats] = useState({
         rooms: 0,
         active: 0,
@@ -22,7 +22,6 @@ const Dashboard = () => {
     });
     const [loading, setLoading] = useState(true);
 
-    // --- REFRESH ENGINE ---
     const fetchAll = async () => {
         try {
             const results = await Promise.allSettled([
@@ -34,7 +33,7 @@ const Dashboard = () => {
             if (d(0)) setStats(prev => ({ ...prev, ...d(0) }));
             setLoading(false);
         } catch (err) {
-            console.error("Dashboard sync failed.");
+            console.error('Dashboard sync failed.');
             setLoading(false);
         }
     };
@@ -54,12 +53,43 @@ const Dashboard = () => {
         };
     }, []);
 
-    // --- DERIVED METRICS ---
     const metrics = useMemo(() => [
-        { label: 'Departments', value: stats.total_departments, icon: DoorOpen, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-        { label: 'Faculty Count', value: stats.total_faculties, icon: GraduationCap, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100' },
-        { label: 'Total Spaces', value: stats.rooms, icon: School, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-        { label: 'Active Classes', value: stats.active, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' }
+        {
+            label: 'Departments',
+            value: stats.total_departments,
+            icon: DoorOpen,
+            note: 'Academic units',
+            accent: 'bg-sky-500',
+            iconBox: 'bg-sky-50 text-sky-700',
+            footer: 'text-sky-700 bg-sky-50 border-sky-100'
+        },
+        {
+            label: 'Faculty Count',
+            value: stats.total_faculties,
+            icon: GraduationCap,
+            note: 'Teaching accounts',
+            accent: 'bg-fuchsia-500',
+            iconBox: 'bg-fuchsia-50 text-fuchsia-700',
+            footer: 'text-fuchsia-700 bg-fuchsia-50 border-fuchsia-100'
+        },
+        {
+            label: 'Total Spaces',
+            value: stats.rooms,
+            icon: School,
+            note: 'Rooms and labs',
+            accent: 'bg-emerald-500',
+            iconBox: 'bg-emerald-50 text-emerald-700',
+            footer: 'text-emerald-700 bg-emerald-50 border-emerald-100'
+        },
+        {
+            label: 'Active Classes',
+            value: stats.active,
+            icon: Zap,
+            note: 'Live sessions',
+            accent: 'bg-amber-500',
+            iconBox: 'bg-amber-50 text-amber-700',
+            footer: 'text-amber-700 bg-amber-50 border-amber-100'
+        }
     ], [stats]);
 
     if (loading) return (
@@ -72,34 +102,59 @@ const Dashboard = () => {
     );
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] p-6 lg:p-12">
-
-            {/* WELCOME SECTION */}
-            <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-10">
+            <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tightest uppercase italic">
+                    <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tightest uppercase italic">
                         Welcome Back <span className="text-indigo-600">Admin</span>
                     </h1>
+                    <p className="mt-2 text-xs font-black uppercase tracking-[0.24em] text-slate-500">
+                        Live campus overview
+                    </p>
                 </div>
-
             </header>
 
-            {/* ANALYTICS GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5 mb-8">
                 {metrics.map((m) => (
-                    <div key={m.label} className={`bg-white p-8 rounded-[2rem] border ${m.border} shadow-md group hover:shadow-xl transition-all duration-500 hover:-translate-y-1`}>
-                        <div className="flex items-center justify-between mb-6">
-                            <div className={`p-4 rounded-2xl ${m.bg} ${m.color} group-hover:scale-110 transition-transform`}>
-                                <m.icon size={24} />
+                    <div
+                        key={m.label}
+                        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                        <div className={`absolute inset-y-0 left-0 w-1.5 ${m.accent}`} />
+                        <div className="p-5 sm:p-6">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">{m.label}</p>
+                                    <p className="mt-3 text-4xl font-black tracking-tight text-slate-950">{m.value}</p>
+                                </div>
+                                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${m.iconBox}`}>
+                                    <m.icon size={23} />
+                                </div>
                             </div>
-                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">Real-time</span>
+
+                            <div className="mt-5 flex items-center justify-between gap-3">
+                                <span className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${m.footer}`}>
+                                    {m.note}
+                                </span>
+                                <ArrowUpRight className="h-4 w-4 text-slate-400" />
+                            </div>
                         </div>
-                        <p className={`text-4xl font-black text-slate-900 tracking-tighter`}>{m.value}</p>
-                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.25em] mt-2 group-hover:text-slate-800 transition-colors">{m.label}</p>
                     </div>
                 ))}
             </div>
 
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">System Status</p>
+                        <h2 className="mt-2 text-xl font-black text-slate-900">Classroom availability is ready to monitor.</h2>
+                    </div>
+                    <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-emerald-700">
+                        <Zap size={18} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Live Sync Active</span>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
