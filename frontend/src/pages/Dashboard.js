@@ -59,7 +59,6 @@ const Dashboard = () => {
             value: stats.total_departments,
             icon: DoorOpen,
             note: 'Academic units',
-            accent: 'bg-sky-500',
             iconBox: 'bg-sky-50 text-sky-700',
             footer: 'text-sky-700 bg-sky-50 border-sky-100'
         },
@@ -68,7 +67,6 @@ const Dashboard = () => {
             value: stats.total_faculties,
             icon: GraduationCap,
             note: 'Teaching accounts',
-            accent: 'bg-fuchsia-500',
             iconBox: 'bg-fuchsia-50 text-fuchsia-700',
             footer: 'text-fuchsia-700 bg-fuchsia-50 border-fuchsia-100'
         },
@@ -77,7 +75,6 @@ const Dashboard = () => {
             value: stats.rooms,
             icon: School,
             note: 'Rooms and labs',
-            accent: 'bg-emerald-500',
             iconBox: 'bg-emerald-50 text-emerald-700',
             footer: 'text-emerald-700 bg-emerald-50 border-emerald-100'
         },
@@ -86,7 +83,6 @@ const Dashboard = () => {
             value: stats.active,
             icon: Zap,
             note: 'Live sessions',
-            accent: 'bg-amber-500',
             iconBox: 'bg-amber-50 text-amber-700',
             footer: 'text-amber-700 bg-amber-50 border-amber-100'
         }
@@ -120,7 +116,6 @@ const Dashboard = () => {
                         key={m.label}
                         className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                     >
-                        <div className={`absolute inset-y-0 left-0 w-1.5 ${m.accent}`} />
                         <div className="p-5 sm:p-6">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
