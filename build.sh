@@ -23,6 +23,8 @@ python manage.py collectstatic --noinput
 # Run migrations
 python manage.py migrate
 
-# Initialize institutional identity (Create Admin)
-# init_db.py is also in backend/cms_project
-python init_db.py
+# Optional first-time admin bootstrap. Keep disabled during normal deploys so
+# deleted or edited database users are not recreated or overwritten.
+if [ "${INIT_DEFAULT_USERS:-false}" = "true" ]; then
+  python init_db.py
+fi

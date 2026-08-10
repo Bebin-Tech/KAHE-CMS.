@@ -25,14 +25,15 @@ ROOMS_BY_BLOCK = {
 def reset_s_block_classrooms(apps, schema_editor):
     Block = apps.get_model('cms', 'Block')
     Room = apps.get_model('cms', 'Room')
-    Booking = apps.get_model('cms', 'Booking')
-    ClassSession = apps.get_model('cms', 'ClassSession')
-    Timetable = apps.get_model('cms', 'Timetable')
 
-    Booking.objects.all().delete()
-    ClassSession.objects.all().delete()
-    Timetable.objects.all().delete()
-    Room.objects.all().delete()
+    for block_name in ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']:
+        block, _ = Block.objects.get_or_create(code=block_name, defaults={'name': block_name})
+        if block.name != block_name:
+            block.name = block_name
+            block.save(update_fields=['name'])
+
+    if Room.objects.exists():
+        return
 
     rooms = []
     for block_name, room_groups in ROOMS_BY_BLOCK.items():
@@ -41,38 +42,29 @@ def reset_s_block_classrooms(apps, schema_editor):
             block.name = block_name
             block.save(update_fields=['name'])
 
-        rooms.extend([
-            Room(
-                room_number=room_number,
-                block=block,
-                building=block_name,
-                capacity=60,
-                type='Lab',
-                status='Available',
-            )
-            for room_number in room_groups['labs']
-        ])
-        rooms.extend([
-            Room(
-                room_number=room_number,
-                block=block,
-                building=block_name,
-                capacity=60,
-                type='Classroom',
-                status='Available',
-            )
-            for room_number in room_groups['classrooms']
-        ])
+        for room_number in room_groups['labs']:
+            if not Room.objects.filter(block=block, room_number=room_number).exists():
+                rooms.append(Room(
+                    room_number=room_number,
+                    block=block,
+                    building=block_name,
+                    capacity=60,
+                    type='Lab',
+                    status='Available',
+                ))
+        for room_number in room_groups['classrooms']:
+            if not Room.objects.filter(block=block, room_number=room_number).exists():
+                rooms.append(Room(
+                    room_number=room_number,
+                    block=block,
+                    building=block_name,
+                    capacity=60,
+                    type='Classroom',
+                    status='Available',
+                ))
 
-    Room.objects.bulk_create(rooms)
-
-    for block_name in ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']:
-        block, _ = Block.objects.get_or_create(code=block_name, defaults={'name': block_name})
-        if block.name != block_name:
-            block.name = block_name
-            block.save(update_fields=['name'])
-
-    Block.objects.exclude(code__in=['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']).filter(rooms__isnull=True).delete()
+    if rooms:
+        Room.objects.bulk_create(rooms)
 
 
 class Migration(migrations.Migration):
