@@ -51,6 +51,8 @@ If the web service is created manually in Render, create or connect a persistent
 - `DATABASE_URL`: a MySQL URL such as `mysql://USER:PASSWORD@HOST:3306/DBNAME`.
 - MySQL variables: `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_HOST`, `MYSQL_PORT`.
 
+If Render already has a non-MySQL `DATABASE_URL` from an old database, either replace it with the MySQL URL or add the full `MYSQL_*` variable set. When `MYSQL_DATABASE` is present, the app uses the `MYSQL_*` variables for persistence.
+
 The current deploy commands are:
 
 - **Build Command**: `./build.sh`

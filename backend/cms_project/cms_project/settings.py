@@ -68,7 +68,9 @@ if DATABASE_URL:
     # Clean the URL to avoid "Scheme ://" error caused by empty or malformed strings
     DATABASE_URL = DATABASE_URL.strip().strip('"').strip("'")
 
-if DATABASE_URL and '://' in DATABASE_URL:
+USE_MYSQL_ENV = bool(os.environ.get('MYSQL_DATABASE'))
+
+if DATABASE_URL and '://' in DATABASE_URL and (DATABASE_URL.startswith('mysql://') or not USE_MYSQL_ENV):
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
@@ -84,7 +86,7 @@ if DATABASE_URL and '://' in DATABASE_URL:
             'Render deployment must use MySQL for persistent KAHE CMS data. '
             'Set DATABASE_URL to a mysql:// connection string.'
         )
-elif os.environ.get('MYSQL_DATABASE'):
+elif USE_MYSQL_ENV:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
