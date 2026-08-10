@@ -679,14 +679,6 @@ def start_session(request):
             status='Active'
         )
         
-        # Log the action
-        AuditLog.objects.create(
-            user=request.user if request.user.is_authenticated else None,
-            action="SESSION_START",
-            resource=f"Room {room.room_number}",
-            details=f"Faculty {session.faculty.get_full_name()} started session for {session.subject.name}"
-        )
-        
         return Response(ClassSessionSerializer(session).data)
     except Room.DoesNotExist:
         return Response({"detail": "Room not found"}, status=404)
@@ -715,14 +707,6 @@ def end_session(request):
         room = session.room
         room.status = 'Available'
         room.save()
-        
-        # Log the action
-        AuditLog.objects.create(
-            user=request.user if request.user.is_authenticated else None,
-            action="SESSION_END",
-            resource=f"Room {room.room_number}",
-            details=f"Session completed for {session.subject.name}"
-        )
         
         return Response({"status": "success"})
     except ClassSession.DoesNotExist:

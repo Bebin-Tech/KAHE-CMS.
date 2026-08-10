@@ -8,7 +8,7 @@ export const RegistryProvider = ({ children }) => {
     const [datasets, setDatasets] = useState({
         departments: [], programs: [], semesters: [], sections: [], subjects: [],
         users: [], mappings: [], curricula: [], rooms: [], settings: null,
-        audit: [], dashboard_stats: {}
+        dashboard_stats: {}
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -19,21 +19,20 @@ export const RegistryProvider = ({ children }) => {
         const canReadUsers = ['admin', 'super_admin'].includes(role);
         try {
             const results = await Promise.allSettled([
-                API.get('/departments/'), API.get('/programs/'), API.get('/semesters/'),
-                API.get('/sections/'), API.get('/subjects/'), canReadUsers ? API.get('/users_list/') : Promise.resolve({ data: [] }),
-                API.get('/faculty-assignments/'), API.get('/curricula/'),
-                API.get('/rooms/'), API.get('/dashboard-stats/'), API.get('/audit-logs/')
+                API.get('/departments/'),
+                canReadUsers ? API.get('/users_list/') : Promise.resolve({ data: [] }),
+                API.get('/rooms/'),
+                API.get('/dashboard-stats/')
             ]);
 
             const d = results.map(r => r.status === 'fulfilled' ? r.value.data : []);
 
             setDatasets(prev => ({
                 ...prev,
-                departments: d[0] || [], programs: d[1] || [], semesters: d[2] || [],
-                sections: d[3] || [], subjects: d[4] || [], users: d[5] || [],
-                mappings: d[6] || [], curricula: d[7] || [], rooms: d[8] || [],
-                dashboard_stats: d[9] || {},
-                audit: d[10] || []
+                departments: d[0] || [],
+                users: d[1] || [],
+                rooms: d[2] || [],
+                dashboard_stats: d[3] || {}
             }));
         } catch (err) {
             console.error("Registry Sync Failure");
