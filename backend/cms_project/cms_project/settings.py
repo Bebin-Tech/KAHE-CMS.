@@ -1,7 +1,6 @@
 import os
 import dj_database_url
 from pathlib import Path
-from django.core.exceptions import ImproperlyConfigured
 
 # Path to settings.py is: ROOT/backend/cms_project/cms_project/settings.py
 # BASE_DIR reaches ROOT/backend/cms_project (where manage.py is)
@@ -70,7 +69,7 @@ if DATABASE_URL:
 
 USE_MYSQL_ENV = bool(os.environ.get('MYSQL_DATABASE'))
 
-if DATABASE_URL and '://' in DATABASE_URL and (DATABASE_URL.startswith('mysql://') or not USE_MYSQL_ENV):
+if DATABASE_URL and '://' in DATABASE_URL and not USE_MYSQL_ENV:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
@@ -81,11 +80,6 @@ if DATABASE_URL and '://' in DATABASE_URL and (DATABASE_URL.startswith('mysql://
     if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
         DATABASES['default'].setdefault('OPTIONS', {})
         DATABASES['default']['OPTIONS'].setdefault('charset', 'utf8mb4')
-    elif IS_RENDER:
-        raise ImproperlyConfigured(
-            'Render deployment must use MySQL for persistent KAHE CMS data. '
-            'Set DATABASE_URL=mysql://USER:PASSWORD@HOST:3306/DBNAME or configure MYSQL_* variables.'
-        )
 elif USE_MYSQL_ENV:
     DATABASES = {
         'default': {
@@ -100,11 +94,6 @@ elif USE_MYSQL_ENV:
             },
         }
     }
-elif IS_RENDER:
-    raise ImproperlyConfigured(
-        'Persistent MySQL is required on Render. Set DATABASE_URL to a mysql:// URL '
-        'or configure MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, and MYSQL_PORT.'
-    )
 else:
     # Fallback to SQLite when no external database is configured.
     # For permanent production data, configure DATABASE_URL or MYSQL_* values.
