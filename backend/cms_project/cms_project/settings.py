@@ -81,6 +81,11 @@ if DATABASE_URL and '://' in DATABASE_URL and (DATABASE_URL.startswith('mysql://
     if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
         DATABASES['default'].setdefault('OPTIONS', {})
         DATABASES['default']['OPTIONS'].setdefault('charset', 'utf8mb4')
+    elif IS_RENDER:
+        raise ImproperlyConfigured(
+            'Render deployment must use MySQL for persistent KAHE CMS data. '
+            'Set DATABASE_URL=mysql://USER:PASSWORD@HOST:3306/DBNAME or configure MYSQL_* variables.'
+        )
 elif USE_MYSQL_ENV:
     DATABASES = {
         'default': {
@@ -97,7 +102,7 @@ elif USE_MYSQL_ENV:
     }
 elif IS_RENDER:
     raise ImproperlyConfigured(
-        'A persistent database is required on Render. Set DATABASE_URL to a persistent database URL '
+        'Persistent MySQL is required on Render. Set DATABASE_URL to a mysql:// URL '
         'or configure MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, and MYSQL_PORT.'
     )
 else:
