@@ -2,6 +2,19 @@
 # exit on error
 set -o errexit
 
+if [ "${RENDER:-false}" = "true" ]; then
+  if [ -z "${DATABASE_URL:-}" ] && [ -z "${MYSQL_DATABASE:-}" ]; then
+    echo "ERROR: Persistent MySQL is required on Render."
+    echo "Add DATABASE_URL=mysql://USER:PASSWORD@HOST:3306/DBNAME or configure MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT."
+    exit 1
+  fi
+  if [ -n "${DATABASE_URL:-}" ] && [[ "${DATABASE_URL}" != mysql://* ]]; then
+    echo "ERROR: DATABASE_URL on Render must be a MySQL URL."
+    echo "Expected format: mysql://USER:PASSWORD@HOST:3306/DBNAME"
+    exit 1
+  fi
+fi
+
 # Install dependencies (requirements.txt is in the root)
 pip install -r requirements.txt
 
