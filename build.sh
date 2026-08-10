@@ -4,18 +4,14 @@ set -o errexit
 
 if [ "${RENDER:-false}" = "true" ]; then
   if [ -z "${DATABASE_URL:-}" ] && [ -z "${MYSQL_DATABASE:-}" ]; then
-    echo "ERROR: Persistent MySQL is required on Render."
-    echo "Add DATABASE_URL=mysql://USER:PASSWORD@HOST:3306/DBNAME or configure MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT."
-    exit 1
-  fi
-  if [ -n "${DATABASE_URL:-}" ] && [[ "${DATABASE_URL}" != mysql://* ]] && [ -z "${MYSQL_DATABASE:-}" ]; then
-    echo "ERROR: DATABASE_URL on Render must be a MySQL URL."
-    echo "Expected format: mysql://USER:PASSWORD@HOST:3306/DBNAME"
-    echo "Alternatively configure MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT."
+    echo "ERROR: A persistent database is required on Render."
+    echo "Set DATABASE_URL to your persistent database URL or configure MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT."
     exit 1
   fi
   if [ -n "${DATABASE_URL:-}" ] && [[ "${DATABASE_URL}" != mysql://* ]] && [ -n "${MYSQL_DATABASE:-}" ]; then
     echo "WARNING: DATABASE_URL is not MySQL. Using MYSQL_* variables for persistent MySQL instead."
+  elif [ -n "${DATABASE_URL:-}" ] && [[ "${DATABASE_URL}" != mysql://* ]]; then
+    echo "WARNING: DATABASE_URL is not MySQL. Using it as the persistent Render database."
   fi
 fi
 
