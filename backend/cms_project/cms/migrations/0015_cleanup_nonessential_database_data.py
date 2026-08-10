@@ -48,8 +48,6 @@ def cleanup_nonessential_data(apps, schema_editor):
     Program = apps.get_model('cms', 'Program')
     Semester = apps.get_model('cms', 'Semester')
     Section = apps.get_model('cms', 'Section')
-    Subject = apps.get_model('cms', 'Subject')
-    ClassSession = apps.get_model('cms', 'ClassSession')
     Block = apps.get_model('cms', 'Block')
 
     Timetable.objects.all().delete()
@@ -60,9 +58,6 @@ def cleanup_nonessential_data(apps, schema_editor):
     Section.objects.all().delete()
     Semester.objects.all().delete()
     Program.objects.all().delete()
-    Subject.objects.exclude(
-        id__in=ClassSession.objects.exclude(subject_id=None).values('subject_id')
-    ).delete()
     Block.objects.exclude(
         code__in=['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block']
     ).filter(rooms__isnull=True).delete()

@@ -20,6 +20,7 @@ export const RegistryProvider = ({ children }) => {
         try {
             const results = await Promise.allSettled([
                 API.get('/departments/'),
+                API.get('/subjects/'),
                 canReadUsers ? API.get('/users_list/') : Promise.resolve({ data: [] }),
                 API.get('/rooms/'),
                 API.get('/dashboard-stats/')
@@ -30,9 +31,10 @@ export const RegistryProvider = ({ children }) => {
             setDatasets(prev => ({
                 ...prev,
                 departments: d[0] || [],
-                users: d[1] || [],
-                rooms: d[2] || [],
-                dashboard_stats: d[3] || {}
+                subjects: d[1] || [],
+                users: d[2] || [],
+                rooms: d[3] || [],
+                dashboard_stats: d[4] || {}
             }));
         } catch (err) {
             console.error("Registry Sync Failure");

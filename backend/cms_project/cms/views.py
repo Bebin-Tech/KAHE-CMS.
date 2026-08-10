@@ -607,6 +607,14 @@ def start_session(request):
             if not department:
                 department = request.user.department
 
+        selected_subject = None
+        if subject_id:
+            selected_subject = Subject.objects.filter(id=subject_id).select_related('department').first()
+            if not selected_subject:
+                return Response({"detail": "Selected subject was not found."}, status=400)
+            if department and selected_subject.department_id != department.id:
+                return Response({"detail": "Selected subject does not belong to the selected department."}, status=400)
+
         if not faculty_id:
             if not faculty_name:
                 return Response({"detail": "Faculty name is required"}, status=400)
@@ -630,7 +638,7 @@ def start_session(request):
                 faculty.save()
             faculty_id = faculty.id
 
-        if not subject_id:
+        if not selected_subject:
             if not subject_name:
                 return Response({"detail": "Subject is required"}, status=400)
             if not department:
@@ -652,6 +660,8 @@ def start_session(request):
                 }
             )
             subject_id = subject.id
+        else:
+            subject_id = selected_subject.id
 
         conflicting_booking = Booking.objects.filter(
             room=room,

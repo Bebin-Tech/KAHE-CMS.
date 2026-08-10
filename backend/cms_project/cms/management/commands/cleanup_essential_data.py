@@ -111,11 +111,6 @@ class Command(BaseCommand):
             actions['completed_sessions_deleted'] += completed_sessions.count()
             completed_sessions.delete()
 
-            active_subject_ids = ClassSession.objects.filter(status='Active').values('subject_id')
-            unused_subjects = Subject.objects.exclude(id__in=active_subject_ids)
-            actions['unused_subjects_deleted'] += unused_subjects.count()
-            unused_subjects.delete()
-
             self.merge_duplicate_departments(actions)
             self.remove_empty_blocks(actions)
             self.normalize_room_status(actions)
@@ -142,8 +137,6 @@ class Command(BaseCommand):
             actions[f'{model._meta.model_name}_to_delete'] = model.objects.count()
         actions['past_bookings_to_delete'] = Booking.objects.filter(end_time__lt=now).count()
         actions['completed_sessions_to_delete'] = ClassSession.objects.exclude(status='Active').count()
-        active_subject_ids = ClassSession.objects.filter(status='Active').values('subject_id')
-        actions['unused_subjects_to_delete'] = Subject.objects.exclude(id__in=active_subject_ids).count()
         actions['duplicate_departments_to_merge'] = self.count_duplicate_departments()
         actions['empty_blocks_to_delete'] = Block.objects.exclude(code__in=CORE_BLOCKS).filter(rooms__isnull=True).count()
         active_room_ids = ClassSession.objects.filter(status='Active').values('room_id')

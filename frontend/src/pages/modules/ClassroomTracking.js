@@ -51,7 +51,7 @@ const ClassroomTracking = () => {
     const [formData, setFormData] = useState({
         faculty_name: isFaculty ? userName : '',
         dept_id: storedDepartmentId,
-        subject_name: '',
+        subject_id: '',
         period: ''
     });
     const [roomForm, setRoomForm] = useState({
@@ -65,6 +65,15 @@ const ClassroomTracking = () => {
     const [message, setMessage] = useState({ text: '', type: '' });
 
     const rooms = useMemo(() => roomsByBlock[activeBlock] || [], [roomsByBlock, activeBlock]);
+    const availableSubjects = useMemo(() => {
+        const subjects = datasets.subjects || [];
+        const deptId = String(formData.dept_id || '');
+        return subjects.filter(subject => {
+            const isActive = String(subject.status || 'Active').toLowerCase() === 'active';
+            const matchesDepartment = !deptId || String(subject.department || '') === deptId;
+            return isActive && matchesDepartment;
+        });
+    }, [datasets.subjects, formData.dept_id]);
 
     const getApiError = (err, fallback) => {
         const data = err.response?.data;
@@ -190,12 +199,16 @@ const ClassroomTracking = () => {
             setMessage({ text: 'PLEASE SELECT A CLASS PERIOD', type: 'error' });
             return;
         }
+        if (!formData.subject_id) {
+            setMessage({ text: 'PLEASE SELECT A SUBJECT', type: 'error' });
+            return;
+        }
         try {
             await API.post('/start-session/', {
                 room_id: selectedRoom.id,
                 faculty_name: formData.faculty_name,
                 department_id: Number(formData.dept_id),
-                subject_name: formData.subject_name,
+                subject_id: Number(formData.subject_id),
                 period: formData.period
             });
             setMessage({ text: 'CLASS STARTED SUCCESSFULLY', type: 'success' });
@@ -446,6 +459,7 @@ const ClassroomTracking = () => {
                                                     ...prev,
                                                     faculty_name: isFaculty ? userName : prev.faculty_name,
                                                     dept_id: isFaculty ? (storedDepartmentId || prev.dept_id) : prev.dept_id,
+                                                    subject_id: '',
                                                     period: ''
                                                 }));
                                                 setShowModal(true);
@@ -568,7 +582,7 @@ const ClassroomTracking = () => {
                                                 {storedDepartmentName || (datasets.departments || []).find(d => String(d.id) === String(formData.dept_id))?.name || 'Department not assigned'}
                                             </div>
                                         ) : (
-                                            <select className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.dept_id} onChange={e => setFormData({ ...formData, dept_id: e.target.value })} required>
+                                            <select className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.dept_id} onChange={e => setFormData({ ...formData, dept_id: e.target.value, subject_id: '' })} required>
                                                 <option value="">Select Dept</option>
                                                 {(datasets.departments || []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                                             </select>
@@ -576,7 +590,19 @@ const ClassroomTracking = () => {
                                     </div>
                                     <div className="space-y-1.5 sm:space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Subject</label>
-                                        <input className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter subject" value={formData.subject_name} onChange={e => setFormData({ ...formData, subject_name: e.target.value })} required />
+                                        <select className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.subject_id} onChange={e => setFormData({ ...formData, subject_id: e.target.value })} required>
+                                            <option value="">Select Subject</option>
+                                            {availableSubjects.map(subject => (
+                                                <option key={subject.id} value={subject.id}>
+                                                    {subject.code ? `${subject.code} - ${subject.name}` : subject.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {availableSubjects.length === 0 && (
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-amber-300 ml-1">
+                                                No active subjects available for this department.
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Select Period</label>

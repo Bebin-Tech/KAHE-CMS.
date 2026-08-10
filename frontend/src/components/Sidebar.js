@@ -9,6 +9,7 @@ import {
     Building2,
     Calendar,
     ChevronDown,
+    BookOpen,
     LogOut,
     X
 } from 'lucide-react';
@@ -68,6 +69,12 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             name: 'Department',
             path: '/departments',
             icon: Building2,
+            roles: ['admin', 'super_admin']
+        },
+        {
+            name: 'Subject',
+            path: '/subjects',
+            icon: BookOpen,
             roles: ['admin', 'super_admin']
         },
         {

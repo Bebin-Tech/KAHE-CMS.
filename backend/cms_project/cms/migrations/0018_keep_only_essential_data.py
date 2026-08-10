@@ -85,9 +85,6 @@ def cleanup_essential_data(apps, schema_editor):
     Booking.objects.filter(end_time__lt=now).delete()
     ClassSession.objects.exclude(status='Active').delete()
 
-    active_subject_ids = ClassSession.objects.filter(status='Active').values('subject_id')
-    Subject.objects.exclude(id__in=active_subject_ids).delete()
-
     department_groups = defaultdict(list)
     for department in Department.objects.order_by('id'):
         key = ((department.code or '').strip().lower(), (department.name or '').strip().lower())

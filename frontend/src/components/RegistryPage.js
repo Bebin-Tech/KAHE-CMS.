@@ -83,7 +83,7 @@ const RegistryPage = ({ moduleKey, config, datasets, lookups, fetchData, saving,
 
             // Ensure IDs and Numbers are correct types
             Object.keys(p).forEach(k => {
-                if (['department', 'program', 'semester', 'subject', 'faculty', 'section', 'duration_years', 'number', 'student_count', 'credits', 'weekly_hours', 'capacity', 'periods_per_day'].includes(k)) {
+                if (['department', 'program', 'semester', 'subject', 'faculty', 'section', 'duration_years', 'number', 'student_count', 'credits', 'weekly_hours', 'syllabus_hours', 'allotted_hours', 'capacity', 'periods_per_day'].includes(k)) {
                     if (p[k] !== undefined && p[k] !== '') p[k] = Number(p[k]);
                 }
             });
