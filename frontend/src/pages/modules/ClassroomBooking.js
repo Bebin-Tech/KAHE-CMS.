@@ -128,9 +128,6 @@ const ClassroomBooking = () => {
                     <h1 className="text-4xl font-black text-slate-900 tracking-tightest uppercase italic">
                         Classroom <span className="text-indigo-600">Booking</span>
                     </h1>
-                        <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-2">
-                            {isAdmin ? 'View and manage all classroom bookings' : 'Reserve classrooms by date and time'}
-                        </p>
                 </div>
                 <button onClick={fetchData} className="px-5 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-sm">
                     <RefreshCw size={15} />
