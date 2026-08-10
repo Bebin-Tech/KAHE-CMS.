@@ -138,18 +138,6 @@ const Dashboard = () => {
                 ))}
             </div>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">System Status</p>
-                        <h2 className="mt-2 text-xl font-black text-slate-900">Classroom availability is ready to monitor.</h2>
-                    </div>
-                    <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-emerald-700">
-                        <Zap size={18} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Live Sync Active</span>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };
