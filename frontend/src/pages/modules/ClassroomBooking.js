@@ -1,10 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../api';
 import { authGet } from '../../authSession';
-import { formatISTDateTime, istNow, toISTDateTimeLocal } from '../../timeUtils';
+import { formatISTDateTime } from '../../timeUtils';
 import { Calendar, Clock, RefreshCw, Trash2 } from 'lucide-react';
 
 const blockOptions = ['S-Block', 'P-Block', 'N-Block', 'E-Block', 'T-Block'];
+const periodOptions = [
+    { value: '1', label: '1st Period', time: '9:00 AM - 9:50 AM' },
+    { value: '2', label: '2nd Period', time: '9:50 AM - 10:55 AM' },
+    { value: '3', label: '3rd Period', time: '11:15 AM - 12:00 PM' },
+    { value: '4', label: '4th Period', time: '12:00 PM - 12:45 PM' },
+    { value: '5', label: '5th Period', time: '01:30 PM - 02:20 PM' },
+    { value: '6', label: '6th Period', time: '02:20 PM - 03:10 PM' }
+];
 
 const formatDateTime = (value) => {
     return formatISTDateTime(value);
@@ -21,15 +29,9 @@ const ClassroomBooking = () => {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
 
-    const startDefault = istNow();
-    startDefault.setMinutes(0, 0, 0);
-    startDefault.setHours(startDefault.getHours() + 1);
-    const endDefault = new Date(startDefault.getTime() + 60 * 60 * 1000);
-
     const [formData, setFormData] = useState({
         room: '',
-        start_time: toISTDateTimeLocal(startDefault),
-        end_time: toISTDateTimeLocal(endDefault),
+        period: '',
         purpose: ''
     });
 
@@ -84,11 +86,15 @@ const ClassroomBooking = () => {
         e.preventDefault();
         setSaving(true);
         setMessage({ text: '', type: '' });
+        if (!formData.period) {
+            setSaving(false);
+            setMessage({ text: 'Please select a booking period.', type: 'error' });
+            return;
+        }
         try {
             await API.post('/bookings/', {
                 room: Number(formData.room),
-                start_time: formData.start_time,
-                end_time: formData.end_time,
+                period: formData.period,
                 purpose: formData.purpose
             });
             setMessage({ text: 'Classroom booked successfully.', type: 'success' });
@@ -168,15 +174,25 @@ const ClassroomBooking = () => {
                         </select>
                     </label>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <label className="space-y-2 block">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Start Time (IST)</span>
-                            <input type="datetime-local" className="w-full p-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.start_time} onChange={e => setFormData({ ...formData, start_time: e.target.value })} required />
-                        </label>
-                        <label className="space-y-2 block">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">End Time (IST)</span>
-                            <input type="datetime-local" className="w-full p-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.end_time} onChange={e => setFormData({ ...formData, end_time: e.target.value })} required />
-                        </label>
+                    <div className="space-y-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Select Period</span>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {periodOptions.map(period => {
+                                const selected = formData.period === period.value;
+                                return (
+                                    <button
+                                        key={period.value}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, period: period.value })}
+                                        className={`min-h-[82px] rounded-xl border p-3 text-left transition-all ${selected ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white border-slate-300 text-slate-800 hover:border-indigo-400 hover:bg-indigo-50'}`}
+                                        aria-pressed={selected}
+                                    >
+                                        <span className="block text-[10px] font-black uppercase tracking-widest">{period.label}</span>
+                                        <span className={`mt-2 block text-[10px] font-black uppercase tracking-wide ${selected ? 'text-indigo-100' : 'text-slate-500'}`}>{period.time}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     <label className="space-y-2 block">

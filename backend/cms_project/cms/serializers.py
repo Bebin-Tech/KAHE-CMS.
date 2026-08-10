@@ -1,7 +1,31 @@
 from rest_framework import serializers
 from django.db import models
 from django.utils import timezone
+from datetime import datetime, time
 from .models import *
+
+PERIOD_SCHEDULE = {
+    '1': (time(9, 0), time(9, 50)),
+    '2': (time(9, 50), time(10, 55)),
+    '3': (time(11, 15), time(12, 0)),
+    '4': (time(12, 0), time(12, 45)),
+    '5': (time(13, 30), time(14, 20)),
+    '6': (time(14, 20), time(15, 10)),
+}
+
+def period_datetimes(period):
+    period_key = str(period or '').strip()
+    if period_key.lower().endswith(('st', 'nd', 'rd', 'th')):
+        period_key = period_key[:-2]
+    if period_key not in PERIOD_SCHEDULE:
+        return None, None
+    current_tz = timezone.get_current_timezone()
+    today = timezone.localdate()
+    start_time, end_time = PERIOD_SCHEDULE[period_key]
+    return (
+        timezone.make_aware(datetime.combine(today, start_time), current_tz),
+        timezone.make_aware(datetime.combine(today, end_time), current_tz)
+    )
 
 class UserSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
@@ -158,6 +182,8 @@ class BookingSerializer(serializers.ModelSerializer):
     room_number = serializers.CharField(source='room.room_number', read_only=True)
     block_name = serializers.CharField(source='room.block.name', read_only=True)
     block_code = serializers.CharField(source='room.block.code', read_only=True)
+    period = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = Booking
         fields = '__all__'
@@ -166,11 +192,16 @@ class BookingSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         user = request.user if request else None
         room = attrs.get('room') or getattr(self.instance, 'room', None)
+        period = attrs.pop('period', None)
+        if period:
+            start_time, end_time = period_datetimes(period)
+            attrs['start_time'] = start_time
+            attrs['end_time'] = end_time
         start_time = attrs.get('start_time') or getattr(self.instance, 'start_time', None)
         end_time = attrs.get('end_time') or getattr(self.instance, 'end_time', None)
 
         if not start_time or not end_time:
-            raise serializers.ValidationError({"detail": "Start time and end time are required."})
+            raise serializers.ValidationError({"detail": "Please select a valid booking period."})
         if end_time <= start_time:
             raise serializers.ValidationError({"detail": "End time must be after start time."})
         if start_time < timezone.now():
