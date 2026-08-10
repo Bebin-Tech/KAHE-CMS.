@@ -16,3 +16,4 @@ kahe_cms.db
 frontend/build/
 .DS_Store
 .env
+.npm-cache/

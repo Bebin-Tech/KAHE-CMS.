@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.db import IntegrityError, models, transaction
 from django.core.paginator import Paginator
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 import pandas as pd
 from .models import *
 from .serializers import *
@@ -123,6 +123,41 @@ def parse_client_datetime(value, fallback=None):
     if timezone.is_naive(parsed):
         parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
     return parsed
+
+PERIOD_SCHEDULE = {
+    '1': (time(9, 0), time(9, 50)),
+    '2': (time(9, 50), time(10, 55)),
+    '3': (time(11, 15), time(12, 0)),
+    '4': (time(12, 0), time(12, 45)),
+    '5': (time(13, 30), time(14, 20)),
+    '6': (time(14, 20), time(15, 10)),
+}
+
+def period_datetimes(period):
+    period_key = str(period or '').strip()
+    if period_key.lower().endswith(('st', 'nd', 'rd', 'th')):
+        period_key = period_key[:-2]
+    if period_key not in PERIOD_SCHEDULE:
+        return None, None
+    current_tz = timezone.get_current_timezone()
+    today = timezone.localdate()
+    start_time, end_time = PERIOD_SCHEDULE[period_key]
+    return (
+        timezone.make_aware(datetime.combine(today, start_time), current_tz),
+        timezone.make_aware(datetime.combine(today, end_time), current_tz)
+    )
+
+def complete_expired_sessions():
+    now = timezone.now()
+    expired_sessions = ClassSession.objects.filter(
+        status='Active',
+        end_time__isnull=False,
+        end_time__lte=now
+    )
+    expired_room_ids = list(expired_sessions.values_list('room_id', flat=True))
+    if expired_room_ids:
+        expired_sessions.update(status='Completed')
+        Room.objects.filter(id__in=expired_room_ids, status='Occupied').update(status='Available')
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -531,6 +566,7 @@ def start_session(request):
     if not can_run_class_sessions(request.user):
         return Response({"detail": "You do not have permission to start classes."}, status=status.HTTP_403_FORBIDDEN)
 
+    complete_expired_sessions()
     room_id = request.data.get('room_id')
     faculty_id = request.data.get('faculty_id')
     subject_id = request.data.get('subject_id')
@@ -540,19 +576,15 @@ def start_session(request):
     department_id = request.data.get('department_id') or request.data.get('dept_id')
     topic = request.data.get('topic')
     remarks = request.data.get('remarks')
-    requested_start_time = parse_client_datetime(
-        request.data.get('class_start_time') or request.data.get('start_time'),
-        timezone.now()
-    )
-    requested_end_time = parse_client_datetime(
-        request.data.get('class_end_time') or request.data.get('end_time'),
-        None
-    )
+    selected_period = request.data.get('period') or request.data.get('class_period')
+    requested_start_time, requested_end_time = period_datetimes(selected_period)
 
     if not requested_end_time:
-        requested_end_time = requested_start_time + timedelta(hours=1)
+        return Response({"detail": "Please select a valid class period."}, status=400)
     if requested_end_time <= requested_start_time:
         return Response({"detail": "Class end time must be after class start time."}, status=400)
+    if requested_end_time <= timezone.now():
+        return Response({"detail": "The selected period has already ended."}, status=400)
     
     try:
         room = Room.objects.get(id=room_id)
@@ -728,6 +760,7 @@ def get_room_blocks(request):
 
 @api_view(['GET'])
 def get_live_rooms(request):
+    complete_expired_sessions()
     block = str(request.query_params.get('block') or '').strip()
     rooms = Room.objects.select_related('block').only(
         'id', 'room_number', 'block_id', 'building', 'capacity', 'type', 'status',
@@ -805,6 +838,7 @@ def get_live_rooms(request):
 
 @api_view(['GET'])
 def find_class(request):
+    complete_expired_sessions()
     query = request.query_params.get('q', '')
     if not query:
         return Response([])
@@ -826,6 +860,7 @@ def find_class(request):
 
 @api_view(['GET'])
 def dashboard_stats(request):
+    complete_expired_sessions()
     data = {
         "rooms": Room.objects.count(),
         "active": ClassSession.objects.filter(status='Active').count(),

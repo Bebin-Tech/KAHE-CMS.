@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useDeferredValue, useMemo } fr
 import API from '../../api';
 import { authGet } from '../../authSession';
 import { useRegistry } from '../../context/RegistryContext';
-import { formatISTDateTime, istNow, toISTDateTimeLocal } from '../../timeUtils';
+import { formatISTDateTime } from '../../timeUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     CheckCircle,
@@ -12,15 +12,14 @@ import {
     Plus
 } from 'lucide-react';
 
-const defaultClassTimes = () => {
-    const start = istNow();
-    start.setSeconds(0, 0);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
-    return {
-        class_start_time: toISTDateTimeLocal(start),
-        class_end_time: toISTDateTimeLocal(end)
-    };
-};
+const PERIOD_OPTIONS = [
+    { value: '1', label: '1st Period', time: '9:00 AM - 9:50 AM' },
+    { value: '2', label: '2nd Period', time: '9:50 AM - 10:55 AM' },
+    { value: '3', label: '3rd Period', time: '11:15 AM - 12:00 PM' },
+    { value: '4', label: '4th Period', time: '12:00 PM - 12:45 PM' },
+    { value: '5', label: '5th Period', time: '01:30 PM - 02:20 PM' },
+    { value: '6', label: '6th Period', time: '02:20 PM - 03:10 PM' }
+];
 
 const formatDateTime = (value) => {
     return formatISTDateTime(value);
@@ -53,7 +52,7 @@ const ClassroomTracking = () => {
         faculty_name: isFaculty ? userName : '',
         dept_id: storedDepartmentId,
         subject_name: '',
-        ...defaultClassTimes()
+        period: ''
     });
     const [roomForm, setRoomForm] = useState({
         room_number: '',
@@ -187,14 +186,17 @@ const ClassroomTracking = () => {
     const handleStartClass = async (e) => {
         e.preventDefault();
         setMessage({ text: '', type: '' });
+        if (!formData.period) {
+            setMessage({ text: 'PLEASE SELECT A CLASS PERIOD', type: 'error' });
+            return;
+        }
         try {
             await API.post('/start-session/', {
                 room_id: selectedRoom.id,
                 faculty_name: formData.faculty_name,
                 department_id: Number(formData.dept_id),
                 subject_name: formData.subject_name,
-                class_start_time: formData.class_start_time,
-                class_end_time: formData.class_end_time
+                period: formData.period
             });
             setMessage({ text: 'CLASS STARTED SUCCESSFULLY', type: 'success' });
             setTimeout(() => {
@@ -439,14 +441,12 @@ const ClassroomTracking = () => {
                                     !isOccupied && (!isBooked || isOwnBooking || canManageRooms) ? (
                                         <button
                                             onClick={() => {
-                                                const nextTimes = defaultClassTimes();
                                                 setSelectedRoom(room);
                                                 setFormData(prev => ({
                                                     ...prev,
                                                     faculty_name: isFaculty ? userName : prev.faculty_name,
                                                     dept_id: isFaculty ? (storedDepartmentId || prev.dept_id) : prev.dept_id,
-                                                    class_start_time: room.booking?.start_time ? toISTDateTimeLocal(new Date(room.booking.start_time)) : nextTimes.class_start_time,
-                                                    class_end_time: room.booking?.end_time ? toISTDateTimeLocal(new Date(room.booking.end_time)) : nextTimes.class_end_time
+                                                    period: ''
                                                 }));
                                                 setShowModal(true);
                                             }}
@@ -578,14 +578,24 @@ const ClassroomTracking = () => {
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Subject</label>
                                         <input className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter subject" value={formData.subject_name} onChange={e => setFormData({ ...formData, subject_name: e.target.value })} required />
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1.5 sm:space-y-2">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class Start Time (IST)</label>
-                                            <input type="datetime-local" className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_start_time} onChange={e => setFormData({ ...formData, class_start_time: e.target.value })} required />
-                                        </div>
-                                        <div className="space-y-1.5 sm:space-y-2">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Class End Time (IST)</label>
-                                            <input type="datetime-local" className="w-full p-3 sm:p-4 bg-[#2a2a2a] border-none rounded-xl sm:rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500" value={formData.class_end_time} onChange={e => setFormData({ ...formData, class_end_time: e.target.value })} required />
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Select Period</label>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                                            {PERIOD_OPTIONS.map(period => {
+                                                const selected = formData.period === period.value;
+                                                return (
+                                                    <button
+                                                        key={period.value}
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, period: period.value })}
+                                                        className={`min-h-[76px] rounded-xl sm:rounded-2xl border p-3 text-left transition-all ${selected ? 'border-indigo-500 bg-indigo-600 text-white shadow-lg shadow-indigo-950/20' : 'border-white/10 bg-[#2a2a2a] text-slate-200 hover:border-indigo-400 hover:bg-[#30303a]'}`}
+                                                        aria-pressed={selected}
+                                                    >
+                                                        <span className="block text-[10px] font-black uppercase tracking-widest">{period.label}</span>
+                                                        <span className={`mt-2 block text-[9px] font-black uppercase tracking-wide ${selected ? 'text-indigo-100' : 'text-slate-400'}`}>{period.time}</span>
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </div>
