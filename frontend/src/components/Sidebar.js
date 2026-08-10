@@ -265,17 +265,25 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
                                 <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1 truncate">{role || 'Academic Staff'}</p>
                             </motion.div>
                         )}
-
-                        {!isCollapsed && (
-                            <button
-                                onClick={handleLogout}
-                                className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all group"
-                                title="Logout"
-                            >
-                                <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            </button>
-                        )}
                     </div>
+                    {!isCollapsed ? (
+                        <button
+                            onClick={handleLogout}
+                            className="mt-3 w-full h-12 inline-flex items-center justify-center gap-3 rounded-xl border border-rose-500 bg-white px-5 text-rose-600 font-black text-sm transition-all hover:bg-rose-50 active:scale-[0.98]"
+                            title="Logout"
+                        >
+                            <LogOut className="w-5 h-5" />
+                            <span>Logout</span>
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleLogout}
+                            className="mt-3 h-11 w-full inline-flex items-center justify-center rounded-xl border border-rose-500 bg-white text-rose-600 transition-all hover:bg-rose-50"
+                            title="Logout"
+                        >
+                            <LogOut className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
             </motion.aside>
         </>
