@@ -9,6 +9,7 @@ from django.utils.dateparse import parse_datetime
 from django.db import IntegrityError, models, transaction
 from django.core.paginator import Paginator
 from datetime import datetime, time, timedelta
+import random
 import pandas as pd
 from .models import *
 from .serializers import *
@@ -199,7 +200,8 @@ def score_classroom_recommendations(block, period, required_capacity=0):
     ).values('room_id').annotate(total=models.Count('id')).values_list('room_id', 'total'))
     max_usage = max([*(session_usage.values() or [0]), *(booking_usage.values() or [0]), 1])
 
-    recommendations = []
+    # CSP phase: keep only rooms that satisfy all hard constraints.
+    csp_candidates = []
     for room in rooms:
         is_available = (
             room.id not in active_room_ids and
@@ -210,22 +212,69 @@ def score_classroom_recommendations(block, period, required_capacity=0):
             continue
 
         capacity = int(room.capacity or 0)
+        if required_capacity and capacity < required_capacity:
+            continue
+        csp_candidates.append(room)
+
+    if not csp_candidates:
+        return [], None
+
+    def fitness(room):
+        capacity = int(room.capacity or 0)
         capacity_gap = max(capacity - required_capacity, 0)
-        under_capacity_penalty = 40 if required_capacity and capacity < required_capacity else 0
-        capacity_score = 35 if not required_capacity else max(0, 35 - min(capacity_gap, 70) * 0.35 - under_capacity_penalty)
+        capacity_score = 35 if not required_capacity else max(0, 35 - min(capacity_gap, 70) * 0.35)
         usage_total = session_usage.get(room.id, 0) + booking_usage.get(room.id, 0)
         balance_score = 25 * (1 - min(usage_total / max_usage, 1))
         type_score = 10 if room.type == 'Classroom' else 6
         status_score = 30
-        score = round(status_score + capacity_score + balance_score + type_score, 1)
+        return round(status_score + capacity_score + balance_score + type_score, 1)
+
+    # GA phase: evolve room candidates toward the highest fitness.
+    population_size = min(max(len(csp_candidates), 8), 24)
+    generations = 18
+    mutation_rate = 0.18
+    population = [random.choice(csp_candidates) for _ in range(population_size)]
+
+    def tournament_select(population_items):
+        contenders = random.sample(population_items, min(3, len(population_items)))
+        return max(contenders, key=fitness)
+
+    for _ in range(generations):
+        ranked_population = sorted(population, key=fitness, reverse=True)
+        next_generation = ranked_population[:2]
+        while len(next_generation) < population_size:
+            parent_a = tournament_select(ranked_population)
+            parent_b = tournament_select(ranked_population)
+            parent = parent_a if fitness(parent_a) >= fitness(parent_b) else parent_b
+            child = parent
+            if random.random() < mutation_rate:
+                child = random.choice(csp_candidates)
+            next_generation.append(child)
+        population = next_generation
+
+    ga_selected_ids = []
+    for room in sorted(population, key=fitness, reverse=True):
+        if room.id not in ga_selected_ids:
+            ga_selected_ids.append(room.id)
+        if len(ga_selected_ids) >= 8:
+            break
+
+    selected_rooms = [room for room in csp_candidates if room.id in ga_selected_ids]
+    selected_rooms.sort(key=lambda item: (-fitness(item), item.room_number))
+
+    recommendations = []
+    for room in selected_rooms:
+        capacity = int(room.capacity or 0)
+        usage_total = session_usage.get(room.id, 0) + booking_usage.get(room.id, 0)
+        score = fitness(room)
 
         reasons = [
-            "Available for the selected period",
-            f"Capacity {capacity} seats",
-            "Lower recent usage" if usage_total <= max_usage / 2 else "Recently used more often",
+            "CSP valid: no booking or active class conflict",
+            f"GA fit score: capacity {capacity} seats",
+            "GA prefers this room for lower recent usage" if usage_total <= max_usage / 2 else "GA selected despite higher recent usage",
         ]
         if required_capacity and capacity >= required_capacity:
-            reasons.append("Meets requested capacity")
+            reasons.append("CSP valid: meets requested capacity")
 
         recommendations.append({
             "id": room.id,
@@ -241,7 +290,6 @@ def score_classroom_recommendations(block, period, required_capacity=0):
             "end_time": end_time,
         })
 
-    recommendations.sort(key=lambda item: (-item["ai_score"], item["room_number"]))
     return recommendations[:8], None
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -937,8 +985,8 @@ def smart_room_recommendations(request):
         return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({
-        "algorithm": "AI Smart Classroom Recommendation",
-        "method": "Availability, booking-conflict, capacity-fit, and recent-utilization scoring",
+        "algorithm": "CSP + Genetic Algorithm Classroom Recommendation",
+        "method": "CSP filters valid rooms by hard constraints; GA optimizes valid rooms by capacity fit, availability, and recent utilization",
         "block": block,
         "period": str(period),
         "recommendations": recommendations,

@@ -221,7 +221,7 @@ const ClassroomBooking = () => {
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <h3 className="text-sm font-black uppercase text-slate-900">AI Suggested Rooms</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Best fit by availability, capacity, and recent usage</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">CSP + GA best fit by availability, capacity, and recent usage</p>
                             </div>
                             {recommendationLoading && <RefreshCw className="animate-spin text-indigo-600" size={18} />}
                         </div>
