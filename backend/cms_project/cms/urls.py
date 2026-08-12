@@ -27,6 +27,7 @@ urlpatterns = [
     path('bulk-import-faculty/', bulk_import_faculty),
     path('room-blocks/', get_room_blocks),
     path('live-rooms/', get_live_rooms),
+    path('smart-room-recommendations/', smart_room_recommendations),
     path('find-class/', find_class),
     path('start-session/', start_session),
     path('end-session/', end_session),

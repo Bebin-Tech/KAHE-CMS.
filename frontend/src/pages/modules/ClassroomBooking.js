@@ -25,6 +25,8 @@ const ClassroomBooking = () => {
     const [activeBlock, setActiveBlock] = useState('S-Block');
     const [rooms, setRooms] = useState([]);
     const [bookings, setBookings] = useState([]);
+    const [recommendations, setRecommendations] = useState([]);
+    const [recommendationLoading, setRecommendationLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
@@ -77,10 +79,32 @@ const ClassroomBooking = () => {
         }
     };
 
+    const fetchRecommendations = async (period = formData.period) => {
+        if (!period) {
+            setRecommendations([]);
+            return;
+        }
+        setRecommendationLoading(true);
+        try {
+            const res = await API.get(`/smart-room-recommendations/?block=${encodeURIComponent(activeBlock)}&period=${encodeURIComponent(period)}&capacity=60`);
+            setRecommendations(Array.isArray(res.data?.recommendations) ? res.data.recommendations : []);
+        } catch (err) {
+            setRecommendations([]);
+            console.error('AI room recommendation failed.', err.response?.data || err.message);
+        } finally {
+            setRecommendationLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeBlock]);
+
+    useEffect(() => {
+        fetchRecommendations(formData.period);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeBlock, formData.period]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -99,6 +123,7 @@ const ClassroomBooking = () => {
             });
             setMessage({ text: 'Classroom booked successfully.', type: 'success' });
             await fetchData();
+            await fetchRecommendations(formData.period);
         } catch (err) {
             setMessage({ text: getApiError(err, 'Classroom booking failed.'), type: 'error' });
         } finally {
@@ -190,6 +215,40 @@ const ClassroomBooking = () => {
                                 );
                             })}
                         </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-black uppercase text-slate-900">AI Suggested Rooms</h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Best fit by availability, capacity, and recent usage</p>
+                            </div>
+                            {recommendationLoading && <RefreshCw className="animate-spin text-indigo-600" size={18} />}
+                        </div>
+                        {!formData.period ? (
+                            <p className="text-xs font-bold text-slate-600">Select a period to get AI room recommendations.</p>
+                        ) : recommendations.length === 0 && !recommendationLoading ? (
+                            <p className="text-xs font-bold text-slate-600">No recommended rooms are available for this period.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {recommendations.slice(0, 3).map(room => (
+                                    <button
+                                        key={room.id}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, room: String(room.id) })}
+                                        className={`w-full text-left rounded-xl border p-3 transition-all ${String(formData.room) === String(room.id) ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white text-slate-800 border-slate-200 hover:border-indigo-300'}`}
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-sm font-black">{room.block_name} - {room.room_number}</span>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest ${String(formData.room) === String(room.id) ? 'text-indigo-100' : 'text-indigo-700'}`}>Score {room.ai_score}</span>
+                                        </div>
+                                        <p className={`mt-1 text-[10px] font-bold ${String(formData.room) === String(room.id) ? 'text-indigo-100' : 'text-slate-500'}`}>
+                                            {(room.reasons || []).slice(0, 2).join(' • ')}
+                                        </p>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <label className="space-y-2 block">

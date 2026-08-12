@@ -159,6 +159,91 @@ def complete_expired_sessions():
         expired_sessions.update(status='Completed')
         Room.objects.filter(id__in=expired_room_ids, status='Occupied').update(status='Available')
 
+def score_classroom_recommendations(block, period, required_capacity=0):
+    start_time, end_time = period_datetimes(period)
+    if not start_time or not end_time:
+        return None, "Please select a valid period."
+    if end_time <= timezone.now():
+        return None, "The selected period has already ended."
+
+    rooms = Room.objects.select_related('block').filter(
+        models.Q(block__code__iexact=block) |
+        models.Q(block__name__iexact=block) |
+        models.Q(building__iexact=block)
+    ).order_by('room_number')
+    room_ids = list(rooms.values_list('id', flat=True))
+
+    active_room_ids = set(ClassSession.objects.filter(
+        room_id__in=room_ids,
+        status='Active',
+        start_time__lt=end_time
+    ).filter(
+        models.Q(end_time__isnull=True) | models.Q(end_time__gt=start_time)
+    ).values_list('room_id', flat=True))
+
+    booked_room_ids = set(Booking.objects.filter(
+        room_id__in=room_ids,
+        status='Approved',
+        start_time__lt=end_time,
+        end_time__gt=start_time
+    ).values_list('room_id', flat=True))
+
+    history_since = timezone.now() - timedelta(days=30)
+    session_usage = dict(ClassSession.objects.filter(
+        room_id__in=room_ids,
+        start_time__gte=history_since
+    ).values('room_id').annotate(total=models.Count('id')).values_list('room_id', 'total'))
+    booking_usage = dict(Booking.objects.filter(
+        room_id__in=room_ids,
+        start_time__gte=history_since
+    ).values('room_id').annotate(total=models.Count('id')).values_list('room_id', 'total'))
+    max_usage = max([*(session_usage.values() or [0]), *(booking_usage.values() or [0]), 1])
+
+    recommendations = []
+    for room in rooms:
+        is_available = (
+            room.id not in active_room_ids and
+            room.id not in booked_room_ids and
+            (room.status or 'Available') != 'Occupied'
+        )
+        if not is_available:
+            continue
+
+        capacity = int(room.capacity or 0)
+        capacity_gap = max(capacity - required_capacity, 0)
+        under_capacity_penalty = 40 if required_capacity and capacity < required_capacity else 0
+        capacity_score = 35 if not required_capacity else max(0, 35 - min(capacity_gap, 70) * 0.35 - under_capacity_penalty)
+        usage_total = session_usage.get(room.id, 0) + booking_usage.get(room.id, 0)
+        balance_score = 25 * (1 - min(usage_total / max_usage, 1))
+        type_score = 10 if room.type == 'Classroom' else 6
+        status_score = 30
+        score = round(status_score + capacity_score + balance_score + type_score, 1)
+
+        reasons = [
+            "Available for the selected period",
+            f"Capacity {capacity} seats",
+            "Lower recent usage" if usage_total <= max_usage / 2 else "Recently used more often",
+        ]
+        if required_capacity and capacity >= required_capacity:
+            reasons.append("Meets requested capacity")
+
+        recommendations.append({
+            "id": room.id,
+            "room_number": room.room_number,
+            "block_name": room.block.name if room.block else room.building,
+            "block_code": room.block.code if room.block else room.building,
+            "capacity": room.capacity,
+            "type": room.type,
+            "status": "Available",
+            "ai_score": score,
+            "reasons": reasons,
+            "start_time": start_time,
+            "end_time": end_time,
+        })
+
+    recommendations.sort(key=lambda item: (-item["ai_score"], item["room_number"]))
+    return recommendations[:8], None
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -829,6 +914,35 @@ def get_live_rooms(request):
             room_data['status'] = 'Available'
         res.append(room_data)
     return Response(res)
+
+@api_view(['GET'])
+def smart_room_recommendations(request):
+    if not (
+        request.user and
+        request.user.is_authenticated and
+        request.user.role in ['faculty', 'admin', 'super_admin']
+    ):
+        return Response({"detail": "You do not have permission to view AI recommendations."}, status=status.HTTP_403_FORBIDDEN)
+
+    complete_expired_sessions()
+    block = str(request.query_params.get('block') or 'S-Block').strip()
+    period = request.query_params.get('period')
+    try:
+        capacity = int(request.query_params.get('capacity') or 0)
+    except (TypeError, ValueError):
+        capacity = 0
+
+    recommendations, error = score_classroom_recommendations(block, period, capacity)
+    if error:
+        return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response({
+        "algorithm": "AI Smart Classroom Recommendation",
+        "method": "Availability, booking-conflict, capacity-fit, and recent-utilization scoring",
+        "block": block,
+        "period": str(period),
+        "recommendations": recommendations,
+    })
 
 @api_view(['GET'])
 def find_class(request):
