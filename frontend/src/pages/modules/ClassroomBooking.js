@@ -24,6 +24,13 @@ const todayISODate = () => {
     return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
 };
 
+const futureISODate = (daysAhead) => {
+    const date = new Date();
+    date.setDate(date.getDate() + daysAhead);
+    const offset = date.getTimezoneOffset();
+    return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10);
+};
+
 const ClassroomBooking = () => {
     const role = authGet('role')?.toLowerCase();
     const isAdmin = ['admin', 'super_admin'].includes(role);
@@ -234,6 +241,7 @@ const ClassroomBooking = () => {
                         <input
                             type="date"
                             min={todayISODate()}
+                            max={futureISODate(14)}
                             className="w-full p-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                             value={formData.booking_date}
                             onChange={e => setFormData({ ...formData, booking_date: e.target.value })}

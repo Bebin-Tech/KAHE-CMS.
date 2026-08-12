@@ -173,6 +173,9 @@ def score_classroom_recommendations(block, period=None, required_capacity=0, boo
         return None, "Booking end time must be after start time."
     if end_time <= timezone.now():
         return None, "The selected booking time has already ended."
+    max_booking_date = timezone.localdate() + timedelta(days=14)
+    if timezone.localtime(start_time).date() > max_booking_date:
+        return None, "Classrooms can be booked up to 14 days in advance."
 
     rooms = Room.objects.select_related('block').filter(
         models.Q(block__code__iexact=block) |
