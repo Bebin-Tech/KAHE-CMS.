@@ -18,6 +18,12 @@ const formatDateTime = (value) => {
     return formatISTDateTime(value);
 };
 
+const todayISODate = () => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
+};
+
 const ClassroomBooking = () => {
     const role = authGet('role')?.toLowerCase();
     const isAdmin = ['admin', 'super_admin'].includes(role);
@@ -33,7 +39,11 @@ const ClassroomBooking = () => {
 
     const [formData, setFormData] = useState({
         room: '',
+        booking_date: todayISODate(),
+        booking_mode: 'period',
         period: '',
+        start_time: '',
+        end_time: '',
         purpose: ''
     });
 
@@ -79,14 +89,26 @@ const ClassroomBooking = () => {
         }
     };
 
-    const fetchRecommendations = async (period = formData.period) => {
-        if (!period) {
+    const fetchRecommendations = async (period = formData.period, bookingDate = formData.booking_date) => {
+        const isCustom = formData.booking_mode === 'custom';
+        if ((!isCustom && !period) || (isCustom && (!formData.start_time || !formData.end_time))) {
             setRecommendations([]);
             return;
         }
         setRecommendationLoading(true);
         try {
-            const res = await API.get(`/smart-room-recommendations/?block=${encodeURIComponent(activeBlock)}&period=${encodeURIComponent(period)}&capacity=60`);
+            const query = new URLSearchParams({
+                block: activeBlock,
+                booking_date: bookingDate,
+                capacity: '60'
+            });
+            if (isCustom) {
+                query.set('start_time', `${bookingDate}T${formData.start_time}:00`);
+                query.set('end_time', `${bookingDate}T${formData.end_time}:00`);
+            } else {
+                query.set('period', period);
+            }
+            const res = await API.get(`/smart-room-recommendations/?${query.toString()}`);
             setRecommendations(Array.isArray(res.data?.recommendations) ? res.data.recommendations : []);
         } catch (err) {
             setRecommendations([]);
@@ -102,28 +124,50 @@ const ClassroomBooking = () => {
     }, [activeBlock]);
 
     useEffect(() => {
-        fetchRecommendations(formData.period);
+        fetchRecommendations(formData.period, formData.booking_date);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeBlock, formData.period]);
+    }, [activeBlock, formData.period, formData.booking_date, formData.booking_mode, formData.start_time, formData.end_time]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
         setMessage({ text: '', type: '' });
-        if (!formData.period) {
+        if (!formData.booking_date) {
+            setSaving(false);
+            setMessage({ text: 'Please select a booking date.', type: 'error' });
+            return;
+        }
+        if (formData.booking_mode === 'period' && !formData.period) {
             setSaving(false);
             setMessage({ text: 'Please select a booking period.', type: 'error' });
             return;
         }
+        if (formData.booking_mode === 'custom' && (!formData.start_time || !formData.end_time)) {
+            setSaving(false);
+            setMessage({ text: 'Please select custom start and end time.', type: 'error' });
+            return;
+        }
+        if (formData.booking_mode === 'custom' && formData.end_time <= formData.start_time) {
+            setSaving(false);
+            setMessage({ text: 'End time must be after start time.', type: 'error' });
+            return;
+        }
         try {
-            await API.post('/bookings/', {
+            const payload = {
                 room: Number(formData.room),
-                period: formData.period,
                 purpose: formData.purpose
-            });
+            };
+            if (formData.booking_mode === 'custom') {
+                payload.start_time = `${formData.booking_date}T${formData.start_time}:00`;
+                payload.end_time = `${formData.booking_date}T${formData.end_time}:00`;
+            } else {
+                payload.booking_date = formData.booking_date;
+                payload.period = formData.period;
+            }
+            await API.post('/bookings/', payload);
             setMessage({ text: 'Classroom booked successfully.', type: 'success' });
             await fetchData();
-            await fetchRecommendations(formData.period);
+            await fetchRecommendations(formData.period, formData.booking_date);
         } catch (err) {
             setMessage({ text: getApiError(err, 'Classroom booking failed.'), type: 'error' });
         } finally {
@@ -182,7 +226,35 @@ const ClassroomBooking = () => {
                 <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 shadow-md p-6 space-y-5">
                     <div>
                         <h2 className="text-lg font-black text-slate-900 uppercase">Book a Classroom</h2>
-                        <p className="text-sm font-semibold text-slate-600 mt-1">Choose a room and reserve the required time slot.</p>
+                        <p className="text-sm font-semibold text-slate-600 mt-1">Choose a future date, room, and period to reserve a classroom.</p>
+                    </div>
+
+                    <label className="space-y-2 block">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Booking Date</span>
+                        <input
+                            type="date"
+                            min={todayISODate()}
+                            className="w-full p-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={formData.booking_date}
+                            onChange={e => setFormData({ ...formData, booking_date: e.target.value })}
+                            required
+                        />
+                    </label>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        {[
+                            { key: 'period', label: 'Period' },
+                            { key: 'custom', label: 'Custom Time' }
+                        ].map(mode => (
+                            <button
+                                key={mode.key}
+                                type="button"
+                                onClick={() => setFormData({ ...formData, booking_mode: mode.key })}
+                                className={`rounded-xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${formData.booking_mode === mode.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300 hover:text-indigo-700'}`}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
                     </div>
 
                     <label className="space-y-2 block">
@@ -190,12 +262,13 @@ const ClassroomBooking = () => {
                         <select className="w-full p-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.room} onChange={e => setFormData({ ...formData, room: e.target.value })} required>
                             {rooms.map(room => (
                                 <option key={room.id} value={room.id}>
-                                    {room.block_name || room.building} - {room.room_number} ({room.status})
+                                    {room.block_name || room.building} - {room.room_number} (Current: {room.status})
                                 </option>
                             ))}
                         </select>
                     </label>
 
+                    {formData.booking_mode === 'period' ? (
                     <div className="space-y-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Select Period</span>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -216,6 +289,30 @@ const ClassroomBooking = () => {
                             })}
                         </div>
                     </div>
+                    ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className="space-y-2 block">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Start Time</span>
+                            <input
+                                type="time"
+                                className="w-full p-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                                value={formData.start_time}
+                                onChange={e => setFormData({ ...formData, start_time: e.target.value })}
+                                required={formData.booking_mode === 'custom'}
+                            />
+                        </label>
+                        <label className="space-y-2 block">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">End Time</span>
+                            <input
+                                type="time"
+                                className="w-full p-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                                value={formData.end_time}
+                                onChange={e => setFormData({ ...formData, end_time: e.target.value })}
+                                required={formData.booking_mode === 'custom'}
+                            />
+                        </label>
+                    </div>
+                    )}
 
                     <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 space-y-3">
                         <div className="flex items-center justify-between gap-3">
@@ -225,8 +322,10 @@ const ClassroomBooking = () => {
                             </div>
                             {recommendationLoading && <RefreshCw className="animate-spin text-indigo-600" size={18} />}
                         </div>
-                        {!formData.period ? (
-                            <p className="text-xs font-bold text-slate-600">Select a period to get AI room recommendations.</p>
+                        {(formData.booking_mode === 'period' && !formData.period) || (formData.booking_mode === 'custom' && (!formData.start_time || !formData.end_time)) ? (
+                            <p className="text-xs font-bold text-slate-600">
+                                {formData.booking_mode === 'custom' ? 'Select a date, start time, and end time to get AI room recommendations.' : 'Select a date and period to get AI room recommendations.'}
+                            </p>
                         ) : recommendations.length === 0 && !recommendationLoading ? (
                             <p className="text-xs font-bold text-slate-600">No recommended rooms are available for this period.</p>
                         ) : (

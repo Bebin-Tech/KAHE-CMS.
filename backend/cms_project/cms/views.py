@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_date, parse_datetime
 from django.db import IntegrityError, models, transaction
 from django.core.paginator import Paginator
 from datetime import datetime, time, timedelta
@@ -134,18 +134,20 @@ PERIOD_SCHEDULE = {
     '6': (time(14, 20), time(15, 10)),
 }
 
-def period_datetimes(period):
+def period_datetimes(period, booking_date=None):
     period_key = str(period or '').strip()
     if period_key.lower().endswith(('st', 'nd', 'rd', 'th')):
         period_key = period_key[:-2]
     if period_key not in PERIOD_SCHEDULE:
         return None, None
     current_tz = timezone.get_current_timezone()
-    today = timezone.localdate()
+    target_date = parse_date(str(booking_date)) if booking_date else timezone.localdate()
+    if target_date is None:
+        return None, None
     start_time, end_time = PERIOD_SCHEDULE[period_key]
     return (
-        timezone.make_aware(datetime.combine(today, start_time), current_tz),
-        timezone.make_aware(datetime.combine(today, end_time), current_tz)
+        timezone.make_aware(datetime.combine(target_date, start_time), current_tz),
+        timezone.make_aware(datetime.combine(target_date, end_time), current_tz)
     )
 
 def complete_expired_sessions():
@@ -160,12 +162,17 @@ def complete_expired_sessions():
         expired_sessions.update(status='Completed')
         Room.objects.filter(id__in=expired_room_ids, status='Occupied').update(status='Available')
 
-def score_classroom_recommendations(block, period, required_capacity=0):
-    start_time, end_time = period_datetimes(period)
+def score_classroom_recommendations(block, period=None, required_capacity=0, booking_date=None, custom_start_time=None, custom_end_time=None):
+    start_time = parse_client_datetime(custom_start_time) if custom_start_time else None
+    end_time = parse_client_datetime(custom_end_time) if custom_end_time else None
     if not start_time or not end_time:
-        return None, "Please select a valid period."
+        start_time, end_time = period_datetimes(period, booking_date)
+    if not start_time or not end_time:
+        return None, "Please select a valid booking time."
+    if end_time <= start_time:
+        return None, "Booking end time must be after start time."
     if end_time <= timezone.now():
-        return None, "The selected period has already ended."
+        return None, "The selected booking time has already ended."
 
     rooms = Room.objects.select_related('block').filter(
         models.Q(block__code__iexact=block) |
@@ -205,8 +212,7 @@ def score_classroom_recommendations(block, period, required_capacity=0):
     for room in rooms:
         is_available = (
             room.id not in active_room_ids and
-            room.id not in booked_room_ids and
-            (room.status or 'Available') != 'Occupied'
+            room.id not in booked_room_ids
         )
         if not is_available:
             continue
@@ -233,10 +239,11 @@ def score_classroom_recommendations(block, period, required_capacity=0):
     population_size = min(max(len(csp_candidates), 8), 24)
     generations = 18
     mutation_rate = 0.18
-    population = [random.choice(csp_candidates) for _ in range(population_size)]
+    rng = random.Random(f"{block}|{period}|{booking_date}|{custom_start_time}|{custom_end_time}|{required_capacity}|{len(csp_candidates)}")
+    population = [rng.choice(csp_candidates) for _ in range(population_size)]
 
     def tournament_select(population_items):
-        contenders = random.sample(population_items, min(3, len(population_items)))
+        contenders = rng.sample(population_items, min(3, len(population_items)))
         return max(contenders, key=fitness)
 
     for _ in range(generations):
@@ -247,8 +254,8 @@ def score_classroom_recommendations(block, period, required_capacity=0):
             parent_b = tournament_select(ranked_population)
             parent = parent_a if fitness(parent_a) >= fitness(parent_b) else parent_b
             child = parent
-            if random.random() < mutation_rate:
-                child = random.choice(csp_candidates)
+            if rng.random() < mutation_rate:
+                child = rng.choice(csp_candidates)
             next_generation.append(child)
         population = next_generation
 
@@ -975,12 +982,22 @@ def smart_room_recommendations(request):
     complete_expired_sessions()
     block = str(request.query_params.get('block') or 'S-Block').strip()
     period = request.query_params.get('period')
+    booking_date = request.query_params.get('booking_date') or request.query_params.get('date')
+    custom_start_time = request.query_params.get('start_time')
+    custom_end_time = request.query_params.get('end_time')
     try:
         capacity = int(request.query_params.get('capacity') or 0)
     except (TypeError, ValueError):
         capacity = 0
 
-    recommendations, error = score_classroom_recommendations(block, period, capacity)
+    recommendations, error = score_classroom_recommendations(
+        block=block,
+        period=period,
+        required_capacity=capacity,
+        booking_date=booking_date,
+        custom_start_time=custom_start_time,
+        custom_end_time=custom_end_time,
+    )
     if error:
         return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -989,6 +1006,9 @@ def smart_room_recommendations(request):
         "method": "CSP filters valid rooms by hard constraints; GA optimizes valid rooms by capacity fit, availability, and recent utilization",
         "block": block,
         "period": str(period),
+        "booking_date": str(booking_date or timezone.localdate()),
+        "start_time": custom_start_time,
+        "end_time": custom_end_time,
         "recommendations": recommendations,
     })
 
