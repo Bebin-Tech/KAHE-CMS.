@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.db import models
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from .models import *
 
 PERIOD_SCHEDULE = {
@@ -213,7 +213,7 @@ class BookingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"detail": "End time must be after start time."})
         if start_time < timezone.now():
             raise serializers.ValidationError({"detail": "Booking start time cannot be in the past."})
-        max_booking_date = timezone.localdate() + timezone.timedelta(days=14)
+        max_booking_date = timezone.localdate() + timedelta(days=14)
         if timezone.localtime(start_time).date() > max_booking_date:
             raise serializers.ValidationError({"detail": "Classrooms can be booked up to 14 days in advance."})
 
