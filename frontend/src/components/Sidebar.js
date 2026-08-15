@@ -66,6 +66,12 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }) => {
             roles: ['admin', 'super_admin', 'faculty']
         },
         {
+            name: 'Automation',
+            path: '/automation',
+            icon: Calendar,
+            roles: ['admin', 'super_admin']
+        },
+        {
             name: 'Department',
             path: '/departments',
             icon: Building2,

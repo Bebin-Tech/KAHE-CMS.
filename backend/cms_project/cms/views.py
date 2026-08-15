@@ -13,6 +13,7 @@ import random
 import pandas as pd
 from .models import *
 from .serializers import *
+from .automation import automation_overview, generate_automated_schedule
 
 class IsAdminRole(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -545,6 +546,54 @@ class FacultyAssignmentViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(faculty__department_id=dept_id)
         return queryset
 
+class FacultyAvailabilityViewSet(viewsets.ModelViewSet):
+    queryset = FacultyAvailability.objects.select_related('faculty', 'period').all()
+    serializer_class = FacultyAvailabilitySerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = FacultyAvailability.objects.select_related('faculty', 'period').order_by('faculty__first_name', 'day', 'period__period_number')
+        if is_faculty_user(self.request.user):
+            queryset = queryset.filter(faculty_id=self.request.user.id)
+        return queryset
+
+class SectionRoomAssignmentViewSet(viewsets.ModelViewSet):
+    queryset = SectionRoomAssignment.objects.select_related('section', 'room', 'room__block', 'assigned_by').all()
+    serializer_class = SectionRoomAssignmentSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = SectionRoomAssignment.objects.select_related(
+            'section', 'section__semester', 'section__semester__program',
+            'room', 'room__block', 'assigned_by'
+        ).order_by('section__semester__program__name', 'section__semester__number', 'section__name')
+        if is_faculty_user(self.request.user):
+            dept_id = faculty_department(self.request.user)
+            queryset = queryset.filter(section__semester__program__department_id=dept_id)
+        return queryset
+
+class TimetableViewSet(viewsets.ModelViewSet):
+    queryset = Timetable.objects.select_related('period', 'section', 'subject', 'faculty', 'room', 'room__block').all()
+    serializer_class = TimetableSerializer
+    permission_classes = [ReadOnlyOrAdminRole]
+
+    def get_queryset(self):
+        queryset = Timetable.objects.select_related(
+            'period', 'section', 'section__semester', 'section__semester__program',
+            'subject', 'faculty', 'room', 'room__block'
+        ).order_by('day', 'period__period_number', 'section__name')
+        if is_faculty_user(self.request.user):
+            queryset = queryset.filter(faculty_id=self.request.user.id)
+        elif getattr(self.request.user, 'role', None) == 'student' and self.request.user.section_id:
+            queryset = queryset.filter(section_id=self.request.user.section_id)
+        section = self.request.query_params.get('section')
+        faculty = self.request.query_params.get('faculty')
+        if section:
+            queryset = queryset.filter(section_id=section)
+        if faculty:
+            queryset = queryset.filter(faculty_id=faculty)
+        return queryset
+
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.select_related('block').all()
     serializer_class = RoomSerializer
@@ -607,6 +656,54 @@ class BookingViewSet(viewsets.ModelViewSet):
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AuditLog.objects.all()
     serializer_class = AuditLogSerializer
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSerializer
+
+    def get_queryset(self):
+        queryset = Notification.objects.select_related('recipient').filter(recipient=self.request.user).order_by('-created_at')
+        if str(self.request.query_params.get('unread') or '').lower() == 'true':
+            queryset = queryset.filter(is_read=False)
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(recipient=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+        return Response(NotificationSerializer(notification).data)
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        self.get_queryset().filter(is_read=False).update(is_read=True)
+        return Response({"status": "notifications marked as read"})
+
+class AutomationRunViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AutomationRun.objects.select_related('triggered_by').all().order_by('-created_at')
+    serializer_class = AutomationRunSerializer
+    permission_classes = [IsAdminRole]
+
+@api_view(['GET'])
+@permission_classes([IsAdminRole])
+def automation_status(request):
+    return Response(automation_overview())
+
+@api_view(['POST'])
+@permission_classes([IsAdminRole])
+def generate_automation_schedule(request):
+    scope = str(request.data.get('scope') or 'weekly').strip().lower()
+    replace_existing = request.data.get('replace_existing', True)
+    if isinstance(replace_existing, str):
+        replace_existing = replace_existing.lower() not in ['false', '0', 'no']
+    run = generate_automated_schedule(
+        triggered_by=request.user,
+        scope=scope if scope in ['weekly', 'monthly', 'custom'] else 'weekly',
+        replace_existing=bool(replace_existing),
+    )
+    return Response(AutomationRunSerializer(run).data, status=status.HTTP_201_CREATED)
 
 @api_view(['GET'])
 @permission_classes([IsAdminRole])

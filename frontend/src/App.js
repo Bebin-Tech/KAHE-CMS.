@@ -11,6 +11,7 @@ import ClassroomBooking from './pages/modules/ClassroomBooking';
 import Settings from './pages/modules/Settings';
 import Departments from './pages/modules/Departments';
 import Subjects from './pages/modules/Subjects';
+import Automation from './pages/modules/Automation';
 import { authGet } from './authSession';
 
 const roleHome = () => {
@@ -77,6 +78,7 @@ function App() {
                                 <Route path="/users" element={<PrivateRoute roles={['admin', 'super_admin']}><UserManagement /></PrivateRoute>} />
                                 <Route path="/departments" element={<PrivateRoute roles={['admin', 'super_admin']}><Departments /></PrivateRoute>} />
                                 <Route path="/subjects" element={<PrivateRoute roles={['admin', 'super_admin']}><Subjects /></PrivateRoute>} />
+                                <Route path="/automation" element={<PrivateRoute roles={['admin', 'super_admin']}><Automation /></PrivateRoute>} />
                                 <Route path="/settings" element={<PrivateRoute roles={['student', 'faculty']}><Settings /></PrivateRoute>} />
                                 <Route path="/classroom-booking" element={<PrivateRoute roles={['admin', 'super_admin', 'faculty']}><ClassroomBooking /></PrivateRoute>} />
                                 <Route path="/classroom-tracking" element={<PrivateRoute><ClassroomTracking /></PrivateRoute>} />

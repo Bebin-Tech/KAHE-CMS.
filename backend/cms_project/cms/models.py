@@ -17,6 +17,7 @@ class User(AbstractUser):
     department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, default='Active')
     designation = models.CharField(max_length=100, null=True, blank=True)
+    section = models.ForeignKey('Section', on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     
     # Faculty specific
     max_hours_per_day = models.IntegerField(default=6)
@@ -81,6 +82,14 @@ class Section(models.Model):
     name = models.CharField(max_length=10)
     student_count = models.IntegerField(default=60)
     status = models.CharField(max_length=20, default='Active')
+    tutor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tutored_sections',
+        limit_choices_to={'role': 'faculty'},
+    )
 
     def __str__(self):
         return f"{self.semester} - Section {self.name}"
@@ -132,6 +141,40 @@ class FacultyAssignment(models.Model):
 
     class Meta:
         unique_together = ('faculty', 'subject', 'section')
+
+class FacultyAvailability(models.Model):
+    DAYS = (
+        ('Monday', 'Monday'),
+        ('Tuesday', 'Tuesday'),
+        ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'),
+        ('Friday', 'Friday'),
+        ('Saturday', 'Saturday'),
+    )
+    faculty = models.ForeignKey(User, on_delete=models.CASCADE, related_name='availability_slots', limit_choices_to={'role': 'faculty'})
+    day = models.CharField(max_length=20, choices=DAYS)
+    period = models.ForeignKey('PeriodTiming', on_delete=models.CASCADE)
+    is_available = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['faculty', 'day', 'period'], name='unique_faculty_day_period_availability')
+        ]
+        indexes = [
+            models.Index(fields=['faculty', 'day', 'is_available'], name='faculty_day_available_idx'),
+        ]
+
+class SectionRoomAssignment(models.Model):
+    section = models.OneToOneField(Section, on_delete=models.CASCADE, related_name='home_room_assignment')
+    room = models.ForeignKey('Room', on_delete=models.PROTECT, related_name='section_home_assignments')
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='room_assignments_created')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['room'], name='section_home_room_idx'),
+        ]
 
 class Block(models.Model):
     code = models.CharField(max_length=20, unique=True)
@@ -194,6 +237,18 @@ class Timetable(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, default='Published')
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['day', 'period', 'section'], name='unique_section_day_period'),
+            models.UniqueConstraint(fields=['day', 'period', 'faculty'], name='unique_faculty_day_period'),
+            models.UniqueConstraint(fields=['day', 'period', 'room'], name='unique_room_day_period'),
+        ]
+        indexes = [
+            models.Index(fields=['day', 'period'], name='timetable_day_period_idx'),
+            models.Index(fields=['section', 'day'], name='timetable_section_day_idx'),
+            models.Index(fields=['faculty', 'day'], name='timetable_faculty_day_idx'),
+        ]
+
 class ClassSession(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     faculty = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -241,3 +296,40 @@ class AuditLog(models.Model):
     resource = models.CharField(max_length=100)
     details = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=160)
+    message = models.TextField()
+    data = models.JSONField(default=dict, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['recipient', 'is_read', '-created_at'], name='notification_user_read_idx'),
+        ]
+
+class AutomationRun(models.Model):
+    SCOPE_CHOICES = (
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('custom', 'Custom'),
+    )
+    STATUS_CHOICES = (
+        ('Completed', 'Completed'),
+        ('Partial', 'Partial'),
+        ('Failed', 'Failed'),
+    )
+    triggered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='automation_runs')
+    scope = models.CharField(max_length=20, choices=SCOPE_CHOICES, default='weekly')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Completed')
+    generated_timetables = models.IntegerField(default=0)
+    generated_notifications = models.IntegerField(default=0)
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['-created_at'], name='automation_run_created_idx'),
+        ]

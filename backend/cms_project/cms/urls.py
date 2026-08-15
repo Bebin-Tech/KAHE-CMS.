@@ -11,9 +11,14 @@ router.register(r'sections', SectionViewSet)
 router.register(r'subjects', SubjectViewSet)
 router.register(r'curricula', CurriculumViewSet)
 router.register(r'faculty-assignments', FacultyAssignmentViewSet)
+router.register(r'faculty-availability', FacultyAvailabilityViewSet)
+router.register(r'section-room-assignments', SectionRoomAssignmentViewSet)
+router.register(r'timetables', TimetableViewSet)
 router.register(r'rooms', RoomViewSet)
 router.register(r'bookings', BookingViewSet)
 router.register(r'audit-logs', AuditLogViewSet)
+router.register(r'notifications', NotificationViewSet, basename='notifications')
+router.register(r'automation-runs', AutomationRunViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -23,6 +28,8 @@ urlpatterns = [
     path('logout/', logout_view),
     path('users_list/', users_list),
     path('dashboard-stats/', dashboard_stats),
+    path('automation/status/', automation_status),
+    path('automation/generate-schedule/', generate_automation_schedule),
     path('class-history/', class_history),
     path('bulk-import-faculty/', bulk_import_faculty),
     path('room-blocks/', get_room_blocks),

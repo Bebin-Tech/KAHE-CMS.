@@ -32,12 +32,14 @@ def period_datetimes(period, booking_date=None):
 
 class UserSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
+    section_name = serializers.CharField(source='section.__str__', read_only=True)
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     class Meta:
         model = User
         fields = (
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
             'employee_id', 'role', 'phone', 'department', 'department_name',
+            'section', 'section_name',
             'status', 'designation', 'password', 'is_active',
             'max_hours_per_day', 'max_hours_per_week', 'availability_status',
             'classroom_permission', 'date_joined'
@@ -103,9 +105,25 @@ class SemesterSerializer(serializers.ModelSerializer):
 
 class SectionSerializer(serializers.ModelSerializer):
     semester_name = serializers.CharField(source='semester.__str__', read_only=True)
+    tutor_name = serializers.CharField(source='tutor.get_full_name', read_only=True)
+    home_room = serializers.SerializerMethodField()
+
     class Meta:
         model = Section
         fields = '__all__'
+
+    def get_home_room(self, obj):
+        assignment = getattr(obj, 'home_room_assignment', None)
+        if not assignment:
+            return None
+        room = assignment.room
+        return {
+            'id': room.id,
+            'room_number': room.room_number,
+            'block_name': room.block.name if room.block else room.building,
+            'capacity': room.capacity,
+            'type': room.type,
+        }
 
 class SubjectSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
@@ -118,12 +136,45 @@ class CurriculumSerializer(serializers.ModelSerializer):
         model = Curriculum
         fields = '__all__'
 
+class TimetableSerializer(serializers.ModelSerializer):
+    section_name = serializers.CharField(source='section.__str__', read_only=True)
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+    faculty_name = serializers.CharField(source='faculty.get_full_name', read_only=True)
+    room_number = serializers.CharField(source='room.room_number', read_only=True)
+    block_name = serializers.CharField(source='room.block.name', read_only=True)
+    period_number = serializers.IntegerField(source='period.period_number', read_only=True)
+    period_start_time = serializers.TimeField(source='period.start_time', read_only=True)
+    period_end_time = serializers.TimeField(source='period.end_time', read_only=True)
+
+    class Meta:
+        model = Timetable
+        fields = '__all__'
+
 class FacultyAssignmentSerializer(serializers.ModelSerializer):
     faculty_name = serializers.CharField(source='faculty.get_full_name', read_only=True)
     subject_name = serializers.CharField(source='subject.name', read_only=True)
     section_name = serializers.CharField(source='section.__str__', read_only=True)
     class Meta:
         model = FacultyAssignment
+        fields = '__all__'
+
+class FacultyAvailabilitySerializer(serializers.ModelSerializer):
+    faculty_name = serializers.CharField(source='faculty.get_full_name', read_only=True)
+    period_label = serializers.CharField(source='period.label', read_only=True)
+    period_number = serializers.IntegerField(source='period.period_number', read_only=True)
+
+    class Meta:
+        model = FacultyAvailability
+        fields = '__all__'
+
+class SectionRoomAssignmentSerializer(serializers.ModelSerializer):
+    section_name = serializers.CharField(source='section.__str__', read_only=True)
+    room_number = serializers.CharField(source='room.room_number', read_only=True)
+    block_name = serializers.CharField(source='room.block.name', read_only=True)
+    assigned_by_name = serializers.CharField(source='assigned_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = SectionRoomAssignment
         fields = '__all__'
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -249,6 +300,21 @@ class AuditLogSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
     class Meta:
         model = AuditLog
+        fields = '__all__'
+
+class NotificationSerializer(serializers.ModelSerializer):
+    recipient_name = serializers.CharField(source='recipient.get_full_name', read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = '__all__'
+        read_only_fields = ('recipient', 'created_at')
+
+class AutomationRunSerializer(serializers.ModelSerializer):
+    triggered_by_name = serializers.CharField(source='triggered_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = AutomationRun
         fields = '__all__'
 
 class ClassSessionSerializer(serializers.ModelSerializer):
