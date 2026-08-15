@@ -29,6 +29,7 @@ urlpatterns = [
     path('users_list/', users_list),
     path('dashboard-stats/', dashboard_stats),
     path('automation/status/', automation_status),
+    path('automation/ai-insights/', automation_ai_insights),
     path('automation/generate-schedule/', generate_automation_schedule),
     path('class-history/', class_history),
     path('bulk-import-faculty/', bulk_import_faculty),

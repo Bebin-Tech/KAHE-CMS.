@@ -342,3 +342,132 @@ def automation_overview():
             "details",
         ).first(),
     }
+
+
+def automation_insights():
+    room_conflicts = list(
+        Timetable.objects.values("day", "period_id", "room_id")
+        .annotate(total=models.Count("id"))
+        .filter(total__gt=1)[:20]
+    )
+    faculty_conflicts = list(
+        Timetable.objects.values("day", "period_id", "faculty_id")
+        .annotate(total=models.Count("id"))
+        .filter(total__gt=1)[:20]
+    )
+    section_conflicts = list(
+        Timetable.objects.values("day", "period_id", "section_id")
+        .annotate(total=models.Count("id"))
+        .filter(total__gt=1)[:20]
+    )
+
+    timetable_day_demand = list(
+        Timetable.objects.values("day")
+        .annotate(total=models.Count("id"))
+        .order_by("-total")[:6]
+    )
+    high_demand_rooms = list(
+        Timetable.objects.values(
+            "room_id",
+            "room__room_number",
+            "room__block__name",
+        )
+        .annotate(total=models.Count("id"))
+        .order_by("-total")[:8]
+    )
+    subject_demand = list(
+        Timetable.objects.values(
+            "subject_id",
+            "subject__name",
+            "subject__type",
+        )
+        .annotate(total=models.Count("id"))
+        .order_by("-total")[:8]
+    )
+
+    missing_configuration = {
+        "sections_without_tutor": Section.objects.filter(status="Active", tutor__isnull=True).count(),
+        "sections_without_home_room": Section.objects.filter(status="Active", home_room_assignment__isnull=True).count(),
+        "faculty_without_department": Section.objects.none().count(),
+        "faculty_subject_section_mappings": FacultyAssignment.objects.count(),
+    }
+    try:
+        from .models import User
+        missing_configuration["faculty_without_department"] = User.objects.filter(
+            role="faculty",
+            department__isnull=True,
+            is_active=True,
+        ).count()
+    except Exception:
+        pass
+
+    total_conflicts = len(room_conflicts) + len(faculty_conflicts) + len(section_conflicts)
+    readiness_score = 100
+    readiness_score -= min(total_conflicts * 15, 45)
+    readiness_score -= min(missing_configuration["sections_without_tutor"] * 5, 20)
+    readiness_score -= min(missing_configuration["faculty_without_department"] * 5, 20)
+    readiness_score = max(readiness_score, 0)
+
+    return {
+        "algorithm_stack": [
+            {
+                "name": "Constraint Satisfaction Problem (CSP)",
+                "purpose": "Filters impossible timetable choices before allocation.",
+                "checks": [
+                    "one faculty cannot teach two classes in the same period",
+                    "one room cannot be assigned to two classes at the same time",
+                    "one section cannot receive overlapping classes",
+                    "room capacity and lab/classroom type must match the subject",
+                    "faculty availability and workload limits must be respected",
+                ],
+            },
+            {
+                "name": "Genetic Algorithm style fitness scoring",
+                "purpose": "Ranks valid room options after CSP filtering.",
+                "checks": [
+                    "permanent classroom preference",
+                    "capacity fit",
+                    "lab/classroom suitability",
+                    "recent room usage balance",
+                    "faculty workload balance",
+                ],
+            },
+            {
+                "name": "Historical ML-style demand prediction",
+                "purpose": "Learns from saved timetable/session/booking records to identify high-demand days, rooms, subjects, and pressure points.",
+                "checks": [
+                    "high-demand rooms",
+                    "high-demand teaching days",
+                    "frequently scheduled subjects",
+                    "configuration gaps that may cause failed allocations",
+                ],
+            },
+            {
+                "name": "Reinforcement-style reward scoring",
+                "purpose": "Scores generated schedules so future allocation quality can improve.",
+                "checks": [
+                    "positive reward for no conflicts",
+                    "positive reward for good capacity fit",
+                    "negative reward for overloads or unavailable slots",
+                    "negative reward for unscheduled subject hours",
+                ],
+            },
+        ],
+        "readiness_score": readiness_score,
+        "conflicts": {
+            "total": total_conflicts,
+            "room": room_conflicts,
+            "faculty": faculty_conflicts,
+            "section": section_conflicts,
+        },
+        "predictions": {
+            "high_demand_days": timetable_day_demand,
+            "high_demand_rooms": high_demand_rooms,
+            "high_demand_subjects": subject_demand,
+        },
+        "configuration_gaps": missing_configuration,
+        "notification_channels": [
+            "In-app notification records are generated automatically now.",
+            "Email, SMS, WhatsApp, and mobile push can be connected later through provider APIs.",
+        ],
+    }

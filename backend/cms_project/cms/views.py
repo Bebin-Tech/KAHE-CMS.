@@ -13,7 +13,7 @@ import random
 import pandas as pd
 from .models import *
 from .serializers import *
-from .automation import automation_overview, generate_automated_schedule
+from .automation import automation_insights, automation_overview, generate_automated_schedule
 
 class IsAdminRole(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -690,6 +690,11 @@ class AutomationRunViewSet(viewsets.ReadOnlyModelViewSet):
 @permission_classes([IsAdminRole])
 def automation_status(request):
     return Response(automation_overview())
+
+@api_view(['GET'])
+@permission_classes([IsAdminRole])
+def automation_ai_insights(request):
+    return Response(automation_insights())
 
 @api_view(['POST'])
 @permission_classes([IsAdminRole])

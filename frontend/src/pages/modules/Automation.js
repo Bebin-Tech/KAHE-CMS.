@@ -12,6 +12,7 @@ const StatCard = ({ label, value }) => (
 
 const Automation = () => {
     const [status, setStatus] = useState(null);
+    const [insights, setInsights] = useState(null);
     const [runs, setRuns] = useState([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
@@ -35,6 +36,9 @@ const Automation = () => {
             ]);
             setStatus(statusRes.data || {});
             setRuns(Array.isArray(runRes.data) ? runRes.data : []);
+            API.get('/automation/ai-insights/')
+                .then(res => setInsights(res.data || null))
+                .catch(() => setInsights(null));
         } catch (err) {
             setMessage({ text: getApiError(err, 'Automation status sync failed.'), type: 'error' });
         } finally {
@@ -162,6 +166,71 @@ const Automation = () => {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    </section>
+
+                    <section className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
+                        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <div className="p-6 border-b border-slate-200 bg-slate-100/70 flex items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-lg font-black uppercase text-slate-900">AI / ML Engine</h2>
+                                    <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                                        CSP + GA + historical prediction + reward scoring
+                                    </p>
+                                </div>
+                                <span className="rounded-2xl bg-indigo-50 border border-indigo-100 px-4 py-2 text-sm font-black text-indigo-700">
+                                    {insights?.readiness_score ?? 0}% Ready
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+                                {(insights?.algorithm_stack || []).map(item => (
+                                    <div key={item.name} className="rounded-2xl border border-slate-200 p-5 bg-white">
+                                        <h3 className="text-sm font-black text-slate-900 uppercase">{item.name}</h3>
+                                        <p className="mt-2 text-xs font-semibold text-slate-600">{item.purpose}</p>
+                                        <ul className="mt-4 space-y-2">
+                                            {(item.checks || []).slice(0, 5).map(check => (
+                                                <li key={check} className="text-[11px] font-bold text-slate-600 flex gap-2">
+                                                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0"></span>
+                                                    <span>{check}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+                            <div>
+                                <h2 className="text-lg font-black uppercase text-slate-900">Prediction Summary</h2>
+                                <p className="mt-1 text-xs font-semibold text-slate-600">
+                                    Based on saved timetable, booking, and session data.
+                                </p>
+                            </div>
+                            <div className="rounded-2xl bg-rose-50 border border-rose-100 p-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-rose-700">Detected Conflicts</p>
+                                <p className="mt-2 text-3xl font-black text-rose-700">{insights?.conflicts?.total ?? 0}</p>
+                            </div>
+                            <div className="space-y-3">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">High Demand Days</h3>
+                                {(insights?.predictions?.high_demand_days || []).length === 0 ? (
+                                    <p className="text-xs font-bold text-slate-500">Generate a timetable to start learning demand patterns.</p>
+                                ) : (
+                                    (insights?.predictions?.high_demand_days || []).map(item => (
+                                        <div key={item.day} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
+                                            <span className="text-sm font-black text-slate-800">{item.day}</span>
+                                            <span className="text-xs font-black text-indigo-700">{item.total} classes</span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Configuration Gaps</p>
+                                <p className="mt-2 text-xs font-bold text-amber-800">
+                                    Tutors missing: {insights?.configuration_gaps?.sections_without_tutor ?? 0} |
+                                    Home rooms missing: {insights?.configuration_gaps?.sections_without_home_room ?? 0}
+                                </p>
+                            </div>
                         </div>
                     </section>
                 </>
