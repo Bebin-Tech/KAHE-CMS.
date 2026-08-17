@@ -3,6 +3,24 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def clean_duplicate_timetable_slots(apps, schema_editor):
+    Timetable = apps.get_model('cms', 'Timetable')
+
+    def delete_duplicate_groups(fields):
+        groups = (
+            Timetable.objects.values(*fields)
+            .annotate(total=models.Count('id'), keep_id=models.Min('id'))
+            .filter(total__gt=1)
+        )
+        for group in groups:
+            filters = {field: group[field] for field in fields}
+            Timetable.objects.filter(**filters).exclude(id=group['keep_id']).delete()
+
+    delete_duplicate_groups(['day', 'period_id', 'section_id'])
+    delete_duplicate_groups(['day', 'period_id', 'faculty_id'])
+    delete_duplicate_groups(['day', 'period_id', 'room_id'])
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -99,6 +117,7 @@ class Migration(migrations.Migration):
             model_name='automationrun',
             index=models.Index(fields=['-created_at'], name='automation_run_created_idx'),
         ),
+        migrations.RunPython(clean_duplicate_timetable_slots, migrations.RunPython.noop),
         migrations.AddConstraint(
             model_name='timetable',
             constraint=models.UniqueConstraint(fields=('day', 'period', 'section'), name='unique_section_day_period'),
