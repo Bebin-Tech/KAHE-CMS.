@@ -1,6 +1,10 @@
 import os
-import dj_database_url
 from pathlib import Path
+
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
 
 # Path to settings.py is: ROOT/backend/cms_project/cms_project/settings.py
 # BASE_DIR reaches ROOT/backend/cms_project (where manage.py is)
@@ -70,6 +74,8 @@ if DATABASE_URL:
 USE_MYSQL_ENV = bool(os.environ.get('MYSQL_DATABASE'))
 
 if DATABASE_URL and '://' in DATABASE_URL and not USE_MYSQL_ENV:
+    if dj_database_url is None:
+        raise ImportError("dj-database-url is required when DATABASE_URL is configured.")
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
